@@ -2,8 +2,6 @@
 
 #include "Character/HeistTags_State.h"
 #include "AbilitySystemComponent.h"
-#include "GameFramework/Character.h"
-#include "GameFramework/CharacterMovementComponent.h"
 
 UGA_Sneak::UGA_Sneak()
 {
@@ -24,12 +22,11 @@ void UGA_Sneak::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 
 	ASC->AddReplicatedLooseGameplayTag(HeistStateTags::State_Sneaking);
 
-	// TODO: AttributeSet 구현 후 GE로 교체
-	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
-	if (IsValid(Character))
+	if (IsValid(SneakEffect))
 	{
-		OriginalMoveSpeed = Character->GetCharacterMovement()->MaxWalkSpeed;
-		Character->GetCharacterMovement()->MaxWalkSpeed = SneakMoveSpeed;
+		FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+		FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(SneakEffect, 1.0f, EffectContext);
+		SneakEffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
 	}
 }
 
@@ -43,13 +40,11 @@ void UGA_Sneak::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	if (IsValid(ASC))
 	{
 		ASC->RemoveReplicatedLooseGameplayTag(HeistStateTags::State_Sneaking);
-	}
 
-	// TODO: AttributeSet 구현 후 GE로 교체
-	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
-	if (IsValid(Character))
-	{
-		Character->GetCharacterMovement()->MaxWalkSpeed = OriginalMoveSpeed;
+		if (SneakEffectHandle.IsValid())
+		{
+			ASC->RemoveActiveGameplayEffect(SneakEffectHandle);
+		}
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

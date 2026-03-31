@@ -2,13 +2,15 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/HeistGameplayAbility.h"
+#include "GameplayEffectTypes.h"
 #include "GA_Sneak.generated.h"
 
 /**
  * 홀드 중 슬금슬금 이동. 입력을 누르는 동안 State.Sneaking 태그를 유지한다.
  * ActivationPolicy = WhileInputActive
  *
- * 이동속도 감소는 AttributeSet 구현 후 GE로 교체 예정.
+ * 에디터에서 SneakEffect에 GE_Sneak을 지정한다.
+ * GE_Sneak은 MoveSpeed 어트리뷰트에 Additive 감소를 적용한다.
  */
 UCLASS()
 class HEIST_API UGA_Sneak : public UHeistGameplayAbility
@@ -31,9 +33,9 @@ protected:
 		bool bWasCancelled) override;
 
 private:
-	// TODO: AttributeSet 구현 후 GE로 교체
+	// 에디터에서 GE_Sneak 지정. MoveSpeed를 감소시키는 Infinite GE.
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Sneak")
-	float SneakMoveSpeed = 150.0f;
+	TSubclassOf<UGameplayEffect> SneakEffect;
 
-	float OriginalMoveSpeed = 0.0f;
+	FActiveGameplayEffectHandle SneakEffectHandle;
 };
