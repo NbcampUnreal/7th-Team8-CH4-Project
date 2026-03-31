@@ -1,5 +1,6 @@
 #include "AbilitySystem/Common/GA_Sneak.h"
 
+#include "AbilitySystem/HeistTags_Ability.h"
 #include "Character/HeistTags_State.h"
 #include "AbilitySystemComponent.h"
 
@@ -8,6 +9,11 @@ UGA_Sneak::UGA_Sneak()
 	ActivationPolicy = EHeistAbilityActivationPolicy::WhileInputActive;
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+
+	AbilityTags.AddTag(HeistAbilityTags::Ability_Sneak);
+
+	// 로컬 GAS 조건 체크용. 다른 클라이언트 복제는 AddReplicatedLooseGameplayTag로 별도 처리.
+	ActivationOwnedTags.AddTag(HeistStateTags::State_Sneaking);
 }
 
 void UGA_Sneak::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
