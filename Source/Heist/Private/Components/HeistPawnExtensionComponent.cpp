@@ -5,6 +5,10 @@
 #include "Data/HeistPawnData.h"
 #include "Data/HeistTags_InitState.h"
 
+#include "Components/GameFrameworkComponentManager.h"
+
+const FName UHeistPawnExtensionComponent::NAME_ActorFeatureName("PawnExtension");
+
 UHeistPawnExtensionComponent::UHeistPawnExtensionComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -20,11 +24,13 @@ UHeistPawnExtensionComponent* UHeistPawnExtensionComponent::FindPawnExtensionCom
 void UHeistPawnExtensionComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	RegisterInitStateFeature();
 	CheckDefaultInitialization();
 }
 
 void UHeistPawnExtensionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UnregisterInitStateFeature();
 	UninitializeAbilitySystem();
 	Super::EndPlay(EndPlayReason);
 }
@@ -51,74 +57,43 @@ void UHeistPawnExtensionComponent::UninitializeAbilitySystem()
 	AbilitySystemComponent = nullptr;
 }
 
-bool UHeistPawnExtensionComponent::HasReachedInitState(const FGameplayTag& State) const
+bool UHeistPawnExtensionComponent::CanChangeInitState(UGameFrameworkComponentManager* Manager,
+	FGameplayTag CurrentState, FGameplayTag DesiredState) const
 {
-	// 순서: DataAvailable < DataInitialized < GameplayReady
-	if (State == HeistInitStateTags::InitState_DataAvailable)
-	{
-		return CurrentInitState == HeistInitStateTags::InitState_DataAvailable
-			|| CurrentInitState == HeistInitStateTags::InitState_DataInitialized
-			|| CurrentInitState == HeistInitStateTags::InitState_GameplayReady;
-	}
-
-	if (State == HeistInitStateTags::InitState_DataInitialized)
-	{
-		return CurrentInitState == HeistInitStateTags::InitState_DataInitialized
-			|| CurrentInitState == HeistInitStateTags::InitState_GameplayReady;
-	}
-
-	if (State == HeistInitStateTags::InitState_GameplayReady)
-		return CurrentInitState == HeistInitStateTags::InitState_GameplayReady;
-
-	return false;
-}
-
-void UHeistPawnExtensionComponent::CheckDefaultInitialization()
-{
-	if (!HasReachedInitState(HeistInitStateTags::InitState_DataAvailable)
-		&& CanTransitionToState(HeistInitStateTags::InitState_DataAvailable))
-	{
-		HandleInitStateTransition(HeistInitStateTags::InitState_DataAvailable);
-	}
-
-	if (!HasReachedInitState(HeistInitStateTags::InitState_DataInitialized)
-		&& CanTransitionToState(HeistInitStateTags::InitState_DataInitialized))
-	{
-		HandleInitStateTransition(HeistInitStateTags::InitState_DataInitialized);
-	}
-
-	if (!HasReachedInitState(HeistInitStateTags::InitState_GameplayReady)
-		&& CanTransitionToState(HeistInitStateTags::InitState_GameplayReady))
-	{
-		HandleInitStateTransition(HeistInitStateTags::InitState_GameplayReady);
-	}
-}
-
-bool UHeistPawnExtensionComponent::CanTransitionToState(const FGameplayTag& NewState) const
-{
-	if (NewState == HeistInitStateTags::InitState_DataAvailable)
+	if (!CurrentState.IsValid() && DesiredState == HeistInitStateTags::InitState_DataAvailable)
 		return IsValid(PawnData);
 
-	if (NewState == HeistInitStateTags::InitState_DataInitialized)
-		return HasReachedInitState(HeistInitStateTags::InitState_DataAvailable) && IsValid(AbilitySystemComponent);
+	if (CurrentState == HeistInitStateTags::InitState_DataAvailable
+		&& DesiredState == HeistInitStateTags::InitState_DataInitialized)
+		return IsValid(AbilitySystemComponent);
 
-	if (NewState == HeistInitStateTags::InitState_GameplayReady)
-		return HasReachedInitState(HeistInitStateTags::InitState_DataInitialized);
+	if (CurrentState == HeistInitStateTags::InitState_DataInitialized
+		&& DesiredState == HeistInitStateTags::InitState_GameplayReady)
+		return true;
 
 	return false;
 }
 
-void UHeistPawnExtensionComponent::HandleInitStateTransition(const FGameplayTag& NewState)
+void UHeistPawnExtensionComponent::HandleChangeInitState(UGameFrameworkComponentManager* Manager,
+	FGameplayTag CurrentState, FGameplayTag DesiredState)
 {
-	CurrentInitState = NewState;
-
-	if (NewState == HeistInitStateTags::InitState_GameplayReady)
+	if (DesiredState == HeistInitStateTags::InitState_GameplayReady)
 	{
 		if (IsValid(PawnData) && IsValid(PawnData->DefaultAbilitySet))
 		{
 			PawnData->DefaultAbilitySet->GiveToAbilitySystem(AbilitySystemComponent);
 		}
-
-		OnGameplayReady.Broadcast();
 	}
+}
+
+void UHeistPawnExtensionComponent::OnActorInitStateChanged(const FActorInitStateChangedParams& Params)
+{
+	// PawnExtension은 다른 피처의 상태 변화에 반응할 필요 없음
+}
+
+void UHeistPawnExtensionComponent::CheckDefaultInitialization()
+{
+	TryToChangeInitState(HeistInitStateTags::InitState_DataAvailable);
+	TryToChangeInitState(HeistInitStateTags::InitState_DataInitialized);
+	TryToChangeInitState(HeistInitStateTags::InitState_GameplayReady);
 }

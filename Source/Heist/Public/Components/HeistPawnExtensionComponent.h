@@ -3,17 +3,17 @@
 #include "CoreMinimal.h"
 #include "Components/PawnComponent.h"
 #include "GameplayTagContainer.h"
+#include "Components/GameFrameworkInitStateInterface.h"
 #include "HeistPawnExtensionComponent.generated.h"
 
 class UHeistPawnData;
 class UHeistAbilitySystemComponent;
-
-DECLARE_MULTICAST_DELEGATE(FOnHeistGameplayReady);
+class UGameFrameworkComponentManager;
+struct FActorInitStateChangedParams;
 
 /**
  * GAS 초기화와 InitState 머신을 담당하는 컴포넌트.
- * AHeistCharacter가 소유하며, 다른 컴포넌트들은 이 컴포넌트를 통해
- * 초기화 완료 시점을 구독한다.
+ * IGameFrameworkInitStateInterface를 구현하여 UE 표준 InitState 흐름을 사용한다.
  *
  * InitState 흐름:
  *   InitState_DataAvailable   - PawnData가 설정됨
@@ -21,7 +21,7 @@ DECLARE_MULTICAST_DELEGATE(FOnHeistGameplayReady);
  *   InitState_GameplayReady   - 모든 준비 완료, 입력 바인딩 가능
  */
 UCLASS()
-class HEIST_API UHeistPawnExtensionComponent : public UPawnComponent
+class HEIST_API UHeistPawnExtensionComponent : public UPawnComponent, public IGameFrameworkInitStateInterface
 {
 	GENERATED_BODY()
 
@@ -29,6 +29,15 @@ public:
 	UHeistPawnExtensionComponent(const FObjectInitializer& ObjectInitializer);
 
 	static UHeistPawnExtensionComponent* FindPawnExtensionComponent(const AActor* Actor);
+
+	static const FName NAME_ActorFeatureName;
+
+	// IGameFrameworkInitStateInterface
+	virtual FName GetFeatureName() const override { return NAME_ActorFeatureName; }
+	virtual bool CanChangeInitState(UGameFrameworkComponentManager* Manager, FGameplayTag CurrentState, FGameplayTag DesiredState) const override;
+	virtual void HandleChangeInitState(UGameFrameworkComponentManager* Manager, FGameplayTag CurrentState, FGameplayTag DesiredState) override;
+	virtual void OnActorInitStateChanged(const FActorInitStateChangedParams& Params) override;
+	virtual void CheckDefaultInitialization() override;
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -40,23 +49,9 @@ public:
 	void UninitializeAbilitySystem();
 	UHeistAbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
 
-	// 현재 State가 주어진 State 이상에 도달했는지 확인한다.
-	bool HasReachedInitState(const FGameplayTag& State) const;
-
-	// 전환 가능한 State까지 순서대로 진행을 시도한다.
-	void CheckDefaultInitialization();
-
-	// GameplayReady 도달 시 브로드캐스트
-	FOnHeistGameplayReady OnGameplayReady;
-
 private:
-	bool CanTransitionToState(const FGameplayTag& NewState) const;
-	void HandleInitStateTransition(const FGameplayTag& NewState);
-
 	TObjectPtr<const UHeistPawnData> PawnData;
 
 	UPROPERTY()
 	TObjectPtr<UHeistAbilitySystemComponent> AbilitySystemComponent;
-
-	FGameplayTag CurrentInitState;
 };

@@ -8,10 +8,13 @@
 #include "Data/HeistPawnData.h"
 #include "Data/HeistTags_InitState.h"
 
+#include "Components/GameFrameworkComponentManager.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "InputMappingContext.h"
 #include "GameFramework/PlayerController.h"
+
+const FName UHeistPlayerComponent::NAME_ActorFeatureName("Player");
 
 UHeistPlayerComponent::UHeistPlayerComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -29,43 +32,68 @@ void UHeistPlayerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(GetPawn<APawn>());
-	if (!IsValid(PawnExtension)) return;
+	RegisterInitStateFeature();
 
-	PawnExtension->OnGameplayReady.AddUObject(this, &UHeistPlayerComponent::OnGameplayReady);
+	// PawnExtension의 모든 상태 변화를 구독 — 변화 시 OnActorInitStateChanged 호출
+	BindOnActorInitStateChanged(UHeistPawnExtensionComponent::NAME_ActorFeatureName,
+		FGameplayTag(), false);
 
-	// BeginPlay 이전에 이미 GameplayReady에 도달한 경우를 처리
-	if (PawnExtension->HasReachedInitState(HeistInitStateTags::InitState_GameplayReady))
-	{
-		OnGameplayReady();
-	}
+	// BeginPlay 시점에 이미 조건이 충족된 경우를 처리
+	CheckDefaultInitialization();
 }
 
 void UHeistPlayerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UnregisterInitStateFeature();
 	Super::EndPlay(EndPlayReason);
 }
 
 void UHeistPlayerComponent::OnPawnInputComponentReady(UInputComponent* InputComponent)
 {
 	bInputComponentReady = true;
-	TryBindInput();
+	CheckDefaultInitialization();
 }
 
-void UHeistPlayerComponent::OnGameplayReady()
+bool UHeistPlayerComponent::CanChangeInitState(UGameFrameworkComponentManager* Manager,
+	FGameplayTag CurrentState, FGameplayTag DesiredState) const
 {
-	bGameplayReady = true;
-	TryBindInput();
+	if (!CurrentState.IsValid() && DesiredState == HeistInitStateTags::InitState_GameplayReady)
+	{
+		return bInputComponentReady
+			&& Manager->HasFeatureReachedInitState(GetOwner(),
+				UHeistPawnExtensionComponent::NAME_ActorFeatureName,
+				HeistInitStateTags::InitState_GameplayReady);
+	}
+
+	return false;
 }
 
-void UHeistPlayerComponent::TryBindInput()
+void UHeistPlayerComponent::HandleChangeInitState(UGameFrameworkComponentManager* Manager,
+	FGameplayTag CurrentState, FGameplayTag DesiredState)
 {
-	if (bInputBound || !bInputComponentReady || !bGameplayReady) return;
-	BindInput();
+	if (DesiredState == HeistInitStateTags::InitState_GameplayReady)
+	{
+		BindInput();
+	}
+}
+
+void UHeistPlayerComponent::OnActorInitStateChanged(const FActorInitStateChangedParams& Params)
+{
+	if (Params.FeatureName == UHeistPawnExtensionComponent::NAME_ActorFeatureName)
+	{
+		CheckDefaultInitialization();
+	}
+}
+
+void UHeistPlayerComponent::CheckDefaultInitialization()
+{
+	TryToChangeInitState(HeistInitStateTags::InitState_GameplayReady);
 }
 
 void UHeistPlayerComponent::BindInput()
 {
+	if (bInputBound) return;
+
 	APawn* Pawn = GetPawn<APawn>();
 	if (!IsValid(Pawn)) return;
 
