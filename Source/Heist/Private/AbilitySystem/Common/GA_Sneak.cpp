@@ -9,7 +9,7 @@ UGA_Sneak::UGA_Sneak()
 {
 	ActivationPolicy = EHeistAbilityActivationPolicy::WhileInputActive;
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalOnly;
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 }
 
 void UGA_Sneak::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -22,7 +22,7 @@ void UGA_Sneak::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
 	if (!IsValid(ASC)) return;
 
-	ASC->AddLooseGameplayTag(HeistStateTags::State_Sneaking);
+	ASC->AddReplicatedLooseGameplayTag(HeistStateTags::State_Sneaking);
 
 	// TODO: AttributeSet 구현 후 GE로 교체
 	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
@@ -42,7 +42,7 @@ void UGA_Sneak::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
 	if (IsValid(ASC))
 	{
-		ASC->RemoveLooseGameplayTag(HeistStateTags::State_Sneaking);
+		ASC->RemoveReplicatedLooseGameplayTag(HeistStateTags::State_Sneaking);
 	}
 
 	// TODO: AttributeSet 구현 후 GE로 교체

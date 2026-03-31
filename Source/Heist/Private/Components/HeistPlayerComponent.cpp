@@ -16,8 +16,7 @@
 
 UHeistPlayerComponent::UHeistPlayerComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.bCanEverTick = false;
 }
 
 UHeistPlayerComponent* UHeistPlayerComponent::FindPlayerComponent(const AActor* Actor)
@@ -97,7 +96,7 @@ void UHeistPlayerComponent::BindInput()
 		}
 	}
 
-	// 이동/시야 — 직접 핸들러 바인딩
+	// 이동 — 직접 핸들러 바인딩
 	HeistInputComp->BindActionByTag(InputConfig, HeistInputTags::Input_Move,
 		ETriggerEvent::Triggered, this, &UHeistPlayerComponent::HandleMoveInput);
 
@@ -109,7 +108,6 @@ void UHeistPlayerComponent::BindInput()
 		AbilityInputBindHandles);
 
 	bInputBound = true;
-	SetComponentTickEnabled(true);
 }
 
 void UHeistPlayerComponent::HandleMoveInput(const FInputActionValue& Value)
@@ -117,43 +115,9 @@ void UHeistPlayerComponent::HandleMoveInput(const FInputActionValue& Value)
 	APawn* Pawn = Cast<APawn>(GetOwner());
 	if (!IsValid(Pawn)) return;
 
-	// 탑다운: 월드 공간 기준 XY 이동
 	const FVector2D MoveVector = Value.Get<FVector2D>();
 	Pawn->AddMovementInput(FVector::ForwardVector, MoveVector.Y);
 	Pawn->AddMovementInput(FVector::RightVector, MoveVector.X);
-}
-
-void UHeistPlayerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	APawn* Pawn = Cast<APawn>(GetOwner());
-	if (!IsValid(Pawn)) return;
-
-	APlayerController* PlayerController = Cast<APlayerController>(Pawn->GetController());
-	if (!IsValid(PlayerController)) return;
-
-	// 마우스 커서를 월드 레이로 역투영
-	FVector RayOrigin;
-	FVector RayDirection;
-	if (!PlayerController->DeprojectMousePositionToWorld(RayOrigin, RayDirection)) return;
-
-	// 레이와 캐릭터 높이 평면의 교점 계산
-	if (FMath::IsNearlyZero(RayDirection.Z)) return;
-
-	float GroundZ = Pawn->GetActorLocation().Z;
-	float T = (GroundZ - RayOrigin.Z) / RayDirection.Z;
-	if (T < 0.0f) return;
-
-	FVector CursorWorldPosition = RayOrigin + RayDirection * T;
-
-	// 캐릭터 → 커서 방향으로 회전 (Z축만)
-	FVector LookDirection = CursorWorldPosition - Pawn->GetActorLocation();
-	LookDirection.Z = 0.0f;
-
-	if (LookDirection.IsNearlyZero()) return;
-
-	Pawn->SetActorRotation(LookDirection.Rotation());
 }
 
 void UHeistPlayerComponent::HandleAbilityInputTagPressed(FGameplayTag InputTag)
@@ -177,4 +141,3 @@ void UHeistPlayerComponent::HandleAbilityInputTagReleased(FGameplayTag InputTag)
 
 	ASC->AbilityInputTagReleased(InputTag);
 }
-
