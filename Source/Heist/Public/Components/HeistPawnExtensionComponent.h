@@ -4,6 +4,7 @@
 #include "Components/PawnComponent.h"
 #include "GameplayTagContainer.h"
 #include "Components/GameFrameworkInitStateInterface.h"
+#include "AbilitySystem/HeistAbilitySet.h"
 #include "HeistPawnExtensionComponent.generated.h"
 
 class UHeistPawnData;
@@ -54,4 +55,6 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UHeistAbilitySystemComponent> AbilitySystemComponent;
+
+	FHeistAbilitySetHandles GrantedAbilitySetHandles;
 };

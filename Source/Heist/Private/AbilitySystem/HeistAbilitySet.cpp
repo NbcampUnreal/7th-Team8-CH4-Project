@@ -3,7 +3,22 @@
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "AbilitySystem/HeistGameplayAbility.h"
 
-void UHeistAbilitySet::GiveToAbilitySystem(UHeistAbilitySystemComponent* ASC) const
+void FHeistAbilitySetHandles::TakeFromAbilitySystem(UHeistAbilitySystemComponent* ASC)
+{
+	if (!IsValid(ASC)) return;
+
+	for (const FGameplayAbilitySpecHandle& Handle : AbilitySpecHandles)
+	{
+		if (Handle.IsValid())
+		{
+			ASC->ClearAbility(Handle);
+		}
+	}
+
+	AbilitySpecHandles.Reset();
+}
+
+void UHeistAbilitySet::GiveToAbilitySystem(UHeistAbilitySystemComponent* ASC, FHeistAbilitySetHandles* OutHandles) const
 {
 	if (!IsValid(ASC)) return;
 
@@ -16,6 +31,12 @@ void UHeistAbilitySet::GiveToAbilitySystem(UHeistAbilitySystemComponent* ASC) co
 		{
 			Spec.GetDynamicSpecSourceTags().AddTag(Entry.InputTag);
 		}
-		ASC->GiveAbility(Spec);
+
+		FGameplayAbilitySpecHandle Handle = ASC->GiveAbility(Spec);
+
+		if (OutHandles != nullptr)
+		{
+			OutHandles->AbilitySpecHandles.Add(Handle);
+		}
 	}
 }

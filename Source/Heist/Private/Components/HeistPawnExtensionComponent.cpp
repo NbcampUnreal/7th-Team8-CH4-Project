@@ -54,6 +54,11 @@ void UHeistPawnExtensionComponent::InitializeAbilitySystem(UHeistAbilitySystemCo
 
 void UHeistPawnExtensionComponent::UninitializeAbilitySystem()
 {
+	if (IsValid(AbilitySystemComponent))
+	{
+		GrantedAbilitySetHandles.TakeFromAbilitySystem(AbilitySystemComponent);
+	}
+
 	AbilitySystemComponent = nullptr;
 }
 
@@ -81,7 +86,7 @@ void UHeistPawnExtensionComponent::HandleChangeInitState(UGameFrameworkComponent
 	{
 		if (IsValid(PawnData) && IsValid(PawnData->DefaultAbilitySet))
 		{
-			PawnData->DefaultAbilitySet->GiveToAbilitySystem(AbilitySystemComponent);
+			PawnData->DefaultAbilitySet->GiveToAbilitySystem(AbilitySystemComponent, &GrantedAbilitySetHandles);
 		}
 	}
 }
