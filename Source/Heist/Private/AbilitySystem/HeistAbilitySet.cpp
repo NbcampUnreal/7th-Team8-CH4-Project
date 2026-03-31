@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "AbilitySystem/HeistGameplayAbility.h"
+#include "AbilitySystemComponent.h"
 
 void FHeistAbilitySetHandles::TakeFromAbilitySystem(UHeistAbilitySystemComponent* ASC)
 {
@@ -37,6 +38,12 @@ void UHeistAbilitySet::GiveToAbilitySystem(UHeistAbilitySystemComponent* ASC, FH
 		if (OutHandles != nullptr)
 		{
 			OutHandles->AbilitySpecHandles.Add(Handle);
+		}
+
+		const UHeistGameplayAbility* AbilityCDO = Entry.AbilityClass.GetDefaultObject();
+		if (IsValid(AbilityCDO) && AbilityCDO->GetActivationPolicy() == EHeistAbilityActivationPolicy::OnSpawn)
+		{
+			ASC->TryActivateAbility(Handle);
 		}
 	}
 }
