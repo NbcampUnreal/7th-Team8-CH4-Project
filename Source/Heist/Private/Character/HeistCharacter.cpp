@@ -3,6 +3,7 @@
 #include "Components/HeistPawnExtensionComponent.h"
 #include "Components/HeistPlayerComponent.h"
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
+#include "Core/HeistPlayerState.h"
 #include "Data/HeistPawnData.h"
 #include "Input/HeistInputComponent.h"
 
@@ -17,14 +18,10 @@ AHeistCharacter::AHeistCharacter(const FObjectInitializer& ObjectInitializer)
 
 	// 컨트롤러 회전 미사용 — PlayerComponent에서 커서 방향으로 직접 처리
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw   = false;
-	bUseControllerRotationRoll  = false;
+	bUseControllerRotationYaw = true;
+	bUseControllerRotationRoll = false;
 
 	GetCharacterMovement()->bOrientRotationToMovement = false;
-
-	AbilitySystemComponent = CreateDefaultSubobject<UHeistAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
-	AbilitySystemComponent->SetIsReplicated(true);
-	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
 	PawnExtensionComponent = CreateDefaultSubobject<UHeistPawnExtensionComponent>(TEXT("PawnExtensionComponent"));
 	PlayerComponent        = CreateDefaultSubobject<UHeistPlayerComponent>(TEXT("PlayerComponent"));
@@ -75,9 +72,9 @@ void AHeistCharacter::UnPossessed()
 	PawnExtensionComponent->UninitializeAbilitySystem();
 }
 
-void AHeistCharacter::OnRep_Controller()
+void AHeistCharacter::OnRep_PlayerState()
 {
-	Super::OnRep_Controller();
+	Super::OnRep_PlayerState();
 	InitializeGameplayAbilitySystem();
 }
 
@@ -85,8 +82,6 @@ void AHeistCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	// UHeistInputComponent가 설정되어 있어야 입력이 동작한다.
-	// 프로젝트 세팅 > Default Classes > Input Component Class = UHeistInputComponent
 	ensureMsgf(IsValid(Cast<UHeistInputComponent>(PlayerInputComponent)),
 		TEXT("UHeistInputComponent가 필요합니다. 프로젝트 세팅에서 Input Component Class를 설정하세요."));
 
@@ -99,6 +94,14 @@ void AHeistCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 
 void AHeistCharacter::InitializeGameplayAbilitySystem()
 {
-	// TODO: PlayerState로 ASC 이동 시 Owner = PlayerState, Avatar = this 로 변경
-	PawnExtensionComponent->InitializeAbilitySystem(AbilitySystemComponent, this);
+	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPS)) return;
+
+	UHeistAbilitySystemComponent* NewASC = HeistPS->GetHeistAbilitySystemComponent();
+	if (!IsValid(NewASC)) return;
+
+	AbilitySystemComponent = NewASC;
+
+	// Owner = PlayerState, Avatar = Character
+	PawnExtensionComponent->InitializeAbilitySystem(AbilitySystemComponent, HeistPS);
 }

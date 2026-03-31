@@ -10,7 +10,16 @@ class HEIST_API UHeistAbilitySystemComponent : public UAbilitySystemComponent
 	GENERATED_BODY()
 
 public:
-	// 입력 태그와 매칭되는 어빌리티를 활성화/종료한다.
+	static UHeistAbilitySystemComponent* FindAbilitySystemComponent(const AActor* Actor);
+
+	// 입력 태그를 큐에 적재한다. ProcessAbilityInput에서 처리된다.
 	void AbilityInputTagPressed(const FGameplayTag& InputTag);
 	void AbilityInputTagReleased(const FGameplayTag& InputTag);
+
+	// [ALL] PlayerController::PlayerTick에서 호출. 큐에 쌓인 입력을 처리한다.
+	void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
+
+private:
+	TArray<FGameplayTag> InputPressedTags;
+	TArray<FGameplayTag> InputReleasedTags;
 };

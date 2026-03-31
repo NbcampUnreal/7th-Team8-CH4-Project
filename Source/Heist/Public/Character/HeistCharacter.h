@@ -20,7 +20,9 @@ class UCameraComponent;
  *   UHeistPawnExtensionComponent — GAS 초기화, InitState 머신
  *   UHeistPlayerComponent        — 입력 바인딩 (GameplayReady 이후)
  *
- * TODO: ASC를 PlayerState로 이동 예정 (리스폰 대응)
+ * ASC 소유는 AHeistPlayerState. 이 클래스는 캐시만 유지한다.
+ *   Owner  = AHeistPlayerState
+ *   Avatar = AHeistCharacter
  */
 UCLASS()
 class HEIST_API AHeistCharacter : public ACharacter, public IAbilitySystemInterface
@@ -37,12 +39,12 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	// [SERVER]
+	// [SERVER] PlayerState 준비 완료 후 ASC 초기화
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void UnPossessed() override;
 
-	// [CLIENT] 자율 프록시 초기화
-	virtual void OnRep_Controller() override;
+	// [CLIENT] PlayerState 복제 완료 후 ASC 캐싱
+	virtual void OnRep_PlayerState() override;
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
@@ -64,6 +66,7 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Camera", meta = (AllowPrivateAccess = true))
 	TObjectPtr<UCameraComponent> TopDownCamera;
 
+	// 캐시 — 소유는 AHeistPlayerState
 	UPROPERTY()
 	TObjectPtr<UHeistAbilitySystemComponent> AbilitySystemComponent;
 };
