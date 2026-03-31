@@ -5,7 +5,8 @@
 #include "Data/HeistPawnData.h"
 #include "Data/HeistTags_InitState.h"
 
-UHeistPawnExtensionComponent::UHeistPawnExtensionComponent()
+UHeistPawnExtensionComponent::UHeistPawnExtensionComponent(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }

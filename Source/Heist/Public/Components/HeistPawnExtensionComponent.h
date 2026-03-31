@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
+#include "Components/PawnComponent.h"
 #include "GameplayTagContainer.h"
 #include "HeistPawnExtensionComponent.generated.h"
 
@@ -21,12 +21,12 @@ DECLARE_MULTICAST_DELEGATE(FOnHeistGameplayReady);
  *   InitState_GameplayReady   - 모든 준비 완료, 입력 바인딩 가능
  */
 UCLASS()
-class HEIST_API UHeistPawnExtensionComponent : public UActorComponent
+class HEIST_API UHeistPawnExtensionComponent : public UPawnComponent
 {
 	GENERATED_BODY()
 
 public:
-	UHeistPawnExtensionComponent();
+	UHeistPawnExtensionComponent(const FObjectInitializer& ObjectInitializer);
 
 	static UHeistPawnExtensionComponent* FindPawnExtensionComponent(const AActor* Actor);
 

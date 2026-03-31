@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
+#include "Components/PawnComponent.h"
 #include "GameplayTagContainer.h"
 #include "HeistPlayerComponent.generated.h"
 
@@ -17,12 +17,12 @@ class UInputComponent;
  * 나머지   — ASC->AbilityInputTagPressed/Released 로 전달
  */
 UCLASS()
-class HEIST_API UHeistPlayerComponent : public UActorComponent
+class HEIST_API UHeistPlayerComponent : public UPawnComponent
 {
 	GENERATED_BODY()
 
 public:
-	UHeistPlayerComponent();
+	UHeistPlayerComponent(const FObjectInitializer& ObjectInitializer);
 
 	static UHeistPlayerComponent* FindPlayerComponent(const AActor* Actor);
 

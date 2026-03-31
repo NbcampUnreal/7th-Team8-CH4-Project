@@ -11,10 +11,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "InputMappingContext.h"
-#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 
-UHeistPlayerComponent::UHeistPlayerComponent()
+UHeistPlayerComponent::UHeistPlayerComponent(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
@@ -29,7 +29,7 @@ void UHeistPlayerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(GetOwner());
+	UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(GetPawn<APawn>());
 	if (!IsValid(PawnExtension)) return;
 
 	PawnExtension->OnGameplayReady.AddUObject(this, &UHeistPlayerComponent::OnGameplayReady);
@@ -66,7 +66,7 @@ void UHeistPlayerComponent::TryBindInput()
 
 void UHeistPlayerComponent::BindInput()
 {
-	APawn* Pawn = Cast<APawn>(GetOwner());
+	APawn* Pawn = GetPawn<APawn>();
 	if (!IsValid(Pawn)) return;
 
 	APlayerController* PlayerController = Cast<APlayerController>(Pawn->GetController());
@@ -112,7 +112,7 @@ void UHeistPlayerComponent::BindInput()
 
 void UHeistPlayerComponent::HandleMoveInput(const FInputActionValue& Value)
 {
-	APawn* Pawn = Cast<APawn>(GetOwner());
+	APawn* Pawn = GetPawn<APawn>();
 	if (!IsValid(Pawn)) return;
 
 	const FVector2D MoveVector = Value.Get<FVector2D>();
@@ -122,7 +122,7 @@ void UHeistPlayerComponent::HandleMoveInput(const FInputActionValue& Value)
 
 void UHeistPlayerComponent::HandleAbilityInputTagPressed(FGameplayTag InputTag)
 {
-	UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(GetOwner());
+	UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(GetPawn<APawn>());
 	if (!IsValid(PawnExtension)) return;
 
 	UHeistAbilitySystemComponent* ASC = PawnExtension->GetAbilitySystemComponent();
@@ -133,7 +133,7 @@ void UHeistPlayerComponent::HandleAbilityInputTagPressed(FGameplayTag InputTag)
 
 void UHeistPlayerComponent::HandleAbilityInputTagReleased(FGameplayTag InputTag)
 {
-	UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(GetOwner());
+	UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(GetPawn<APawn>());
 	if (!IsValid(PawnExtension)) return;
 
 	UHeistAbilitySystemComponent* ASC = PawnExtension->GetAbilitySystemComponent();

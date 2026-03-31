@@ -16,7 +16,8 @@ public class Heist : ModuleRules
 			"GameplayAbilities",
 			"GameplayTags",
 			"GameplayTasks",
-			"EnhancedInput"
+			"EnhancedInput",
+			"ModularGameplay"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
