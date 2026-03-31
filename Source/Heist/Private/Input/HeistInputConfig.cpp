@@ -2,9 +2,9 @@
 
 #include "InputAction.h"
 
-const UInputAction* UHeistInputConfig::FindInputActionByTag(const FGameplayTag& InputTag) const
+const UInputAction* UHeistInputConfig::FindNativeActionByTag(const FGameplayTag& InputTag) const
 {
-	for (const FHeistInputMapping& Mapping : InputMappings)
+	for (const FHeistInputMapping& Mapping : NativeInputMappings)
 	{
 		if (Mapping.InputTag == InputTag && IsValid(Mapping.InputAction))
 		{

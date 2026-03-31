@@ -101,21 +101,12 @@ void UHeistPlayerComponent::BindInput()
 	HeistInputComp->BindActionByTag(InputConfig, HeistInputTags::Input_Move,
 		ETriggerEvent::Triggered, this, &UHeistPlayerComponent::HandleMoveInput);
 
-	// 어빌리티 입력 — ASC로 전달
-	HeistInputComp->BindActionByTag(InputConfig, HeistInputTags::Input_Interact,
-		ETriggerEvent::Started, this, &UHeistPlayerComponent::HandleInteractInputPressed);
-	HeistInputComp->BindActionByTag(InputConfig, HeistInputTags::Input_Interact,
-		ETriggerEvent::Completed, this, &UHeistPlayerComponent::HandleInteractInputReleased);
-
-	HeistInputComp->BindActionByTag(InputConfig, HeistInputTags::Input_Attack,
-		ETriggerEvent::Started, this, &UHeistPlayerComponent::HandleAttackInputPressed);
-	HeistInputComp->BindActionByTag(InputConfig, HeistInputTags::Input_Attack,
-		ETriggerEvent::Completed, this, &UHeistPlayerComponent::HandleAttackInputReleased);
-
-	HeistInputComp->BindActionByTag(InputConfig, HeistInputTags::Input_Skill,
-		ETriggerEvent::Started, this, &UHeistPlayerComponent::HandleSkillInputPressed);
-	HeistInputComp->BindActionByTag(InputConfig, HeistInputTags::Input_Skill,
-		ETriggerEvent::Completed, this, &UHeistPlayerComponent::HandleSkillInputReleased);
+	// 어빌리티 입력 — InputConfig 전체를 순회하여 태그 기반으로 ASC에 라우팅
+	HeistInputComp->BindAbilityActions(InputConfig,
+		this,
+		&UHeistPlayerComponent::HandleAbilityInputTagPressed,
+		&UHeistPlayerComponent::HandleAbilityInputTagReleased,
+		AbilityInputBindHandles);
 
 	bInputBound = true;
 	SetComponentTickEnabled(true);
@@ -165,14 +156,7 @@ void UHeistPlayerComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 	Pawn->SetActorRotation(LookDirection.Rotation());
 }
 
-void UHeistPlayerComponent::HandleInteractInputPressed() { NotifyAbilityInputPressed(HeistInputTags::Input_Interact.GetTag()); }
-void UHeistPlayerComponent::HandleInteractInputReleased() { NotifyAbilityInputReleased(HeistInputTags::Input_Interact.GetTag()); }
-void UHeistPlayerComponent::HandleAttackInputPressed() { NotifyAbilityInputPressed(HeistInputTags::Input_Attack.GetTag()); }
-void UHeistPlayerComponent::HandleAttackInputReleased() { NotifyAbilityInputReleased(HeistInputTags::Input_Attack.GetTag()); }
-void UHeistPlayerComponent::HandleSkillInputPressed() { NotifyAbilityInputPressed(HeistInputTags::Input_Skill.GetTag()); }
-void UHeistPlayerComponent::HandleSkillInputReleased() { NotifyAbilityInputReleased(HeistInputTags::Input_Skill.GetTag()); }
-
-void UHeistPlayerComponent::NotifyAbilityInputPressed(const FGameplayTag& InputTag)
+void UHeistPlayerComponent::HandleAbilityInputTagPressed(FGameplayTag InputTag)
 {
 	UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(GetOwner());
 	if (!IsValid(PawnExtension)) return;
@@ -183,7 +167,7 @@ void UHeistPlayerComponent::NotifyAbilityInputPressed(const FGameplayTag& InputT
 	ASC->AbilityInputTagPressed(InputTag);
 }
 
-void UHeistPlayerComponent::NotifyAbilityInputReleased(const FGameplayTag& InputTag)
+void UHeistPlayerComponent::HandleAbilityInputTagReleased(FGameplayTag InputTag)
 {
 	UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(GetOwner());
 	if (!IsValid(PawnExtension)) return;
@@ -193,3 +177,4 @@ void UHeistPlayerComponent::NotifyAbilityInputReleased(const FGameplayTag& Input
 
 	ASC->AbilityInputTagReleased(InputTag);
 }
+

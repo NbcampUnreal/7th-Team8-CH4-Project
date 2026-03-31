@@ -10,7 +10,7 @@ class HEIST_API UHeistAbilitySystemComponent : public UAbilitySystemComponent
 	GENERATED_BODY()
 
 public:
-	// 입력 태그로 어빌리티 활성화를 요청한다.
+	// 입력 태그와 매칭되는 어빌리티를 활성화/종료한다.
 	void AbilityInputTagPressed(const FGameplayTag& InputTag);
 	void AbilityInputTagReleased(const FGameplayTag& InputTag);
 };

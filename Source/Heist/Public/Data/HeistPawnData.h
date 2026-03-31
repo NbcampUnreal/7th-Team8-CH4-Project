@@ -5,6 +5,7 @@
 #include "HeistPawnData.generated.h"
 
 class UHeistInputConfig;
+class UHeistAbilitySet;
 class UInputMappingContext;
 
 UCLASS(BlueprintType, Const)
@@ -22,5 +23,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UHeistInputConfig> InputConfig;
 
-	// TODO: AbilitySet 추가 예정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
+	TObjectPtr<UHeistAbilitySet> DefaultAbilitySet;
 };

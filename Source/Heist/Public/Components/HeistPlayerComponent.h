@@ -41,18 +41,13 @@ private:
 	// 이동 핸들러
 	void HandleMoveInput(const FInputActionValue& Value);
 
-	// 어빌리티 입력 핸들러
-	void HandleInteractInputPressed();
-	void HandleInteractInputReleased();
-	void HandleAttackInputPressed();
-	void HandleAttackInputReleased();
-	void HandleSkillInputPressed();
-	void HandleSkillInputReleased();
-
-	void NotifyAbilityInputPressed(const FGameplayTag& InputTag);
-	void NotifyAbilityInputReleased(const FGameplayTag& InputTag);
+	// 어빌리티 입력 핸들러 — 태그를 직접 받아 ASC로 전달
+	void HandleAbilityInputTagPressed(FGameplayTag InputTag);
+	void HandleAbilityInputTagReleased(FGameplayTag InputTag);
 
 	bool bInputComponentReady = false;
 	bool bGameplayReady       = false;
 	bool bInputBound          = false;
+
+	TArray<uint32> AbilityInputBindHandles;
 };

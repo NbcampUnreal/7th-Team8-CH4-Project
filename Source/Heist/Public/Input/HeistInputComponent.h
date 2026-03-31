@@ -19,9 +19,29 @@ public:
 	{
 		if (!IsValid(InputConfig)) return;
 
-		const UInputAction* InputAction = InputConfig->FindInputActionByTag(InputTag);
+		const UInputAction* InputAction = InputConfig->FindNativeActionByTag(InputTag);
 		if (!IsValid(InputAction)) return;
 
 		BindAction(InputAction, TriggerEvent, Object, Func);
+	}
+
+	// InputConfig의 모든 매핑을 순회하며 어빌리티 입력을 태그 기반으로 바인딩한다.
+	// PressedFunc / ReleasedFunc: void(FGameplayTag) 시그니처
+	template<class UserClass, typename FuncType>
+	void BindAbilityActions(const UHeistInputConfig* InputConfig,
+		UserClass* Object, FuncType PressedFunc, FuncType ReleasedFunc,
+		TArray<uint32>& OutBindHandles)
+	{
+		if (!IsValid(InputConfig)) return;
+
+		for (const FHeistInputMapping& Mapping : InputConfig->AbilityInputMappings)
+		{
+			if (!IsValid(Mapping.InputAction) || !Mapping.InputTag.IsValid()) continue;
+
+			OutBindHandles.Add(BindAction(Mapping.InputAction, ETriggerEvent::Started,
+				Object, PressedFunc, Mapping.InputTag).GetHandle());
+			OutBindHandles.Add(BindAction(Mapping.InputAction, ETriggerEvent::Completed,
+				Object, ReleasedFunc, Mapping.InputTag).GetHandle());
+		}
 	}
 };

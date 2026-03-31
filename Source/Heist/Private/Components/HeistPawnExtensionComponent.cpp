@@ -1,6 +1,7 @@
 #include "Components/HeistPawnExtensionComponent.h"
 
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
+#include "AbilitySystem/HeistAbilitySet.h"
 #include "Data/HeistPawnData.h"
 #include "Data/HeistTags_InitState.h"
 
@@ -112,6 +113,11 @@ void UHeistPawnExtensionComponent::HandleInitStateTransition(const FGameplayTag&
 
 	if (NewState == HeistInitStateTags::InitState_GameplayReady)
 	{
+		if (IsValid(PawnData) && IsValid(PawnData->DefaultAbilitySet))
+		{
+			PawnData->DefaultAbilitySet->GiveToAbilitySystem(AbilitySystemComponent);
+		}
+
 		OnGameplayReady.Broadcast();
 	}
 }
