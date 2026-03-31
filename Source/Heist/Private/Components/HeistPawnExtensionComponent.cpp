@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "AbilitySystem/HeistAbilitySet.h"
+#include "AbilitySystem/HeistAttributeSet.h"
 #include "Data/HeistPawnData.h"
 #include "Data/HeistTags_InitState.h"
 
@@ -52,6 +53,19 @@ void UHeistPawnExtensionComponent::InitializeAbilitySystem(UHeistAbilitySystemCo
 	CheckDefaultInitialization();
 }
 
+void UHeistPawnExtensionComponent::ApplyCharacterStats()
+{
+	if (!IsValid(PawnData) || !IsValid(PawnData->CharacterStatsTable)) return;
+
+	const FHeistCharacterStatsRow* Row = PawnData->CharacterStatsTable->FindRow<FHeistCharacterStatsRow>(
+		PawnData->StatsRowName, TEXT("ApplyCharacterStats"));
+	if (Row == nullptr) return;
+
+	AbilitySystemComponent->SetNumericAttributeBase(UHeistAttributeSet::GetMaxHealthAttribute(), Row->MaxHealth);
+	AbilitySystemComponent->SetNumericAttributeBase(UHeistAttributeSet::GetHealthAttribute(), Row->MaxHealth);
+	AbilitySystemComponent->SetNumericAttributeBase(UHeistAttributeSet::GetMoveSpeedAttribute(), Row->MoveSpeed);
+}
+
 void UHeistPawnExtensionComponent::UninitializeAbilitySystem()
 {
 	if (IsValid(AbilitySystemComponent))
@@ -82,6 +96,11 @@ bool UHeistPawnExtensionComponent::CanChangeInitState(UGameFrameworkComponentMan
 void UHeistPawnExtensionComponent::HandleChangeInitState(UGameFrameworkComponentManager* Manager,
 	FGameplayTag CurrentState, FGameplayTag DesiredState)
 {
+	if (DesiredState == HeistInitStateTags::InitState_DataInitialized)
+	{
+		ApplyCharacterStats();
+	}
+
 	if (DesiredState == HeistInitStateTags::InitState_GameplayReady)
 	{
 		if (IsValid(PawnData) && IsValid(PawnData->DefaultAbilitySet))

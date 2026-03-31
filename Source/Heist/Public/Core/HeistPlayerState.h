@@ -6,6 +6,7 @@
 #include "HeistPlayerState.generated.h"
 
 class UHeistAbilitySystemComponent;
+class UHeistAttributeSet;
 
 /**
  * ASC를 소유한다. 리스폰 후에도 GAS 상태가 유지된다.
@@ -24,4 +25,7 @@ public:
 private:
 	UPROPERTY()
 	TObjectPtr<UHeistAbilitySystemComponent> AbilitySystemComponent;
+
+	UPROPERTY()
+	TObjectPtr<UHeistAttributeSet> AttributeSet;
 };

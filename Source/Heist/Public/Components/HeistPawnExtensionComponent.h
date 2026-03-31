@@ -51,6 +51,8 @@ public:
 	UHeistAbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
 
 private:
+	void ApplyCharacterStats();
+
 	TObjectPtr<const UHeistPawnData> PawnData;
 
 	UPROPERTY()
