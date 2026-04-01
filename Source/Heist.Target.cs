@@ -16,6 +16,5 @@ public class HeistTarget : TargetRules
 
 	private void RegisterModulesCreatedByRider()
 	{
-		ExtraModuleNames.AddRange(new string[] { "GitStatusBranch" });
 	}
 }
