@@ -1,0 +1,42 @@
+name: Auto LFS Unlock
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  auto-unlock:
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Unlock Merged Assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_AUTHOR: ${{ github.actor }}
+        run: |
+          # 머지 커밋 기준으로 변경된 파일 추출
+          MODIFIED_FILES=$(git log -m -1 --name-only --pretty="format:" ${{ github.sha }} | grep -E '\.(uasset|umap)$' || true)
+
+          if [ -z "$MODIFIED_FILES" ]; then
+            exit 0
+          fi
+
+          git config --global credential.helper store
+          echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+
+          git lfs locks > current_locks.txt
+
+          for file in $MODIFIED_FILES; do
+            # 머지된 파일 중, 원래 PR 작성자가 걸어둔 락만 안전하게 해제
+            if grep -E -q "^$file\s+$PR_AUTHOR" current_locks.txt; then
+              git lfs unlock "$file" || true
+            fi
+          done
+          echo "병합된 에셋들의 Lock이 안전하게 해제되었습니다."

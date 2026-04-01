@@ -1,0 +1,48 @@
+name: Asset Lock Enforcement
+
+on:
+  pull_request:
+    paths:
+      - "**/*.uasset"
+      - "**/*.umap"
+
+jobs:
+  verify-locks:
+    if: github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Locks for Modified Assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_AUTHOR: ${{ github.actor }}
+        run: |
+          MODIFIED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(uasset|umap)$' || true)
+
+          if [ -z "$MODIFIED_FILES" ]; then
+            exit 0
+          fi
+
+          # LFS 인증 정보 명확화
+          git config --global credential.helper store
+          echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+
+          git lfs locks > current_locks.txt
+
+          ERROR_COUNT=0
+          for file in $MODIFIED_FILES; do
+            # 정확한 경로와 작성자 매칭 (오탐지 방지)
+            if [ -f "$file" ] && ! grep -E -q "^$file\s+$PR_AUTHOR" current_locks.txt; then
+              echo "ERROR: 락(Lock) 없이 수정된 파일 감지 -> $file"
+              ERROR_COUNT=$((ERROR_COUNT+1))
+            fi
+          done
+
+          if [ $ERROR_COUNT -gt 0 ]; then
+            echo "에셋을 수정할 때는 반드시 언리얼 에디터에서 체크아웃(Lock)을 먼저 해야 합니다!"
+            exit 1
+          fi
