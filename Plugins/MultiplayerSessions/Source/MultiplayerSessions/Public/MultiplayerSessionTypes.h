@@ -25,7 +25,7 @@ struct MULTIPLAYERSESSIONS_API FMultiplayerSessionConfig
 	GENERATED_BODY()
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	int32 NumPublicConnections = 10;
+	int32 NumPublicConnections = 5;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FString MatchType = TEXT("FREE");
