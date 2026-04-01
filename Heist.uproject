@@ -13,6 +13,11 @@
 			]
 		},
 		{
+			"Name": "HeistUI",
+			"Type": "ClientOnly",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "GitStatusBranch",
 			"Type": "Editor",
 			"LoadingPhase": "Default"

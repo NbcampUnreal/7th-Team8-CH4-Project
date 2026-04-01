@@ -10,7 +10,7 @@ public class HeistTarget : TargetRules
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 
-		ExtraModuleNames.AddRange( new string[] { "Heist" } );
+		ExtraModuleNames.AddRange( new string[] { "Heist", "HeistUI" } );
 		RegisterModulesCreatedByRider();
 	}
 
