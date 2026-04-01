@@ -26,6 +26,8 @@ public:
 	void DestroySession();
 	void StartSession();
 
+	FString GetLastCreatedSessionInviteCode() const { return LastCreatedInviteCode; }
+
 	FMultiplayerOnCreateSessionComplete MultiplayerOnCreateSessionComplete;
 	FMultiplayerOnFindSessionsComplete MultiplayerOnFindSessionsComplete;
 	FMultiplayerOnJoinSessionComplete MultiplayerOnJoinSessionComplete;
@@ -41,8 +43,11 @@ protected:
 
 private:
 	bool InitSessionInterface();
+	static FString GenerateInviteCode();
 
 	IOnlineSessionPtr SessionInterface;
+
+	FString LastCreatedInviteCode;
 
 	TSharedPtr<FOnlineSessionSettings> LastSessionSettings;
 	TSharedPtr<FOnlineSessionSearch> LastSessionSearch;

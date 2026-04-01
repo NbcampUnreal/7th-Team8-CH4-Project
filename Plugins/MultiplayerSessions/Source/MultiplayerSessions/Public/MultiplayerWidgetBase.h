@@ -36,6 +36,9 @@ protected:
 	// Returns the first search result whose MatchType matches SessionConfig, or nullptr
 	const FOnlineSessionSearchResult* FindMatchingSession(const TArray<FOnlineSessionSearchResult>& Results) const;
 
+	// Returns the first search result whose InviteCode matches the given code, or nullptr
+	const FOnlineSessionSearchResult* FindSessionByInviteCode(const TArray<FOnlineSessionSearchResult>& Results, const FString& InviteCode) const;
+
 	UPROPERTY()
 	TObjectPtr<UMultiplayerSessionsSubsystem> SessionsSubsystem;
 

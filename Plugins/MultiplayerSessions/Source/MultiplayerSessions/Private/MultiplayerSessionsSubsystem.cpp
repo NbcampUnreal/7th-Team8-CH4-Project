@@ -3,6 +3,7 @@
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
 #include "Online/OnlineSessionNames.h"
+#include "Math/UnrealMathUtility.h"
 
 UMultiplayerSessionsSubsystem::UMultiplayerSessionsSubsystem() :
 	CreateSessionCompleteDelegate(
@@ -50,6 +51,9 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, co
 	LastSessionSettings->bUseLobbiesIfAvailable = true;
 	LastSessionSettings->BuildUniqueId = 1;
 	LastSessionSettings->Set(MultiplayerSessionConstants::MatchTypeKey, MatchType, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+
+	LastCreatedInviteCode = GenerateInviteCode();
+	LastSessionSettings->Set(MultiplayerSessionConstants::InviteCodeKey, LastCreatedInviteCode, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	if (!LocalPlayer)
@@ -150,6 +154,21 @@ void UMultiplayerSessionsSubsystem::StartSession()
 	}
 }
 
+FString UMultiplayerSessionsSubsystem::GenerateInviteCode()
+{
+	constexpr int32 CodeLength = 6;
+	const TCHAR Charset[] = TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+	constexpr int32 CharsetSize = 36;
+
+	FString Code;
+	Code.Reserve(CodeLength);
+	for (int32 i = 0; i < CodeLength; ++i)
+	{
+		Code.AppendChar(Charset[FMath::RandRange(0, CharsetSize - 1)]);
+	}
+	return Code;
+}
+
 bool UMultiplayerSessionsSubsystem::InitSessionInterface()
 {
 	if (!SessionInterface)
@@ -168,6 +187,11 @@ void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, b
 	if (SessionInterface)
 	{
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+	}
+
+	if (!bWasSuccessful)
+	{
+		LastCreatedInviteCode = FString();
 	}
 
 	MultiplayerOnCreateSessionComplete.Broadcast(bWasSuccessful);

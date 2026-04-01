@@ -7,6 +7,9 @@ namespace MultiplayerSessionConstants
 {
 	// Session settings key for match type filtering
 	static const FName MatchTypeKey(TEXT("MatchType"));
+
+	// Session settings key for invite code
+	static const FName InviteCodeKey(TEXT("InviteCode"));
 }
 
 // Indicates the purpose of a dedicated server address request.

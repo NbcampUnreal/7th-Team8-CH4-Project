@@ -70,6 +70,22 @@ const FOnlineSessionSearchResult* UMultiplayerWidgetBase::FindMatchingSession(co
 	return nullptr;
 }
 
+const FOnlineSessionSearchResult* UMultiplayerWidgetBase::FindSessionByInviteCode(const TArray<FOnlineSessionSearchResult>& Results, const FString& InviteCode) const
+{
+	if (InviteCode.IsEmpty()) return nullptr;
+
+	for (const FOnlineSessionSearchResult& Result : Results)
+	{
+		FString SettingsValue;
+		Result.Session.SessionSettings.Get(MultiplayerSessionConstants::InviteCodeKey, SettingsValue);
+		if (SettingsValue == InviteCode)
+		{
+			return &Result;
+		}
+	}
+	return nullptr;
+}
+
 void UMultiplayerWidgetBase::BindDelegates()
 {
 	if (!SessionsSubsystem) return;
