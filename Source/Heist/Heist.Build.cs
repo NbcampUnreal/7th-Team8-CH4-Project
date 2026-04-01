@@ -18,12 +18,9 @@ public class Heist : ModuleRules
 			"GameplayTasks",
 			"EnhancedInput",
 			"ModularGameplay",
+			"MultiplayerSessions",
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[]
-		{
-			"MultiplayerSessions",
-			"OnlineSubsystem",
-		});
+		PrivateDependencyModuleNames.AddRange(new string[] { });
 	}
 }

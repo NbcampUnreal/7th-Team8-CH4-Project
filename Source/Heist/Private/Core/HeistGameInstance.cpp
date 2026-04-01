@@ -1,10 +1,10 @@
-#include "HeistGameInstance.h"
+#include "Core/HeistGameInstance.h"
 
 #include "MultiplayerSessionTypes.h"
 
 UHeistGameInstance::UHeistGameInstance()
 {
-	LobbyPath = TEXT("/Game/Maps/Lobby");
+	LobbyPath = TEXT("/Game/Heist/Maps/L_Lobby");
 	bUseDedicatedServer = false;
 	bDestroySessionOnStart = false;
 }

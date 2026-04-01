@@ -10,7 +10,7 @@
  * 데디케이티드 서버 전환 시 RequestDedicatedServerAddress()를 오버라이드한다.
  */
 UCLASS()
-class UHeistGameInstance : public UMultiplayerGameInstance
+class HEIST_API UHeistGameInstance : public UMultiplayerGameInstance
 {
 	GENERATED_BODY()
 

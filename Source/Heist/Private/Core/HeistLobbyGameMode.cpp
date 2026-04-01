@@ -1,10 +1,11 @@
 #include "Core/HeistLobbyGameMode.h"
 
-#include "GameFramework/GameStateBase.h"
-#include "GameFramework/PlayerState.h"
+#include "Core/HeistLobbyGameState.h"
+#include "Core/HeistPlayerState.h"
 
 AHeistLobbyGameMode::AHeistLobbyGameMode()
 {
+	GameStateClass = AHeistLobbyGameState::StaticClass();
 	GameMapPath = TEXT("/Game/Maps/Game");
 	MinPlayersToStart = 5;
 }
@@ -15,8 +16,15 @@ void AHeistLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 
 	if (!IsValid(NewPlayer)) return;
 
-	const APlayerState* PlayerState = NewPlayer->GetPlayerState<APlayerState>();
+	const AHeistPlayerState* PlayerState = NewPlayer->GetPlayerState<AHeistPlayerState>();
 	const FString PlayerName = IsValid(PlayerState) ? PlayerState->GetPlayerName() : TEXT("Unknown");
+
+	AHeistLobbyGameState* LobbyGameState = GetGameState<AHeistLobbyGameState>();
+	if (IsValid(LobbyGameState))
+	{
+		LobbyGameState->AddPlayer(PlayerName);
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] PostLogin: %s (Total: %d)"),
 		*PlayerName, GameState->PlayerArray.Num());
 }
@@ -27,6 +35,13 @@ void AHeistLobbyGameMode::Logout(AController* Exiting)
 	{
 		const APlayerState* PlayerState = Exiting->GetPlayerState<APlayerState>();
 		const FString PlayerName = IsValid(PlayerState) ? PlayerState->GetPlayerName() : TEXT("Unknown");
+
+		AHeistLobbyGameState* LobbyGameState = GetGameState<AHeistLobbyGameState>();
+		if (IsValid(LobbyGameState))
+		{
+			LobbyGameState->RemovePlayer(PlayerName);
+		}
+
 		UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] Logout: %s"), *PlayerName);
 	}
 
