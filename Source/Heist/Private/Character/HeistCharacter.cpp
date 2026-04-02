@@ -16,12 +16,14 @@ AHeistCharacter::AHeistCharacter(const FObjectInitializer& ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	// 컨트롤러 회전 미사용 — PlayerComponent에서 커서 방향으로 직접 처리
+	// 커서 방향 회전은 CMC가 보간 처리 — UpdateCursorRotation()이 SetControlRotation()으로 목표 Yaw를 세팅하면
+	// CMC가 RotationRate 속도로 보간하여 메시를 회전시킨다.
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = true;
+	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
 	GetCharacterMovement()->bOrientRotationToMovement = false;
+	GetCharacterMovement()->bUseControllerDesiredRotation = true;
 
 	PawnExtensionComponent = CreateDefaultSubobject<UHeistPawnExtensionComponent>(TEXT("PawnExtensionComponent"));
 	PlayerComponent        = CreateDefaultSubobject<UHeistPlayerComponent>(TEXT("PlayerComponent"));
