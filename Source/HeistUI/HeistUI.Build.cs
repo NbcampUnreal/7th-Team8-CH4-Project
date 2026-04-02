@@ -18,6 +18,10 @@ public class HeistUI : ModuleRules
 			"Heist",
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"MultiplayerSessions",
+			"OnlineSubsystem",
+		});
 	}
 }

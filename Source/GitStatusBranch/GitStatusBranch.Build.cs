@@ -20,9 +20,13 @@ public class GitStatusBranch : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
-                "UnrealEd",
                 "SourceControl"
             }
         );
+
+        if (Target.Type == TargetType.Editor)
+        {
+            PrivateDependencyModuleNames.Add("UnrealEd");
+        }
     }
 }
