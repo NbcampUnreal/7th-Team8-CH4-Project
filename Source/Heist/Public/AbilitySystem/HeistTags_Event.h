@@ -1,0 +1,15 @@
+#pragma once
+
+#include "NativeGameplayTags.h"
+
+namespace HeistEventTags
+{
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Hit);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Healed);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_CuffingComplete);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_EscortStarted);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_EscortInterrupted);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_ArrivedAtCar);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_BackAttackHit);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_StunExpired);
+}
