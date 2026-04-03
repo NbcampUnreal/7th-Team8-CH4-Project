@@ -2,9 +2,17 @@
 
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "Core/HeistPlayerState.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
+#include "Systems/Messaging/HeistMessageTypes.h"
+#include "Systems/Messaging/HeistTags_Message.h"
 
 #include "GameFramework/Pawn.h"
 #include "EnhancedInputComponent.h"
+
+AHeistPlayerController::AHeistPlayerController()
+{
+	bShowMouseCursor = true;
+}
 
 void AHeistPlayerController::SetupInputComponent()
 {
@@ -18,12 +26,8 @@ void AHeistPlayerController::SetupInputComponent()
 
 void AHeistPlayerController::Input_SystemMenu()
 {
-	ToggleSystemMenu();
-}
-
-AHeistPlayerController::AHeistPlayerController()
-{
-	bShowMouseCursor = true;
+	UHeistMessageSubsystem& MessageSubsystem = UHeistMessageSubsystem::Get(this);
+	MessageSubsystem.BroadcastMessage(HeistMessageTags::Message_UI_SystemMenuToggle, FHeistSystemMenuToggleMessage{});
 }
 
 void AHeistPlayerController::PlayerTick(float DeltaTime)
