@@ -15,4 +15,8 @@ class HEIST_API AThiefCharacter : public AHeistCharacter
 
 public:
 	AThiefCharacter(const FObjectInitializer& ObjectInitializer);
+
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|Movement")
+	float MaxRotationRateYaw = 150.f;
 };
