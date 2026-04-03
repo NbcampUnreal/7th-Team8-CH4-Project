@@ -44,7 +44,7 @@ private:
 #pragma region AnimIK
 private:
 	void UpdateIK(float DeltaSeconds);
-	void DoFootTrace(FName SocketName, FVector& OutOffset, FRotator& OutRotation, float DeltaSeconds);
+	void DoFootTrace(FName SocketName, FVector& OutOffset, FRotator& OutRotation, bool& OutHit, float DeltaSeconds);
 	
 public:
 	UPROPERTY(BlueprintReadOnly, Category="IK")
@@ -63,10 +63,10 @@ public:
 	FRotator IK_Rotation_R;
 
 	UPROPERTY(EditDefaultsOnly, Category="IK")
-	float IK_Trace_Dist = 50.f;
+	float IK_Trace_Dist = 80.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category="IK")
-	float IK_InterpSpeed = 15.f;
+	float IK_InterpSpeed = 20.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category="IK")
 	float FootHeight = 5.f;
@@ -79,15 +79,31 @@ public:
                                                                                                                                                                                                                                                                     
 	UPROPERTY(BlueprintReadOnly, Category="IK")                                                                                                                                                                                                                     
 	float IK_Alpha_R = 0.f;
-
+	
 	UPROPERTY(EditDefaultsOnly, Category="IK")
-	float IK_AlphaBlendThreshold = 8.f; // 이 이상 오프셋일 때 Alpha=1
-
+	float IK_ThighDeadZone = 15.f;
+	
+	// 발이 빠르게 움직이면 IK 끄기 - 속도 임계점
+	UPROPERTY(EditAnywhere, Category="IK")
+	float IK_FootSpeedThreshold = 200.f;
+	
+	UPROPERTY(EditDefaultsOnly, Category="IK")
+	float NormalThreshold = 0.5f;
+	
 private:
 	UPROPERTY()
 	ACharacter* PlayerChar;
 	
 	FCollisionQueryParams TraceParams;
+	
+	FVector PrevSocketL = FVector::ZeroVector;
+	FVector PrevSocketR = FVector::ZeroVector;
+	
+	UPROPERTY()
+	bool bIK_HitL = false;
+
+	UPROPERTY()
+	bool bIK_HitR = false;
 	
 	static const FName FootL;
 	static const FName FootR;
