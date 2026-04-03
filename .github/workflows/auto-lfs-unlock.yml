@@ -19,12 +19,17 @@ jobs:
       - name: Unlock Merged Assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_AUTHOR: ${{ github.actor }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
-          # 머지 커밋 기준으로 변경된 파일 추출
-          MODIFIED_FILES=$(git log -m -1 --name-only --pretty="format:" ${{ github.sha }} | grep -E '\.(uasset|umap)$' || true)
+          # FIX 1: github.sha(머지 커밋)에서 -m 플래그로 파일 추출 시
+          # 양쪽 부모 diff가 섞여 PR 무관 파일이 포함되는 문제 수정
+          # base..head SHA를 명시적으로 비교하는 방식으로 교체
+          MODIFIED_FILES=$(git diff --name-only \
+            origin/${{ github.event.pull_request.base.ref }}...${{ github.event.pull_request.head.sha }} \
+            | grep -E '\.(uasset|umap)$' || true)
 
           if [ -z "$MODIFIED_FILES" ]; then
+            echo "해제할 언리얼 에셋 락이 없습니다."
             exit 0
           fi
 
@@ -33,10 +38,27 @@ jobs:
 
           git lfs locks > current_locks.txt
 
-          for file in $MODIFIED_FILES; do
-            # 머지된 파일 중, 원래 PR 작성자가 걸어둔 락만 안전하게 해제
-            if grep -E -q "^$file\s+$PR_AUTHOR" current_locks.txt; then
-              git lfs unlock "$file" || true
+          UNLOCK_COUNT=0
+          FAIL_COUNT=0
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+
+            # FIX 2: asset-lock-check와 동일하게 grep -F (고정 문자열)로 통일
+            # 기존 정규식은 경로 슬래시(/) 미이스케이프로 오작동 가능성 존재
+            LOCK_LINE=$(grep -F "$file" current_locks.txt || true)
+            if [ -n "$LOCK_LINE" ] && echo "$LOCK_LINE" | grep -qF "$PR_AUTHOR"; then
+              # FIX 3: || true 로 에러를 묵살하던 방식 제거, 실패 시 명시적 로그 출력
+              if git lfs unlock "$file"; then
+                echo "락 해제 성공: $file"
+                UNLOCK_COUNT=$((UNLOCK_COUNT+1))
+              else
+                echo "WARNING: 락 해제 실패 -> $file (수동 해제 필요)"
+                FAIL_COUNT=$((FAIL_COUNT+1))
+              fi
             fi
-          done
-          echo "병합된 에셋들의 Lock이 안전하게 해제되었습니다."
+          done <<< "$MODIFIED_FILES"
+
+          echo "병합된 에셋 Lock 해제 완료: 성공 ${UNLOCK_COUNT}개"
+          if [ $FAIL_COUNT -gt 0 ]; then
+            echo "WARNING: 실패 ${FAIL_COUNT}개 — 위 목록을 확인 후 수동으로 해제해주세요."
+          fi
