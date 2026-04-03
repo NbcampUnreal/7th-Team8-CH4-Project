@@ -30,9 +30,8 @@ jobs:
             [ -z "$file" ] && continue
             [ ! -f "$file" ] && continue
 
-            # FIX 2: head -n 1 파이프 방식은 바이너리 null 바이트에서 오동작 가능
-            # git lfs pointer --check 로 교체 — LFS 공식 검증 도구 사용
-            if ! git lfs pointer --check "$file" > /dev/null 2>&1; then
+            # git lfs pointer --check 는 --file 플래그 필수 (positional argument 미지원)
+            if ! git lfs pointer --check --file="$file" > /dev/null 2>&1; then
               echo "ERROR: 생 바이너리 업로드 감지! -> $file"
               ERROR_COUNT=$((ERROR_COUNT+1))
             fi

@@ -2,12 +2,32 @@
 
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "Core/HeistPlayerState.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
+#include "Systems/Messaging/HeistMessageTypes.h"
+#include "Systems/Messaging/HeistTags_Message.h"
 
 #include "GameFramework/Pawn.h"
+#include "EnhancedInputComponent.h"
 
 AHeistPlayerController::AHeistPlayerController()
 {
 	bShowMouseCursor = true;
+}
+
+void AHeistPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	if (!IsValid(SystemMenuInputAction)) return;
+
+	UEnhancedInputComponent* EnhancedIC = CastChecked<UEnhancedInputComponent>(InputComponent);
+	EnhancedIC->BindAction(SystemMenuInputAction, ETriggerEvent::Started, this, &ThisClass::Input_SystemMenu);
+}
+
+void AHeistPlayerController::Input_SystemMenu()
+{
+	UHeistMessageSubsystem& MessageSubsystem = UHeistMessageSubsystem::Get(this);
+	MessageSubsystem.BroadcastMessage(HeistMessageTags::Message_SystemMenu_Toggle, FHeistSystemMenuToggleMessage{});
 }
 
 void AHeistPlayerController::PlayerTick(float DeltaTime)
