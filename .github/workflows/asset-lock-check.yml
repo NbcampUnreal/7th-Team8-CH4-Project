@@ -2,9 +2,7 @@ name: Asset Lock Enforcement
 
 on:
   pull_request:
-    paths:
-      - "**/*.uasset"
-      - "**/*.umap"
+    branches: ["main", "develop"]
 
 jobs:
   verify-locks:
@@ -16,31 +14,43 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.base_ref }}
+
       - name: Check Locks for Modified Assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AUTHOR: ${{ github.actor }}
         run: |
-          MODIFIED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(uasset|umap)$' || true)
+          # FIX 1: --diff-filter=M 으로 수정 파일만 검사 (삭제 파일 제외)
+          # 삭제된 파일은 락 없이 지워져도 통과되는 기존 버그를 방지
+          MODIFIED_FILES=$(git diff --name-only --diff-filter=M origin/${{ github.base_ref }}...HEAD | grep -E '\.(uasset|umap)$' || true)
 
           if [ -z "$MODIFIED_FILES" ]; then
+            echo "검사할 수정된 언리얼 에셋이 없습니다."
             exit 0
           fi
 
-          # LFS 인증 정보 명확화
+          git lfs install
           git config --global credential.helper store
           echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
 
           git lfs locks > current_locks.txt
 
           ERROR_COUNT=0
-          for file in $MODIFIED_FILES; do
-            # 정확한 경로와 작성자 매칭 (오탐지 방지)
-            if [ -f "$file" ] && ! grep -E -q "^$file\s+$PR_AUTHOR" current_locks.txt; then
-              echo "ERROR: 락(Lock) 없이 수정된 파일 감지 -> $file"
-              ERROR_COUNT=$((ERROR_COUNT+1))
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+
+            if [ -f "$file" ]; then
+              # FIX 2: sed 이스케이프 대신 grep -F (고정 문자열) 사용
+              # 기존 정규식은 경로의 슬래시(/)를 처리하지 못해 락 검증 우회 가능성 존재
+              LOCK_LINE=$(grep -F "$file" current_locks.txt || true)
+              if [ -z "$LOCK_LINE" ] || ! echo "$LOCK_LINE" | grep -qF "$PR_AUTHOR"; then
+                echo "ERROR: 락(Lock) 없이 수정된 파일 감지 -> $file"
+                ERROR_COUNT=$((ERROR_COUNT+1))
+              fi
             fi
-          done
+          done <<< "$MODIFIED_FILES"
 
           if [ $ERROR_COUNT -gt 0 ]; then
             echo "에셋을 수정할 때는 반드시 언리얼 에디터에서 체크아웃(Lock)을 먼저 해야 합니다!"
