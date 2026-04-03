@@ -19,6 +19,7 @@ public class Heist : ModuleRules
 			"EnhancedInput",
 			"ModularGameplay",
 			"MultiplayerSessions",
+			"StructUtils",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

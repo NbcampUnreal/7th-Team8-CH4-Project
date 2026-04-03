@@ -1,0 +1,19 @@
+#pragma once
+
+#include "NativeGameplayTags.h"
+
+namespace HeistMessageTags
+{
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UI_SystemMenuToggle);
+
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Ping);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Ping_Danger);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Ping_Move);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Ping_Item);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Ping_Rescue);
+
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Alarm);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Alarm_Theft);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Alarm_GPS);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Alarm_Global);
+}
