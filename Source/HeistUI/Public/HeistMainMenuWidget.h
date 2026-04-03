@@ -39,6 +39,10 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UEditableTextBox> TextBoxInviteCode;
 
+	// 상태/오류 메시지 표시 (선택적 바인딩)
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> TextBlockStatus;
+
 	UFUNCTION()
 	void ButtonHostClicked();
 
@@ -46,6 +50,11 @@ private:
 	void ButtonJoinByCodeClicked();
 
 	void SetButtonsEnabled(bool bEnabled);
+	void ShowStatus(const FString& Message);
+	void ClearStatus();
+
+	FTimerHandle StatusClearTimerHandle;
+	static constexpr float StatusDisplaySeconds = 3.0f;
 
 	// FindSessions 비동기 대기 중 코드가 변경되는 것을 방지하기 위해 버튼 클릭 시점에 저장
 	FString PendingInviteCode;

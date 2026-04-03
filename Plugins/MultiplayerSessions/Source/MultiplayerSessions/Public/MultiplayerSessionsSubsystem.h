@@ -45,6 +45,11 @@ private:
 	bool InitSessionInterface();
 	static FString GenerateInviteCode();
 
+	void OnFindSessionsTimeout();
+
+	static constexpr float FindSessionsTimeoutSeconds = 10.0f;
+	FTimerHandle FindSessionsTimeoutHandle;
+
 	IOnlineSessionPtr SessionInterface;
 
 	FString LastCreatedInviteCode;
