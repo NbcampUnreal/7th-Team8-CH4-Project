@@ -27,7 +27,7 @@ void AHeistPlayerController::SetupInputComponent()
 void AHeistPlayerController::Input_SystemMenu()
 {
 	UHeistMessageSubsystem& MessageSubsystem = UHeistMessageSubsystem::Get(this);
-	MessageSubsystem.BroadcastMessage(HeistMessageTags::Message_UI_SystemMenuToggle, FHeistSystemMenuToggleMessage{});
+	MessageSubsystem.BroadcastMessage(HeistMessageTags::Message_SystemMenu_Toggle, FHeistSystemMenuToggleMessage{});
 }
 
 void AHeistPlayerController::PlayerTick(float DeltaTime)

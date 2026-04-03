@@ -32,6 +32,7 @@ UHeistMessageSubsystem& UHeistMessageSubsystem::Get(const UObject* WorldContextO
     return *Subsystem;
 }
 
+
 void UHeistMessageSubsystem::UnregisterListener(FHeistMessageListenerHandle& Handle)
 {
     if (!Handle.IsValid()) return;

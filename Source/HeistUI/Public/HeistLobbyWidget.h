@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "HeistLobbyWidget.generated.h"
 
 class UTextBlock;
@@ -29,26 +30,24 @@ protected:
 	virtual void NativeDestruct() override;
 
 private:
-	// 초대 코드 표시
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TextBlockInviteCode;
 
-	// 플레이어 목록 (동적으로 TextBlock 추가)
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UScrollBox> ScrollBoxPlayers;
 
-	// 게임 시작 버튼 (호스트 전용 — BP에서 호스트만 보이도록 처리)
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> ButtonStartGame;
 
 	UPROPERTY()
 	TObjectPtr<UMultiplayerSessionsSubsystem> SessionsSubsystem;
 
-	// GameState 델리게이트 핸들
-	FDelegateHandle LobbyPlayersChangedHandle;
+	FHeistMessageListenerHandle PlayersChangedListenerHandle;
+
+	void OnPlayersChangedMessageReceived(FGameplayTag Channel, const struct FHeistLobbyPlayersChangedMessage& Message);
+
+	void RefreshPlayerList(const TArray<FString>& PlayerNames);
 
 	UFUNCTION()
-	void ButtonStartGameClicked();
-
-	void RefreshPlayerList();
+	void OnButtonStartGameClicked();
 };

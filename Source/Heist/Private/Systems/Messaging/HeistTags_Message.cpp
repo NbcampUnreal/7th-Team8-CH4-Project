@@ -2,7 +2,9 @@
 
 namespace HeistMessageTags
 {
-    UE_DEFINE_GAMEPLAY_TAG(Message_UI_SystemMenuToggle, "Message.UI.SystemMenuToggle");
+    UE_DEFINE_GAMEPLAY_TAG(Message_SystemMenu_Toggle, "Message.SystemMenu.Toggle");
+
+    UE_DEFINE_GAMEPLAY_TAG(Message_Lobby_PlayersChanged, "Message.Lobby.PlayersChanged");
 
     UE_DEFINE_GAMEPLAY_TAG(Message_Ping, "Message.Ping");
     UE_DEFINE_GAMEPLAY_TAG(Message_Ping_Danger, "Message.Ping.Danger");

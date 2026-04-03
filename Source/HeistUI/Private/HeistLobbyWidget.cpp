@@ -1,9 +1,10 @@
 #include "HeistLobbyWidget.h"
 
+#include "Systems/Messaging/HeistMessageTypes.h"
+#include "Systems/Messaging/HeistTags_Message.h"
 #include "Core/HeistLobbyGameMode.h"
-#include "Core/HeistLobbyGameState.h"
-#include "MultiplayerSessionsSubsystem.h"
 
+#include "MultiplayerSessionsSubsystem.h"
 #include "Components/Button.h"
 #include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
@@ -13,9 +14,20 @@ bool UHeistLobbyWidget::Initialize()
 {
 	if (!Super::Initialize()) return false;
 
+	if (IsDesignTime()) return true;
+
+	UHeistMessageSubsystem& MessageSubsystem = UHeistMessageSubsystem::Get(this);
+
+	PlayersChangedListenerHandle = MessageSubsystem.RegisterListener<FHeistLobbyPlayersChangedMessage>(
+		HeistMessageTags::Message_Lobby_PlayersChanged,
+		[this](FGameplayTag Channel, const FHeistLobbyPlayersChangedMessage& Message)
+		{
+			OnPlayersChangedMessageReceived(Channel, Message);
+		});
+
 	if (ButtonStartGame)
 	{
-		ButtonStartGame->OnClicked.AddDynamic(this, &ThisClass::ButtonStartGameClicked);
+		ButtonStartGame->OnClicked.AddDynamic(this, &ThisClass::OnButtonStartGameClicked);
 	}
 
 	return true;
@@ -23,11 +35,7 @@ bool UHeistLobbyWidget::Initialize()
 
 void UHeistLobbyWidget::NativeDestruct()
 {
-	AHeistLobbyGameState* LobbyGameState = GetWorld()->GetGameState<AHeistLobbyGameState>();
-	if (IsValid(LobbyGameState))
-	{
-		LobbyGameState->OnLobbyPlayersChanged.Remove(LobbyPlayersChangedHandle);
-	}
+	PlayersChangedListenerHandle.Unregister();
 
 	Super::NativeDestruct();
 }
@@ -47,25 +55,20 @@ void UHeistLobbyWidget::Setup()
 			TextBlockInviteCode->SetText(FText::FromString(InviteCode));
 		}
 	}
-
-	AHeistLobbyGameState* LobbyGameState = GetWorld()->GetGameState<AHeistLobbyGameState>();
-	if (IsValid(LobbyGameState))
-	{
-		LobbyPlayersChangedHandle = LobbyGameState->OnLobbyPlayersChanged.AddUObject(this, &ThisClass::RefreshPlayerList);
-		RefreshPlayerList();
-	}
 }
 
-void UHeistLobbyWidget::RefreshPlayerList()
+void UHeistLobbyWidget::OnPlayersChangedMessageReceived(FGameplayTag Channel, const FHeistLobbyPlayersChangedMessage& Message)
+{
+	RefreshPlayerList(Message.PlayerNames);
+}
+
+void UHeistLobbyWidget::RefreshPlayerList(const TArray<FString>& PlayerNames)
 {
 	if (!ScrollBoxPlayers) return;
 
 	ScrollBoxPlayers->ClearChildren();
 
-	AHeistLobbyGameState* LobbyGameState = GetWorld()->GetGameState<AHeistLobbyGameState>();
-	if (!IsValid(LobbyGameState)) return;
-
-	for (const FString& PlayerName : LobbyGameState->GetLobbyPlayerNames())
+	for (const FString& PlayerName : PlayerNames)
 	{
 		UTextBlock* PlayerEntry = NewObject<UTextBlock>(this);
 		PlayerEntry->SetText(FText::FromString(PlayerName));
@@ -73,7 +76,7 @@ void UHeistLobbyWidget::RefreshPlayerList()
 	}
 }
 
-void UHeistLobbyWidget::ButtonStartGameClicked()
+void UHeistLobbyWidget::OnButtonStartGameClicked()
 {
 	APlayerController* PC = GetOwningPlayer();
 	if (!IsValid(PC)) return;

@@ -31,7 +31,9 @@ void AHeistLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 
 void AHeistLobbyGameMode::Logout(AController* Exiting)
 {
-	if (IsValid(Exiting))
+	UWorld* World = GetWorld();
+	// PIE 강제 종료 시 World teardown 중에 Logout이 호출될 수 있으므로 처리를 건너뜀
+	if (IsValid(Exiting) && IsValid(World) && !World->bIsTearingDown)
 	{
 		const APlayerState* PlayerState = Exiting->GetPlayerState<APlayerState>();
 		const FString PlayerName = IsValid(PlayerState) ? PlayerState->GetPlayerName() : TEXT("Unknown");

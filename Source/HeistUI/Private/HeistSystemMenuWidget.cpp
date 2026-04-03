@@ -15,7 +15,7 @@ bool UHeistSystemMenuWidget::Initialize()
 
 	UHeistMessageSubsystem& MessageSubsystem = UHeistMessageSubsystem::Get(this);
 	ToggleListenerHandle = MessageSubsystem.RegisterListener<FHeistSystemMenuToggleMessage>(
-		HeistMessageTags::Message_UI_SystemMenuToggle,
+		HeistMessageTags::Message_SystemMenu_Toggle,
 		[this](FGameplayTag Channel, const FHeistSystemMenuToggleMessage& Message)
 		{
 			OnToggleMessageReceived(Channel, Message);
