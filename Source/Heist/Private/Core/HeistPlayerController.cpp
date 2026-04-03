@@ -4,6 +4,22 @@
 #include "Core/HeistPlayerState.h"
 
 #include "GameFramework/Pawn.h"
+#include "EnhancedInputComponent.h"
+
+void AHeistPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	if (!IsValid(SystemMenuInputAction)) return;
+
+	UEnhancedInputComponent* EnhancedIC = CastChecked<UEnhancedInputComponent>(InputComponent);
+	EnhancedIC->BindAction(SystemMenuInputAction, ETriggerEvent::Started, this, &ThisClass::Input_SystemMenu);
+}
+
+void AHeistPlayerController::Input_SystemMenu()
+{
+	ToggleSystemMenu();
+}
 
 AHeistPlayerController::AHeistPlayerController()
 {
