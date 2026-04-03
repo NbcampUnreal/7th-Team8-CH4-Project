@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -9,9 +7,7 @@
 struct FGameplayTag;
 class UAbilitySystemComponent;
 class ACharacter;
-/**
- * 
- */
+
 UCLASS()
 class HEIST_API UHeistAnimInstance : public UAnimInstance
 {
