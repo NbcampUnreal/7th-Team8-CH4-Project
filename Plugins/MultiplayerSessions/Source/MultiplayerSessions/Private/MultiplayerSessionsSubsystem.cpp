@@ -26,7 +26,11 @@ UMultiplayerSessionsSubsystem::UMultiplayerSessionsSubsystem() :
 
 void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, const FString& MatchType)
 {
-	if (!InitSessionInterface()) return;
+	if (!InitSessionInterface())
+	{
+		MultiplayerOnCreateSessionComplete.Broadcast(false);
+		return;
+	}
 
 	FNamedOnlineSession* ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
 	if (ExistingSession != nullptr)
@@ -74,6 +78,7 @@ void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResults)
 {
 	if (!InitSessionInterface())
 	{
+		MultiplayerOnFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(), false);
 		return;
 	}
 
@@ -96,7 +101,15 @@ void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResults)
 	{
 		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 		MultiplayerOnFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(), false);
+		return;
 	}
+
+	GetWorld()->GetTimerManager().SetTimer(
+		FindSessionsTimeoutHandle,
+		this, &ThisClass::OnFindSessionsTimeout,
+		FindSessionsTimeoutSeconds,
+		false
+	);
 }
 
 void UMultiplayerSessionsSubsystem::JoinSession(const FOnlineSessionSearchResult& SessionResult)
@@ -197,8 +210,20 @@ void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, b
 	MultiplayerOnCreateSessionComplete.Broadcast(bWasSuccessful);
 }
 
+void UMultiplayerSessionsSubsystem::OnFindSessionsTimeout()
+{
+	if (SessionInterface)
+	{
+		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
+	}
+
+	MultiplayerOnFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(), false);
+}
+
 void UMultiplayerSessionsSubsystem::OnFindSessionComplete(bool bWasSuccessful)
 {
+	GetWorld()->GetTimerManager().ClearTimer(FindSessionsTimeoutHandle);
+
 	if (SessionInterface)
 	{
 		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
