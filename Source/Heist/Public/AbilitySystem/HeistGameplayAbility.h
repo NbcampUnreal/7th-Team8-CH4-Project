@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
@@ -23,8 +23,24 @@ struct FChannelingData : public FTableRowBase
 	GENERATED_BODY()
 
 	// 채널링 완료까지 걸리는 시간 (초)
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float Duration = 1.0f;
+
+	// 채널링 중 이동 가능 여부
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bCanMove = true;
+
+	// 이동 시 자동 취소 여부
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bCancelOnMove = true;
+
+	// 피격 시 자동 취소 여부
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bCancelOnHit = true;
+
+	// 외부 중단 이벤트 Tag
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FGameplayTag InterruptEventTag;
 };
 
 /**
@@ -71,6 +87,9 @@ protected:
 private:
 	UFUNCTION()
 	void OnChannelingTimerExpired();
+
+	UFUNCTION()
+	void OnChannelingInterruptEvent(FGameplayEventData Payload);
 
 	bool bIsChanneling = false;
 };

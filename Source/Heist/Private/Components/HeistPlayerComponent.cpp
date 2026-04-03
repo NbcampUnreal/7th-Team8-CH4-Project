@@ -1,7 +1,8 @@
-#include "Components/HeistPlayerComponent.h"
+﻿#include "Components/HeistPlayerComponent.h"
 
 #include "Components/HeistPawnExtensionComponent.h"
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
+#include "AbilitySystem/HeistTags_Event.h"
 #include "Input/HeistInputComponent.h"
 #include "Input/HeistInputConfig.h"
 #include "Input/HeistTags_Input.h"
@@ -143,7 +144,23 @@ void UHeistPlayerComponent::HandleMoveInput(const FInputActionValue& Value)
 	APawn* Pawn = GetPawn<APawn>();
 	if (!IsValid(Pawn)) return;
 
+	// 이동 입력이 0이 아닐 때 ASC로 이동 이벤트 전달
 	const FVector2D MoveVector = Value.Get<FVector2D>();
+	if (!MoveVector.IsNearlyZero())
+	{
+		UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(Pawn);
+		if (IsValid(PawnExtension))
+		{
+			UHeistAbilitySystemComponent* ASC = PawnExtension->GetAbilitySystemComponent();
+			if (IsValid(ASC))
+			{
+				FGameplayEventData Payload;
+				Payload.Instigator = Pawn;
+
+				ASC->HandleGameplayEvent(HeistEventTags::Event_Input_Move, &Payload);
+			}
+		}
+	}
 	Pawn->AddMovementInput(FVector::ForwardVector, MoveVector.Y);
 	Pawn->AddMovementInput(FVector::RightVector, MoveVector.X);
 }
