@@ -27,6 +27,7 @@ void UHeistMainMenuWidget::OnCreateSessionComplete(bool bWasSuccessful)
 {
 	if (!bWasSuccessful)
 	{
+		ShowStatus(TEXT("세션 생성에 실패했습니다."));
 		SetButtonsEnabled(true);
 		return;
 	}
@@ -40,6 +41,7 @@ void UHeistMainMenuWidget::OnFindSessionsComplete(const TArray<FOnlineSessionSea
 
 	if (!bWasSuccessful)
 	{
+		ShowStatus(TEXT("세션을 찾을 수 없습니다."));
 		SetButtonsEnabled(true);
 		return;
 	}
@@ -48,6 +50,7 @@ void UHeistMainMenuWidget::OnFindSessionsComplete(const TArray<FOnlineSessionSea
 	if (!Match)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[HeistMainMenuWidget] No session found for invite code: %s"), *PendingInviteCode);
+		ShowStatus(TEXT("초대 코드가 올바르지 않습니다."));
 		SetButtonsEnabled(true);
 		return;
 	}
@@ -59,6 +62,7 @@ void UHeistMainMenuWidget::OnJoinSessionComplete(EOnJoinSessionCompleteResult::T
 {
 	if (Result != EOnJoinSessionCompleteResult::Success)
 	{
+		ShowStatus(TEXT("세션 참가에 실패했습니다."));
 		SetButtonsEnabled(true);
 	}
 	// 성공 시: HeistGameInstance::HandleSessionJoined 가 ClientTravel을 처리한다.
@@ -77,16 +81,46 @@ void UHeistMainMenuWidget::ButtonJoinByCodeClicked()
 	if (!IsValid(SessionsSubsystem)) return;
 	if (!TextBoxInviteCode) return;
 
-	PendingInviteCode = TextBoxInviteCode->GetText().ToString().TrimStartAndEnd();
+	PendingInviteCode = TextBoxInviteCode->GetText().ToString().TrimStartAndEnd().ToUpper();
 	if (PendingInviteCode.Len() != InviteCodeLength)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[HeistMainMenuWidget] Invalid invite code length: %d (expected %d)"),
-			PendingInviteCode.Len(), InviteCodeLength);
+		ShowStatus(TEXT("초대 코드는 6자리입니다."));
 		return;
+	}
+
+	for (TCHAR Ch : PendingInviteCode)
+	{
+		if (!FChar::IsAlpha(Ch) && !FChar::IsDigit(Ch))
+		{
+			ShowStatus(TEXT("초대 코드는 영문자와 숫자만 사용 가능합니다."));
+			return;
+		}
 	}
 
 	SetButtonsEnabled(false);
 	SessionsSubsystem->FindSessions(SessionConfig.MaxSearchResults);
+}
+
+void UHeistMainMenuWidget::ShowStatus(const FString& Message)
+{
+	if (!TextBlockStatus) return;
+
+	TextBlockStatus->SetText(FText::FromString(Message));
+
+	GetWorld()->GetTimerManager().SetTimer(
+		StatusClearTimerHandle,
+		this, &ThisClass::ClearStatus,
+		StatusDisplaySeconds,
+		false
+	);
+}
+
+void UHeistMainMenuWidget::ClearStatus()
+{
+	if (TextBlockStatus)
+	{
+		TextBlockStatus->SetText(FText::GetEmpty());
+	}
 }
 
 void UHeistMainMenuWidget::SetButtonsEnabled(bool bEnabled)
