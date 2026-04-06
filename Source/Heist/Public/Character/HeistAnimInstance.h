@@ -30,11 +30,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	bool bIsSneaking = false;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsEscorted = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsCuffed = false;
+	
 private:
 	TWeakObjectPtr<UAbilitySystemComponent> CachedASC;
 	bool bTagBindingReady = false;
 	
 	FDelegateHandle SneakingTagChangedHandle;
+	FDelegateHandle CuffedTagChangedHandle;
+	FDelegateHandle EscortedTagChangedHandle;
 #pragma endregion AbilitySystem
 	
 #pragma region AnimIK

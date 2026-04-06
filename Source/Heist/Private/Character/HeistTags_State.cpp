@@ -3,7 +3,8 @@
 namespace HeistStateTags
 {
 	UE_DEFINE_GAMEPLAY_TAG(State_Sneaking, "State.Sneaking");
-
+	UE_DEFINE_GAMEPLAY_TAG(State_Stunned, "State.Stunned");
+	
 	UE_DEFINE_GAMEPLAY_TAG(State_Thief_Normal, "State.Thief.Normal");
 	UE_DEFINE_GAMEPLAY_TAG(State_Thief_Injure, "State.Thief.Injure");
 	UE_DEFINE_GAMEPLAY_TAG(State_Thief_Cuffed, "State.Thief.Cuffed");
@@ -12,5 +13,5 @@ namespace HeistStateTags
 
 	UE_DEFINE_GAMEPLAY_TAG(State_Police_Normal, "State.Police.Normal");
 	UE_DEFINE_GAMEPLAY_TAG(State_Police_Escorting, "State.Police.Escorting");
-	UE_DEFINE_GAMEPLAY_TAG(State_Police_Stunned, "State.Police.Stunned");
+	
 }

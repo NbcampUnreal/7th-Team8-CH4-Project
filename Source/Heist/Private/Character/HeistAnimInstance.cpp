@@ -90,7 +90,8 @@ void UHeistAnimInstance::SyncAllTagsEvents(UAbilitySystemComponent* ASC)
 	
 	bIsSneaking = ASC->HasMatchingGameplayTag(HeistStateTags::State_Sneaking);
 	// 새 상태 추가시 여기 수정
-	
+	bIsEscorted = ASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Escorted);
+	bIsCuffed = ASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Cuffed);
 	
 	RefreshIKFootSpeedThresholdCached(); // IK 임계값 캐시 초기화
 }
@@ -104,15 +105,33 @@ void UHeistAnimInstance::BindAllTagsEvents(UAbilitySystemComponent* ASC)
 		EGameplayTagEventType::NewOrRemoved
 	).AddUObject(this, &UHeistAnimInstance::HandleTagChanged);
 	// 새 상태 추가시 여기 수정
+	CuffedTagChangedHandle = ASC->RegisterGameplayTagEvent(
+		HeistStateTags::State_Thief_Cuffed,
+		EGameplayTagEventType::NewOrRemoved
+	).AddUObject(this, &UHeistAnimInstance::HandleTagChanged);
+	EscortedTagChangedHandle = ASC->RegisterGameplayTagEvent(
+		HeistStateTags::State_Thief_Escorted,
+		EGameplayTagEventType::NewOrRemoved
+	).AddUObject(this, &UHeistAnimInstance::HandleTagChanged);
 }
 
 void UHeistAnimInstance::HandleTagChanged(const FGameplayTag Tag, int32 NewCount)
 {
 	const bool bActive = (NewCount > 0);
-
+	
+	// 동시에 처리할 수 없는 상태일 경우 여기에 else if로 추가한다
+	// 추후 이식성을 고려해 도둑과 경찰 모두 이곳에서 관리한다, CPP를 분리하지 않음
 	if (Tag == HeistStateTags::State_Sneaking)
 	{
 		bIsSneaking = bActive;
+	} else if (Tag == HeistStateTags::State_Thief_Escorted)
+	{
+		bIsEscorted = bActive;
+	}
+	
+	if (Tag == HeistStateTags::State_Thief_Cuffed)
+	{
+		bIsCuffed = bActive;
 	}
 	
 	RefreshIKFootSpeedThresholdCached();
