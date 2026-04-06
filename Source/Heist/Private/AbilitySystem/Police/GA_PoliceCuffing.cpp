@@ -52,9 +52,7 @@ void UGA_PoliceCuffing::ActivateAbility(
 		return;
 	}
 
-	// [테스트 코드] 채널링 정상 작동 확인 후 복구
-	//StartChanneling(FName("Cuffing"));
-	OnChannelingCompleted();
+	StartChanneling(FName("Cuffing"));
 }
 
 void UGA_PoliceCuffing::OnChannelingCompleted()
