@@ -1,10 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Animation/AnimInstance.h"
 #include "HeistAnimInstance.generated.h"
 
-struct FGameplayTag;
 class UAbilitySystemComponent;
 class ACharacter;
 
@@ -30,11 +30,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	bool bIsSneaking = false;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsEscorted = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsCuffed = false;
+	
 private:
 	TWeakObjectPtr<UAbilitySystemComponent> CachedASC;
 	bool bTagBindingReady = false;
 	
 	FDelegateHandle SneakingTagChangedHandle;
+	FDelegateHandle CuffedTagChangedHandle;
+	FDelegateHandle EscortedTagChangedHandle;
 #pragma endregion AbilitySystem
 	
 #pragma region AnimIK
@@ -62,7 +70,7 @@ public:
 	float IK_Trace_Dist = 80.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category="IK")
-	float IK_InterpSpeed = 20.0f;
+	float IK_InterpSpeed = 10.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category="IK")
 	float FootHeight = 5.f;
@@ -77,14 +85,22 @@ public:
 	float IK_Alpha_R = 0.f;
 	
 	UPROPERTY(EditDefaultsOnly, Category="IK")
-	float IK_ThighDeadZone = 15.f;
+	float IK_ThighDeadZone = 27.5f;
 	
 	// 발이 빠르게 움직이면 IK 끄기 - 속도 임계점
-	UPROPERTY(EditAnywhere, Category="IK")
-	float IK_FootSpeedThreshold = 200.f;
+	// UPROPERTY(EditAnywhere, Category="IK")
+	// float IK_FootSpeedThreshold = 200.f;
 	
 	UPROPERTY(EditDefaultsOnly, Category="IK")
 	float NormalThreshold = 0.5f;
+
+	// 태그 별 임계값 테이블
+	UPROPERTY(EditAnywhere, Category = "IK")
+	TMap<FGameplayTag, float> IK_FootSpeedThresholdMap;
+	
+	// 기본 임계값 설정
+	UPROPERTY(EditAnywhere, Category="IK")
+	float IK_FootSpeedThreshold_Default = 200.f;
 	
 private:
 	UPROPERTY()
@@ -92,8 +108,18 @@ private:
 	
 	FCollisionQueryParams TraceParams;
 	
-	FVector PrevSocketL = FVector::ZeroVector;
-	FVector PrevSocketR = FVector::ZeroVector;
+	// 로컬 공간 기준 이전 프레임 발 소켓 위치
+	FVector PrevLocalL = FVector::ZeroVector;
+	FVector PrevLocalR = FVector::ZeroVector;
+	
+	// 캐릭터 초기화 시 속도 스파이크 방지
+	bool bLocalFootCacheInitialized = false;
+
+	// 태그 기반 임계값 캐시(태그 변경 시점에만 갱신)
+	float IK_FootSpeedThreshold_Cached = 200.f;
+
+	// 현재 ASC 태그 상태를 읽어 캐시 임계값 갱신
+	void RefreshIKFootSpeedThresholdCached();
 	
 	UPROPERTY()
 	bool bIK_HitL = false;
