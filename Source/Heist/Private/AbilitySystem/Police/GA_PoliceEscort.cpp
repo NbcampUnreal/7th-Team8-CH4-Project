@@ -53,6 +53,7 @@ void UGA_PoliceEscort::ActivateAbility(
 	if (!IsValid(TargetThief))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
 	}
 
 	UAbilitySystemComponent* TargetASC = TargetThief->GetAbilitySystemComponent();
