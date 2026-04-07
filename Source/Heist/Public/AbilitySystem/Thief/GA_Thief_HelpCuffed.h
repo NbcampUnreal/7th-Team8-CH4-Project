@@ -38,10 +38,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Effects")
 	TSubclassOf<UGameplayEffect> InjuredEffectClass;
 	
-	// 구출 시도 시 제거할 수갑 상태 GE
-	UPROPERTY(EditDefaultsOnly, Category = "Heist|Effects") 
-	TSubclassOf<UGameplayEffect> CuffedEffectClass;
-	
 	// 타겟 ASC 캐싱
 	UPROPERTY()
 	TWeakObjectPtr<class UAbilitySystemComponent> TargetASC;

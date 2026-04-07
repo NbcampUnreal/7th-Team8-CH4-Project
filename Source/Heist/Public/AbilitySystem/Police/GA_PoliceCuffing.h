@@ -22,8 +22,4 @@ protected:
 private:
 	UPROPERTY()
 	TObjectPtr<AThiefCharacter> TargetThief;
-
-	// TODO(하민): Interaction 컴포넌트 완성 시 트리거 이벤트 데이터로 타겟을 넘겨받고 이 변수는 삭제 예정
-	UPROPERTY(EditDefaultsOnly, Category = "Heist|Cuffing")
-	float InteractRadius = 150.0f;
 };

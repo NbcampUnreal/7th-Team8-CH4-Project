@@ -30,4 +30,13 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo,
 		bool bReplicateEndAbility, bool bWasCancelled) override;
 	
+	// 채널링 오버라이드
+	virtual void OnChannelingCompleted() override;
+
+protected:
+	
+	
+	// 타겟 ASC 캐싱
+	UPROPERTY()
+	TWeakObjectPtr<class UAbilitySystemComponent> TargetASC;
 };
