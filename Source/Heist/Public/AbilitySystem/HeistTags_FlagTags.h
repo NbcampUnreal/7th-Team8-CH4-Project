@@ -3,7 +3,7 @@
 #include "NativeGameplayTags.h"
 
 // 행동 플래그
-namespace HeistEventTags
+namespace HeistFlagTags
 {
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_Carrying);
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_SoloCarrying);

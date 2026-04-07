@@ -1,4 +1,4 @@
-﻿#include "Components/HeistPlayerComponent.h"
+#include "Components/HeistPlayerComponent.h"
 
 #include "Components/HeistPawnExtensionComponent.h"
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
@@ -211,7 +211,7 @@ void UHeistPlayerComponent::HandleInteractPressed()
 	if (!IsValid(ASC)) return;
 
 	// 상자 운반 미리 대응 코드 - 이미 들고있음
-	if (ASC->HasMatchingGameplayTag(HeistEventTags::Tag_Carrying)) return;
+	if (ASC->HasMatchingGameplayTag(HeistFlagTags::Tag_Carrying)) return;
 	
 	// Line Trace
 	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
@@ -271,7 +271,7 @@ void UHeistPlayerComponent::HandleInteractReleased()
 	if (!IsValid(ASC)) return;
 	
 	// TODO: Release 시 상자 드롭하는 로직 - 가구현 각도를 어떻게 처리를 해야할걸요?
-	// if (ASC->HasMatchingGameplayTag(HeistEventTags::Tag_Carrying))
+	// if (ASC->HasMatchingGameplayTag(HeistFlagTags::Tag_Carrying))
 	// {
 	// 	FGameplayEventData Payload;
 	// 	Payload.Instigator = Pawn;

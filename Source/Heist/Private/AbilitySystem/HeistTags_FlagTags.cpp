@@ -1,6 +1,6 @@
 #include "AbilitySystem/HeistTags_FlagTags.h"
 
-namespace HeistAbilityTags
+namespace HeistFlagTags
 {
 	UE_DEFINE_GAMEPLAY_TAG(Tag_Carrying, "Tag.Carrying");
 	UE_DEFINE_GAMEPLAY_TAG(Tag_SoloCarrying, "Tag.SoloCarrying");
