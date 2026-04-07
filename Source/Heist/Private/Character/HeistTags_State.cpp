@@ -1,10 +1,12 @@
-﻿#include "Character/HeistTags_State.h"
+#include "Character/HeistTags_State.h"
 
 namespace HeistStateTags
 {
 	UE_DEFINE_GAMEPLAY_TAG(State_Sneaking, "State.Sneaking");
 	UE_DEFINE_GAMEPLAY_TAG(State_Stunned, "State.Stunned");
-
+	UE_DEFINE_GAMEPLAY_TAG(State_ActionDisabled, "State.ActionDisabled");
+	UE_DEFINE_GAMEPLAY_TAG(State_Channeling, "State.Channeling");
+	
 	UE_DEFINE_GAMEPLAY_TAG(State_Thief_Normal, "State.Thief.Normal");
 	UE_DEFINE_GAMEPLAY_TAG(State_Thief_Injured, "State.Thief.Injured");
 	UE_DEFINE_GAMEPLAY_TAG(State_Thief_Cuffed, "State.Thief.Cuffed");

@@ -1,5 +1,6 @@
 ﻿#include "AbilitySystem/HeistGameplayAbility.h"
 
+#include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "AbilitySystem/HeistTags_Event.h"
 
@@ -32,6 +33,13 @@ void UHeistGameplayAbility::StartChanneling(FName RowName)
 		MontageTask->OnCancelled.AddDynamic(this, &UHeistGameplayAbility::OnMontageCancelled);
 
 		MontageTask->ReadyForActivation();
+	}
+	
+	// Before - 채널링 잠금 GE 적용
+	if (IsValid(ChannelingEffectClass))
+	{
+		FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(ChannelingEffectClass, 1.f);
+		ChannelingEffectHandle = ApplyGameplayEffectSpecToOwner(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, Spec);
 	}
 	
 	// 1. 기본 타이머 (Duration)
@@ -112,6 +120,13 @@ void UHeistGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	bool bReplicateEndAbility, bool bWasCancelled)
 {
+	// 채널링 잠금 GE가 있다면 항상 제거한다
+	if (ChannelingEffectHandle.IsValid())
+	{
+		GetAbilitySystemComponentFromActorInfo()->RemoveActiveGameplayEffect(ChannelingEffectHandle);
+		ChannelingEffectHandle.Invalidate();
+	}
+	
 	if (bIsChanneling && bWasCancelled)
 	{
 		bIsChanneling = false;

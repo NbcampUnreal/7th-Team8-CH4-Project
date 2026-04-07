@@ -75,6 +75,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Channeling")
 	TObjectPtr<UDataTable> ChannelingDataTable;
 
+	// 채널링 Tag 관리용 GE 클래스, 모든 채널링 어빌리티가 공유한다.
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|Channeling")
+	TSubclassOf<UGameplayEffect> ChannelingEffectClass;
+
+	FActiveGameplayEffectHandle ChannelingEffectHandle;
+	
 	// RowName으로 DataTable에서 채널링 데이터를 조회한다.
 	const FChannelingData* GetChannelingData(FName RowName) const;
 

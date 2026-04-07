@@ -27,7 +27,8 @@ AHeistCharacter::AHeistCharacter(const FObjectInitializer& ObjectInitializer)
 
 	PawnExtensionComponent = CreateDefaultSubobject<UHeistPawnExtensionComponent>(TEXT("PawnExtensionComponent"));
 	PlayerComponent        = CreateDefaultSubobject<UHeistPlayerComponent>(TEXT("PlayerComponent"));
-
+	InteractionComponent   = CreateDefaultSubobject<UHeistInteractionComponent>(TEXT("InteractionComponent"));
+	
 	// 탑다운 카메라
 	CameraSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraSpringArm"));
 	CameraSpringArm->SetupAttachment(RootComponent);
