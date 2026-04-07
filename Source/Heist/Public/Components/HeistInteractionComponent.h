@@ -21,7 +21,7 @@ public:
 	
 	// LMB 입력 시 호출됨 - Line Trace 히트 Actor 검증 후 어빌리티 Tag를 반환한다.
 	// 목록에 없거나 CanInteract == false이면 EmptyTag를 반환하도록 한다.
-	FGameplayTag ResolveInteractAbilityTag(AActor* HitActor) const;
+	FGameplayTag ResolveInteractAbilityTag(AActor* HitActor);
 	
 private:
 	// 현재 캐릭터 Sphere 안에 들어온 IHeistInteractable 목록을 가져온다.
