@@ -7,7 +7,7 @@
 
 // DT_InteractData 행 구조체
 USTRUCT(BlueprintType)
-struct FInteractData : public FTableRowBase
+struct FHeistInteractData : public FTableRowBase
 {
 	GENERATED_BODY()
 	

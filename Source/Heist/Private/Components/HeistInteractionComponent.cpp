@@ -17,15 +17,30 @@ void UHeistInteractionComponent::UnregisterInteractable(TScriptInterface<IHeistI
 	ActiveInteractables.Remove(Interactable);
 }
 
-FGameplayTag UHeistInteractionComponent::ResolveInteractAbilityTag(AActor* HitActor) const
+FGameplayTag UHeistInteractionComponent::ResolveInteractAbilityTag(AActor* HitActor)
 {
 	if (!IsValid(HitActor)) return FGameplayTag::EmptyTag;
+	
+	// (Destroy로 Unregister 누락된 경우) 쓰레기 강제 정리
+	ActiveInteractables.RemoveAll([](const TScriptInterface<IHeistInteractable>& E)
+	{
+		return !IsValid(E.GetObject());
+	});
 	
 	ACharacter* Interactor = Cast<ACharacter>(GetOwner());
 	
 	for (const TScriptInterface<IHeistInteractable>& Entity : ActiveInteractables)
 	{
-		if (Entity.GetObject() != HitActor) continue; // Hit Actor가 아니면 건너뛰고
+		// Hit Actor가 인터렉터블 하거나, 혹은 ActorComponent가 인터렉터블 하거나,
+		UObject* EntityObj = Entity.GetObject();
+		bool bOwnerMatch = (EntityObj == HitActor);
+		
+		// Hit Actor가 안 인터렉터블함
+		if (!bOwnerMatch)
+			if (UActorComponent* Comp = Cast<UActorComponent>(EntityObj)) // 그럼 혹시 Interactable Component?
+				bOwnerMatch = (Comp->GetOwner() == HitActor);
+		
+		if (!bOwnerMatch) continue; // 아니면 폐기
 		
 		// 거리 안에 엔티티 있으면 상호작용 가능한지 체크한다
 		if (IHeistInteractable::Execute_CanInteract(Entity.GetObject(), Interactor))
