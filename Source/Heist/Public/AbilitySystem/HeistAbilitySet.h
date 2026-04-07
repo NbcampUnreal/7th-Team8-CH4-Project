@@ -21,7 +21,7 @@ struct FHeistAbilitySetEntry
 	int32 AbilityLevel = 1;
 
 	// 입력 태그. 설정 시 이 태그로 어빌리티 활성화/종료를 라우팅한다.
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, meta = (Tooltip = "설정 시 이 태그로 어빌리티 활성화/종료를 라우팅합니다, 비워두면 코드에서 직접 발동합니다 (Interaction GA등)"))
 	FGameplayTag InputTag;
 };
 

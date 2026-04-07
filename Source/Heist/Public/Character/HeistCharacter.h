@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
+#include "Components/HeistInteractionComponent.h"
 #include "HeistCharacter.generated.h"
 
 class UHeistPawnExtensionComponent;
@@ -69,4 +70,8 @@ private:
 	// 캐시 — 소유는 AHeistPlayerState
 	UPROPERTY()
 	TObjectPtr<UHeistAbilitySystemComponent> AbilitySystemComponent;
+	
+	// 인터렉트 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components", meta = (AllowPrivateAccess = true))
+	TObjectPtr<UHeistInteractionComponent> InteractionComponent;
 };

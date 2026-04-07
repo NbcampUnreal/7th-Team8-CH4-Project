@@ -2,14 +2,20 @@
 
 #include "Character/ThiefCharacter.h"
 #include "Character/HeistTags_State.h"
+#include "AbilitySystem/HeistTags_Ability.h"
 #include "AbilitySystem/HeistTags_Event.h"
 #include "AbilitySystemComponent.h"
-
-#include "Kismet/KismetSystemLibrary.h"
 
 UGA_PoliceCuffing::UGA_PoliceCuffing()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+
+	AbilityTags.AddTag(HeistAbilityTags::Ability_Police_Cuffing);
+
+	FAbilityTriggerData TriggerData;
+	TriggerData.TriggerTag = HeistAbilityTags::Ability_Police_Cuffing;
+	TriggerData.TriggerSource = EGameplayAbilityTriggerSource::GameplayEvent;
+	AbilityTriggers.Add(TriggerData);
 }
 
 void UGA_PoliceCuffing::ActivateAbility(
@@ -22,29 +28,9 @@ void UGA_PoliceCuffing::ActivateAbility(
 
 	TargetThief = nullptr;
 
-	TArray<AActor*> OverlappingActors;
-	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
-
-	TArray<AActor*> ActorsToIgnore;
-	ActorsToIgnore.Add(GetAvatarActorFromActorInfo());
-
-	//TODO(하민): 임시 타겟팅 (추후 Interaction 컴포넌트로 교체)
-	UKismetSystemLibrary::SphereOverlapActors(GetWorld(), GetAvatarActorFromActorInfo()->GetActorLocation(),
-		InteractRadius, ObjectTypes, AThiefCharacter::StaticClass(), ActorsToIgnore, OverlappingActors);
-
-	for (AActor* Actor : OverlappingActors)
-	{
-		AThiefCharacter* Thief = Cast<AThiefCharacter>(Actor);
-		if (!IsValid(Thief)) continue;
-
-		UAbilitySystemComponent* TargetASC = Thief->GetAbilitySystemComponent();
-		if (IsValid(TargetASC) && TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Injured))
-		{
-			TargetThief = Thief;
-			break;
-		}
-	}
+	// 상호작용 처리
+	AActor* TargetActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Target.Get()) : nullptr;
+	TargetThief = Cast<AThiefCharacter>(TargetActor);
 
 	if (!IsValid(TargetThief))
 	{

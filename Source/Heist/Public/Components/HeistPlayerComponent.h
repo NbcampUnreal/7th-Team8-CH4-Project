@@ -50,7 +50,11 @@ private:
 	void HandleMoveInput(const FInputActionValue& Value);
 	void HandleAbilityInputTagPressed(FGameplayTag InputTag);
 	void HandleAbilityInputTagReleased(FGameplayTag InputTag);
-
+	void HandleInteractPressed();
+	void HandleInteractReleased();
+	
+	FGameplayTag CurrentInteractAbilityTag; // 현재 상호작용 중인 어빌리티를 추적하는 용도입니다.
+	
 	bool bInputComponentReady = false;
 	bool bInputBound = false;
 
