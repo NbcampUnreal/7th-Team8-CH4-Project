@@ -21,9 +21,9 @@ void UDebugUISubsystem::PlayerControllerChanged(APlayerController* NewPlayerCont
 
 	if (NewPlayerController && NewPlayerController->IsLocalController()) 
 	{ 
-		if (!GetWorld()->GetTimerManager().IsTimerActive(InputCheckTimer)) 
-		{ 
-			GetWorld()->GetTimerManager().SetTimer(InputCheckTimer, this, &UDebugUISubsystem::CheckDebugInput, 0.01f, true); 
+		if (NewPlayerController->InputComponent) 
+		{
+			NewPlayerController->InputComponent->BindKey(EKeys::F6, IE_Pressed, this, &UDebugUISubsystem::ToggleDebugWidget);
 		}
 	}
 }
