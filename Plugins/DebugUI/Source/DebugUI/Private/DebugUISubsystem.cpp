@@ -5,15 +5,8 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "Runtime/UMG/Public/UMG.h"
+#include "DebugUISettings.h"
 
-UDebugUISubsystem::UDebugUISubsystem()
-{
-	static ConstructorHelpers::FClassFinder<UUserWidget> WBPClass(TEXT("/DebugUI/HUD/WBP_DebugMain.WBP_DebugMain_C"));
-	if (WBPClass.Succeeded())
-	{
-		DebugWidgetClass = WBPClass.Class; 
-	}
-}
 
 void UDebugUISubsystem::PlayerControllerChanged(APlayerController* NewPlayerController)
 {
@@ -28,20 +21,27 @@ void UDebugUISubsystem::PlayerControllerChanged(APlayerController* NewPlayerCont
 	}
 }
 
+//ProjectSettings에서(가장 하단에 추가됨) Widget연결(WBP_...)이 되어 있어야 동작함
 void UDebugUISubsystem::ToggleDebugWidget()
 {
-	if (!DebugWidgetClass) return; 
 
-	UWorld* World = GetWorld();
-	if (!World) return;
+	if (DebugWidgetInstance == nullptr) 
+	{
+		const UDebugUISettings* Settings = GetDefault<UDebugUISettings>();
+		if (Settings && !Settings->DebugWidgetClass.IsNull()) 
+		{
+			// 소프트 클래스를 동기식으로 로드 (최초 1회)
+			UClass* LoadedClass = Settings->DebugWidgetClass.LoadSynchronous();
 
-	APlayerController* PC = GetLocalPlayer()->GetPlayerController(World);
-	if (!PC) return;
+			UWorld* World = GetWorld();
+			APlayerController* PC = GetLocalPlayer()->GetPlayerController(World);
+			if (World && PC)
+			{
+				DebugWidgetInstance = CreateWidget<UUserWidget>(World, LoadedClass);
+			}
+		}
+	}
 
-	if (!DebugWidgetInstance) 
-	{ 
-		DebugWidgetInstance = CreateWidget<UUserWidget>(World, DebugWidgetClass);
-	} 
 
 	if (DebugWidgetInstance) 
 	{ 

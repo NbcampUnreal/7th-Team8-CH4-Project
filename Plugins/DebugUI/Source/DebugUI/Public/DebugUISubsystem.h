@@ -11,7 +11,6 @@ class DEBUGUI_API UDebugUISubsystem : public ULocalPlayerSubsystem
 	GENERATED_BODY()
 	
 public:
-	UDebugUISubsystem();
 
 	virtual void PlayerControllerChanged(APlayerController* NewPlayerController) override;
 
