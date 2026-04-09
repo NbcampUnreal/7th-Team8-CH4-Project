@@ -74,10 +74,34 @@ void UHeistAnimInstance::UnbindAbilitySystem()
 		{
 			ASC->RegisterGameplayTagEvent(HeistStateTags::State_Sneaking, EGameplayTagEventType::NewOrRemoved).Remove(SneakingTagChangedHandle);
 		}
-		// 새 상태 추가시 여기 수정
+		if (StunnedTagChangedHandle.IsValid())
+		{
+			ASC->RegisterGameplayTagEvent(HeistStateTags::State_Stunned, EGameplayTagEventType::NewOrRemoved).Remove(StunnedTagChangedHandle);
+		}
+		if (KnockbackTagChangedHandle.IsValid())
+		{
+			ASC->RegisterGameplayTagEvent(HeistStateTags::State_Knockback, EGameplayTagEventType::NewOrRemoved).Remove(KnockbackTagChangedHandle);
+		}
+		if (CuffedTagChangedHandle.IsValid())
+		{
+			ASC->RegisterGameplayTagEvent(HeistStateTags::State_Thief_Cuffed, EGameplayTagEventType::NewOrRemoved).Remove(CuffedTagChangedHandle);
+		}
+		if (EscortedTagChangedHandle.IsValid())
+		{
+			ASC->RegisterGameplayTagEvent(HeistStateTags::State_Thief_Escorted, EGameplayTagEventType::NewOrRemoved).Remove(EscortedTagChangedHandle);
+		}
+		if (InjuredTagChangedHandle.IsValid())
+		{
+			ASC->RegisterGameplayTagEvent(HeistStateTags::State_Thief_Injured, EGameplayTagEventType::NewOrRemoved).Remove(InjuredTagChangedHandle);
+		}
 	}
 	
 	SneakingTagChangedHandle.Reset();
+	StunnedTagChangedHandle.Reset();
+	KnockbackTagChangedHandle.Reset();
+	CuffedTagChangedHandle.Reset();
+	EscortedTagChangedHandle.Reset();
+	InjuredTagChangedHandle.Reset();
 	CachedASC.Reset();
 	bTagBindingReady = false;
 	IK_FootSpeedThreshold_Cached = IK_FootSpeedThreshold_Default;
@@ -89,7 +113,8 @@ void UHeistAnimInstance::SyncAllTagsEvents(UAbilitySystemComponent* ASC)
 	if (!IsValid(ASC)) return;
 	
 	bIsSneaking = ASC->HasMatchingGameplayTag(HeistStateTags::State_Sneaking);
-	// 새 상태 추가시 여기 수정
+	bIsStunned = ASC->HasMatchingGameplayTag(HeistStateTags::State_Stunned);
+	bIsKnockbacked = ASC->HasMatchingGameplayTag(HeistStateTags::State_Knockback);
 	bIsEscorted = ASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Escorted);
 	bIsCuffed = ASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Cuffed);
 	bIsInjured = ASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Injured);
@@ -105,7 +130,14 @@ void UHeistAnimInstance::BindAllTagsEvents(UAbilitySystemComponent* ASC)
 		HeistStateTags::State_Sneaking,
 		EGameplayTagEventType::NewOrRemoved
 	).AddUObject(this, &UHeistAnimInstance::HandleTagChanged);
-	// 새 상태 추가시 여기 수정
+	StunnedTagChangedHandle = ASC->RegisterGameplayTagEvent(
+		HeistStateTags::State_Stunned,
+		EGameplayTagEventType::NewOrRemoved
+	).AddUObject(this, &UHeistAnimInstance::HandleTagChanged);
+	KnockbackTagChangedHandle = ASC->RegisterGameplayTagEvent(
+		HeistStateTags::State_Knockback,
+		EGameplayTagEventType::NewOrRemoved
+	).AddUObject(this, &UHeistAnimInstance::HandleTagChanged);
 	CuffedTagChangedHandle = ASC->RegisterGameplayTagEvent(
 		HeistStateTags::State_Thief_Cuffed,
 		EGameplayTagEventType::NewOrRemoved
@@ -129,6 +161,12 @@ void UHeistAnimInstance::HandleTagChanged(const FGameplayTag Tag, int32 NewCount
 	if (Tag == HeistStateTags::State_Sneaking)
 	{
 		bIsSneaking = bActive;
+	} else if (Tag == HeistStateTags::State_Stunned)
+	{
+		bIsStunned = bActive;
+	} else if (Tag == HeistStateTags::State_Knockback)
+	{
+		bIsKnockbacked = bActive;
 	} else if (Tag == HeistStateTags::State_Thief_Escorted)
 	{
 		bIsEscorted = bActive;

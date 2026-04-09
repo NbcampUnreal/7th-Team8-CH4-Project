@@ -1,4 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Animation/HeistANS_MeleeAttack.h"
 
@@ -30,9 +29,9 @@ void UHeistANS_MeleeAttack::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSe
 	AActor* Owner = MeshComp->GetOwner();
 	if (!IsValid(Owner) || !Owner->HasAuthority()) return; // 클라면 그냥 리턴박습니다.
 	
-	// 공격자의 HitReactionComponent에 캐싱해놓은 타격 로직을 가져옵니다.
+	// 공격자의 HitReactionComponent가 melee hit 공통 진입점을 처리합니다.
 	UHeistHitReactionComponent* HitReactionComp = Owner->FindComponentByClass<UHeistHitReactionComponent>();
-	if (!IsValid(HitReactionComp) || !HitReactionComp->OnMeleeHit.IsBound()) return;
+	if (!IsValid(HitReactionComp) || !HitReactionComp->HasMeleeHitHandler()) return;
 
 	const FVector SocketLocation = MeshComp->GetSocketLocation(HitSocket);
 
@@ -50,12 +49,7 @@ void UHeistANS_MeleeAttack::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSe
 		if (!IsValid(HitActor) || AlreadyHitActors.Contains(HitActor)) continue;
 
 		AlreadyHitActors.Add(HitActor);
-		
-		// 여기서, 피격자에게 공격자 데이터를 담아 보냅니다
-		FGameplayEventData Payload;
-		Payload.Instigator = Owner;
-		Payload.Target     = HitActor;
-		HitReactionComp->OnMeleeHit.Execute(Payload);
+		HitReactionComp->ProcessMeleeHit(Owner, HitActor);
 	}
 }
 

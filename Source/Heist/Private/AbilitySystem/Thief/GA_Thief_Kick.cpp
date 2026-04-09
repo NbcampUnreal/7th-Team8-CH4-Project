@@ -6,10 +6,14 @@
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "AbilitySystem/HeistTags_Ability.h"
 #include "AbilitySystem/HeistTags_Data.h"
-#include "AbilitySystem/HeistTags_Event.h"
 #include "Character/HeistCharacter.h"
 #include "Character/HeistTags_State.h"
+#include "Character/ThiefCharacter.h"
 #include "Components/HeistHitReactionComponent.h"
+#include "Components/ThiefEscortComponent.h"
+#include "Engine/World.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "TimerManager.h"
 
 UGA_Thief_Kick::UGA_Thief_Kick()
 {
@@ -38,12 +42,14 @@ void UGA_Thief_Kick::ActivateAbility(
 		return;
 	}
 	
-	// 이 로직은 공격자의 Action을 HitReactionComponent에 캐싱해놓는 것이다.
+	// 현재 Kick의 hit 처리 함수를 HitReactionComponent에 등록합니다.
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	if (UHeistHitReactionComponent* HRC =
 		IsValid(Avatar) ? Avatar->FindComponentByClass<UHeistHitReactionComponent>() : nullptr)
 	{
-		HRC->OnMeleeHit.BindUObject(this, &UGA_Thief_Kick::OnBackAttackHit);
+		FHeistMeleeHitDelegate Handler;
+		Handler.BindUObject(this, &UGA_Thief_Kick::OnBackAttackHit);
+		HRC->SetMeleeHitHandler(Handler);
 	}
 
 	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
@@ -58,38 +64,88 @@ void UGA_Thief_Kick::ActivateAbility(
 void UGA_Thief_Kick::OnBackAttackHit(const FGameplayEventData& Payload)
 {
 	if (!HasAuthority(&CurrentActivationInfo)) return;
-
+	
 	AHeistCharacter* Target = Cast<AHeistCharacter>(const_cast<AActor*>(Payload.Target.Get()));
 	if (!IsValid(Target)) return;
 
 	UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
 	if (!IsValid(TargetASC)) return;
 
-	// 공격자 반대 방향으로 회전 (배쪽 = 넉백 방향)
+	// 방어코드
+	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_MoveDisabled)) return;
+	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Injured)) return;
+	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Cuffed)) return;
+	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Escorted)) return;
+
+	ApplyKickToTarget(Target, TargetASC);
+}
+
+void UGA_Thief_Kick::ApplyKickToTarget(AHeistCharacter* Target, UAbilitySystemComponent* TargetASC)
+{
+	if (!IsValid(Target) || !IsValid(TargetASC)) return;
+
 	AActor* Self = GetAvatarActorFromActorInfo();
-	if (IsValid(Self))
+	if (!IsValid(Self)) return;
+
+	if (AThiefCharacter* EscortedThief = UThiefEscortComponent::FindEscortedThiefByPolice(Target))
 	{
-		FVector Direction = Target->GetActorLocation() - Self->GetActorLocation();
-		Direction.Z = 0.f;
-		if (!Direction.IsNearlyZero())
-			Target->SetActorRotation(Direction.GetSafeNormal().Rotation());
+		if (UThiefEscortComponent* EscortComp = EscortedThief->GetThiefEscortComponent())
+		{
+			EscortComp->InterruptEscort(GetAbilitySystemComponentFromActorInfo(), false);
+		}
 	}
-	
-	// GE_Stunned 적용 -> State_Stunned 부여 -> GA_PoliceEscort가 자동 취소되는 흐름입니다.
-	if (IsValid(StunGEClass))
+
+	FVector LaunchDirection = Target->GetActorLocation() - Self->GetActorLocation();
+	LaunchDirection.Z = 0.f;
+	if (LaunchDirection.IsNearlyZero()) return;
+
+	LaunchDirection = LaunchDirection.GetSafeNormal();
+	Target->SetActorRotation(LaunchDirection.Rotation());
+
+	const FVector LaunchVelocity = (LaunchDirection * KnockbackLaunchSpeed) + FVector::UpVector * KnockbackZVelocity; // 어우씨 이거 넣으니까 공중으로 뜬다
+	Target->LaunchCharacter(LaunchVelocity, true, true);
+
+	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
+	if (!IsValid(SourceASC)) return;
+
+	if (IsValid(KnockbackEffectClass) && KnockbackDuration > 0.f)
 	{
-		FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(StunGEClass, 1.f);
-		Spec.Data->SetSetByCallerMagnitude(HeistDataTags::Data_Duration_Stun, StunDuration);
-		TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+		FGameplayEffectSpecHandle KnockbackSpec = MakeOutgoingGameplayEffectSpec(KnockbackEffectClass, 1.f);
+		if (KnockbackSpec.IsValid() && KnockbackSpec.Data.IsValid())
+		{
+			KnockbackSpec.Data->SetSetByCallerMagnitude(
+				HeistDataTags::Data_Duration_Knockback,
+				KnockbackDuration);
+			TargetASC->ApplyGameplayEffectSpecToSelf(*KnockbackSpec.Data.Get());
+		}
 	}
-	
-	// GA_KickStagger 트리거 — 피격자 ASC에 이벤트 발행
-	// EventMagnitude로 넉백 힘 전달 → GA_KickStagger::ActivateAbility에서 LaunchCharacter에 사용
-	FGameplayEventData KickPayload;
-	KickPayload.Instigator = GetAvatarActorFromActorInfo();
-	KickPayload.Target = Target;
-	KickPayload.EventMagnitude = KnockbackForce;
-	TargetASC->HandleGameplayEvent(HeistEventTags::Event_KickHit, &KickPayload);
+
+	if (!IsValid(StunEffectClass) || StunDuration <= 0.f) return;
+
+	UWorld* World = Target->GetWorld();
+	if (!IsValid(World)) return;
+
+	TWeakObjectPtr<UAbilitySystemComponent> WeakSourceASC(SourceASC);
+	TWeakObjectPtr<UAbilitySystemComponent> WeakTargetASC(TargetASC);
+	TSubclassOf<UGameplayEffect> LocalStunEffectClass = StunEffectClass;
+	const float LocalStunDuration = StunDuration;
+	FTimerDelegate ApplyStunDelegate;
+	ApplyStunDelegate.BindLambda([WeakSourceASC, WeakTargetASC, LocalStunEffectClass, LocalStunDuration]()
+	{
+		if (!WeakSourceASC.IsValid() || !WeakTargetASC.IsValid() || !LocalStunEffectClass) return;
+
+		FGameplayEffectContextHandle EffectContext = WeakSourceASC->MakeEffectContext();
+		FGameplayEffectSpecHandle StunSpec = WeakSourceASC->MakeOutgoingSpec(LocalStunEffectClass, 1.f, EffectContext);
+		if (!StunSpec.IsValid() || !StunSpec.Data.IsValid()) return;
+
+		StunSpec.Data->SetSetByCallerMagnitude(
+			HeistDataTags::Data_Duration_Stun,
+			LocalStunDuration);
+		WeakTargetASC->ApplyGameplayEffectSpecToSelf(*StunSpec.Data.Get());
+	});
+
+	FTimerHandle TimerHandle;
+	World->GetTimerManager().SetTimer(TimerHandle, ApplyStunDelegate, KnockbackDuration, false);
 }
 
 void UGA_Thief_Kick::OnKickMontageCompleted()
@@ -113,7 +169,7 @@ void UGA_Thief_Kick::EndAbility(
 	if (UHeistHitReactionComponent* HRC =
 		IsValid(Avatar) ? Avatar->FindComponentByClass<UHeistHitReactionComponent>() : nullptr)
 	{
-		HRC->OnMeleeHit.Unbind();
+		HRC->ResetMeleeHitHandler();
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

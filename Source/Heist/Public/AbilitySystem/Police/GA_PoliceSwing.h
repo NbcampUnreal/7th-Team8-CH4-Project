@@ -35,7 +35,6 @@ private:
 
 	FActiveGameplayEffectHandle AttackSlowEffectHandle;
 
-	UFUNCTION()
 	void OnHitEvent(const FGameplayEventData& Payload);
 
 	UFUNCTION()

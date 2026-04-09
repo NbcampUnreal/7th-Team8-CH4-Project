@@ -1,6 +1,7 @@
 #include "Core/HeistPlayerController.h"
 
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
+#include "Character/HeistTags_State.h"
 #include "Core/HeistPlayerState.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
@@ -34,13 +35,16 @@ void AHeistPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 
-	UpdateCursorRotation();
-
 	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
 	if (!IsValid(HeistPS)) return;
 
 	UHeistAbilitySystemComponent* ASC = HeistPS->GetHeistAbilitySystemComponent();
 	if (!IsValid(ASC)) return;
+
+	if (!ASC->HasMatchingGameplayTag(HeistStateTags::State_RotationDisabled))
+	{
+		UpdateCursorRotation();
+	}
 
 	ASC->ProcessAbilityInput(DeltaTime, false);
 }

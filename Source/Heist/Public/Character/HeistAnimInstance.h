@@ -29,6 +29,12 @@ public:
 	// AnimGraph에서 사용할 상태 boolean
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	bool bIsSneaking = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsStunned = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsKnockbacked = false;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	bool bIsEscorted = false;
@@ -44,6 +50,8 @@ private:
 	bool bTagBindingReady = false;
 	
 	FDelegateHandle SneakingTagChangedHandle;
+	FDelegateHandle StunnedTagChangedHandle;
+	FDelegateHandle KnockbackTagChangedHandle;
 	FDelegateHandle CuffedTagChangedHandle;
 	FDelegateHandle EscortedTagChangedHandle;
 	FDelegateHandle InjuredTagChangedHandle;

@@ -42,47 +42,45 @@ void UGA_PoliceEscort::ActivateAbility(
 	// 상호작용 처리
 	AActor* TargetActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Target.Get()) : nullptr;
 	TargetThief = Cast<AThiefCharacter>(TargetActor);
-
-	if (!IsValid(TargetThief))
+	
+	AHeistCharacter* Police = Cast<AHeistCharacter>(GetAvatarActorFromActorInfo());
+	if (!IsValid(TargetThief) || !IsValid(Police))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
-	// 1. 도둑의 이동 차단 - GE로 대체할게요, 캐릭터에 RegisterGameplayTagEvent로 이것과 똑같은 구현으로 옮겼습니다
-	// UCharacterMovementComponent* ThiefMovement = TargetThief->GetCharacterMovement();
-	// if (IsValid(ThiefMovement))
-	// {
-	// 	ThiefMovement->SetMovementMode(MOVE_None);
-	// }
 	
-	// 도둑 ActionDisabled + 이동 차단 GE 부착 / 위치 추종 시작 — 서버에서만 처리
 	if (HasAuthority(&CurrentActivationInfo))
 	{
-		UAbilitySystemComponent* TargetASC = TargetThief->GetAbilitySystemComponent();
-		if (IsValid(TargetASC) && IsValid(EscortedEffectClass))
-		{
-			// SpecHandle은 이렇게 명세를 저장한다, GE로 사용될 SubclassOf를 받음
-			FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(EscortedEffectClass, 1.f);
-			// Spec을 실행하고 받은 Effect Handle이 캐싱된다.
-			EscortedEffectHandle = TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-		}
-	    // 2. 위치 추종 시작
 		UThiefEscortComponent* EscortComp = TargetThief->GetThiefEscortComponent();
-		if (IsValid(EscortComp))
+		UAbilitySystemComponent* PoliceASC = GetAbilitySystemComponentFromActorInfo();
+		
+		if (!IsValid(EscortComp) || !IsValid(PoliceASC))
 		{
-			EscortComp->SetEscortedBy(Cast<AHeistCharacter>(GetAvatarActorFromActorInfo()));
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+			return;
+		}
+		
+		const bool bEscortStarted = EscortComp->BeginEscort(Police, EscortedEffectClass, PoliceASC);
+		if (!bEscortStarted)
+		{
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+			return;
 		}
 	}
-
+	
 	//TODO(하민): 경찰에게 이속 40% 감소 GE 적용 -> 보원: Escorting에 40퍼 감소를, Escorted에 이동 차단을 넣죠!
 	if (IsValid(EscortingEffectClass))
 	{
 		FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(EscortingEffectClass, 1.f);
-		EscortingEffectHandle = ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, Spec);
+		if (Spec.IsValid() && Spec.Data.IsValid())
+		{
+			EscortingEffectHandle = ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, Spec);
+		}
 	}
 	
-	UAbilityTask_WaitGameplayEvent* WaitCarEvent = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, HeistEventTags::Event_ArrivedAtCar);
+	UAbilityTask_WaitGameplayEvent* WaitCarEvent = 
+		UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, HeistEventTags::Event_ArrivedAtCar);
 	WaitCarEvent->EventReceived.AddDynamic(this, &UGA_PoliceEscort::OnArrivedAtCar);
 	WaitCarEvent->ReadyForActivation();
 }
@@ -99,49 +97,34 @@ void UGA_PoliceEscort::EndAbility(
 	bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
-	if (IsValid(TargetThief))
+	if (EscortingEffectHandle.IsValid())
 	{
-		// Escorting GE(속도저하) 제거 (이동 복구는 GE 제거가 자동 처리)
-		if (EscortingEffectHandle.IsValid())
+		GetAbilitySystemComponentFromActorInfo()->RemoveActiveGameplayEffect(EscortingEffectHandle);
+		EscortingEffectHandle.Invalidate();
+	}
+	
+	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
+	{
+		UThiefEscortComponent* EscortComp = TargetThief->GetThiefEscortComponent();
+		if (IsValid(EscortComp) && EscortComp->IsEscorted())
 		{
-			GetAbilitySystemComponentFromActorInfo()->RemoveActiveGameplayEffect(EscortingEffectHandle);
-			EscortingEffectHandle.Invalidate();
+			// 기존 취소 정책
+			// bWasCancelled == true 이면 cuffed 유지
+			EscortComp->InterruptEscort(
+				CuffedEffectClass, 
+				GetAbilitySystemComponentFromActorInfo(),
+				/* bConvertedToCuffed */ bWasCancelled);
 		}
 		
-		// 도둑 GE 해제 / 위치 추종 해제 / 밀어내기 — 서버에서만 처리
-		if (HasAuthority(&CurrentActivationInfo))
+		if (bWasCancelled)
 		{
-			UAbilitySystemComponent* TargetASC = TargetThief->GetAbilitySystemComponent();
-			if (IsValid(TargetASC) && EscortedEffectHandle.IsValid())
+			AActor* PoliceActor = GetAvatarActorFromActorInfo();
+			if (IsValid(PoliceActor))
 			{
-				TargetASC->RemoveActiveGameplayEffect(EscortedEffectHandle);
-				EscortedEffectHandle.Invalidate();
-
-				// 이송 중단(기절 등)인 경우 도둑을 Cuffed 상태로 전환
-				if (bWasCancelled && IsValid(CuffedEffectClass))
-				{
-					FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(CuffedEffectClass, 1.f);
-					TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-				}
-			}
-
-			UThiefEscortComponent* EscortComp = TargetThief->GetThiefEscortComponent();
-			if (IsValid(EscortComp))
-			{
-				EscortComp->SetEscortedBy(nullptr);
-			}
-
-			// 취소(발차기 등)인 경우에만 겹침 방지 밀어내기
-			if (bWasCancelled)
-			{
-				AActor* PoliceActor = GetAvatarActorFromActorInfo();
-				if (IsValid(PoliceActor))
-				{
-					TargetThief->AddActorWorldOffset(PoliceActor->GetActorRightVector() * 50.0f, true);
-				}
+				TargetThief->AddActorWorldOffset(PoliceActor->GetActorRightVector() * EscortReleaseOffset, true);
 			}
 		}
 	}
-
+	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 };

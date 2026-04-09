@@ -2,11 +2,10 @@
 #include "Components/HeistHitReactionComponent.h"
 
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
-#include "Character/HeistTags_State.h"
+#include "GameFramework/Actor.h"
 #include "Components/GameFrameworkComponentManager.h"
 #include "Components/HeistPawnExtensionComponent.h"
 #include "Data/HeistTags_InitState.h"
-#include "GameFramework/Character.h"
 
 const FName UHeistHitReactionComponent::NAME_ActorFeatureName("HitReaction"); 
 
@@ -19,6 +18,32 @@ UHeistHitReactionComponent* UHeistHitReactionComponent::FindHitReactionComponent
 {
 	if (!IsValid(Actor)) return nullptr;
 	return Actor->FindComponentByClass<UHeistHitReactionComponent>();
+}
+
+void UHeistHitReactionComponent::SetMeleeHitHandler(const FHeistMeleeHitDelegate& InHandler)
+{
+	MeleeHitHandler = InHandler;
+}
+
+void UHeistHitReactionComponent::ResetMeleeHitHandler()
+{
+	MeleeHitHandler.Unbind();
+}
+
+bool UHeistHitReactionComponent::HasMeleeHitHandler() const
+{
+	return MeleeHitHandler.IsBound();
+}
+
+void UHeistHitReactionComponent::ProcessMeleeHit(AActor* InstigatorActor, AActor* TargetActor) const
+{
+	if (!MeleeHitHandler.IsBound()) return;
+	if (!IsValid(InstigatorActor) || !IsValid(TargetActor)) return;
+
+	FGameplayEventData Payload;
+	Payload.Instigator = InstigatorActor;
+	Payload.Target = TargetActor;
+	MeleeHitHandler.Execute(Payload);
 }
 
 void UHeistHitReactionComponent::BeginPlay()
@@ -64,10 +89,6 @@ void UHeistHitReactionComponent::HandleChangeInitState(UGameFrameworkComponentMa
 	// PawnExtension에서 GAS 가져옴
 	UHeistAbilitySystemComponent* ASC = PawnExtension->GetAbilitySystemComponent();
 	if (!IsValid(ASC)) return;
-
-	// Stunned GameplayTagEvent를 바인딩
-	ASC->RegisterGameplayTagEvent(HeistStateTags::State_Stunned, EGameplayTagEventType::NewOrRemoved)
-		.AddUObject(this, &UHeistHitReactionComponent::OnStunnedTagChanged);
 	
 	// 이외에도 상태 변화가 필요한 이벤트를 아래에 추가하세요
 }
@@ -81,20 +102,4 @@ void UHeistHitReactionComponent::OnActorInitStateChanged(const FActorInitStateCh
 void UHeistHitReactionComponent::CheckDefaultInitialization()
 {
 	TryToChangeInitState(HeistInitStateTags::InitState_GameplayReady);
-}
-
-void UHeistHitReactionComponent::OnStunnedTagChanged(const FGameplayTag Tag, int32 Count)
-{
-	// Stunned 태그가 활성화되면 캐릭터를 스턴 상태로 만들고, 비활성화되면 스턴에서 해제하는 로직을 여기에 구현하세요.
-
-	// 아래와 같이 일반화합니다
-	if (Count > 0) return; // 스턴 진입은 GA의 PlayAnimMontage가 처리
-
-	ACharacter* OwnerChar = Cast<ACharacter>(GetOwner());
-	if (!IsValid(OwnerChar)) return;
-
-	UAnimInstance* AnimInst = OwnerChar->GetMesh()->GetAnimInstance();
-	if (IsValid(AnimInst) && IsValid(AnimInst->GetCurrentActiveMontage()))
-		AnimInst->Montage_JumpToSection(FName("Outro"), AnimInst->GetCurrentActiveMontage());
-
 }

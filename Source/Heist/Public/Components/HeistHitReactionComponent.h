@@ -8,12 +8,23 @@
 #include "HeistHitReactionComponent.generated.h"
 
 /*
- * DECLARE_DELEGATE_OneParam - Melee Attack에 관한 처리를 위임합니다. ANS 등에서 실행된 GameplayEventData를 받아 실행 로직을 처리합니다.   
+ * 근접 타격 처리용 non-dynamic delegate.
+ * 공격 Ability가 현재 타격 처리 함수를 등록하고, HitReactionComponent가 공통 진입점에서 실행합니다.
  */
 DECLARE_DELEGATE_OneParam(FHeistMeleeHitDelegate, const FGameplayEventData&);
 
 /*
- * 해당 컴포넌트는 향후, 피격 시의 로직(폭발, 섬광탄 등)까지 담당한다면 적합합니다, 현재는 Delegate 수행하기 위한 껍데기로 선언하겠습니다
+ * melee hit 공통 진입점 컴포넌트.
+ * 현재 공격 Ability가 hit handler를 등록하면, AnimNotifyState는 이 컴포넌트를 통해 타격 판정 결과를 전달합니다.
+ * 향후 피격 연출, 캐시, 면역 시간 등 공통 피격 인프라도 이 컴포넌트에서 확장할 수 있습니다.
+	* 피격 연출의 공통 인프라
+	- 마지막 공격자 저장
+	- 마지막 피격 위치/방향 저장
+	- 히트 스톱, 카메라 셰이크, 이펙트/사운드 브로드캐스트
+	- 연속 피격 면역 시간 관리
+	- 로컬 전용 리액션 재생
+	- 공통 충돌/피격 캐시
+
  * IGameFrameworkInitStateInterface의 구현은 아래 단계를 보장한다고 합니다. 
 	PawnExtension ──┐
 				  ├──► InitState_DataAvailable    (PawnData 세팅됨)
@@ -33,6 +44,11 @@ public:
 	
 	static UHeistHitReactionComponent* FindHitReactionComponent(const AActor* Actor);
 	static const FName NAME_ActorFeatureName;
+
+	void SetMeleeHitHandler(const FHeistMeleeHitDelegate& InHandler);
+	void ResetMeleeHitHandler();
+	bool HasMeleeHitHandler() const;
+	void ProcessMeleeHit(AActor* InstigatorActor, AActor* TargetActor) const;
 	
 	// IGameFrameworkInitStateInterface
 	virtual FName GetFeatureName() const override { return NAME_ActorFeatureName; }
@@ -44,10 +60,6 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
-	FHeistMeleeHitDelegate OnMeleeHit;
-	
 private:
-	// State_Stunned GE 만료 → Outro 섹션 점프
-	void OnStunnedTagChanged(const FGameplayTag Tag, int32 Count);
-
+	FHeistMeleeHitDelegate MeleeHitHandler;
 };

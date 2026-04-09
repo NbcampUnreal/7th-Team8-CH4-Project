@@ -34,6 +34,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Effects")
 	TSubclassOf<UGameplayEffect> CuffedEffectClass;
 	
+	UPROPERTY(EditDefaultsOnly, Category="Heist|Escort")
+	float EscortReleaseOffset = 50.0f;
+	
 	//FGameplayEffectSpecHandle EscortingEffectHandle;
 	// Spec은 설계도이다. GE 적용 전, 파라미터를 통해 설정할 때 들고있는 용도이다.
 	// 찍어낼 템플릿으로서 가지고 있다가 해당하는 GE를 만들어 실행하는 용도

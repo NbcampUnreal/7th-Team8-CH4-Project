@@ -4,11 +4,10 @@
 
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
-#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "AbilitySystem/HeistTags_Ability.h"
-#include "AbilitySystem/HeistTags_Event.h"
 #include "Character/HeistCharacter.h"
 #include "Character/HeistTags_State.h"
+#include "Character/ThiefCharacter.h"
 #include "Components/HeistHitReactionComponent.h"
 
 UGA_PoliceSwing::UGA_PoliceSwing()
@@ -52,23 +51,22 @@ void UGA_PoliceSwing::ActivateAbility(
 	MontageTask->OnCancelled.AddDynamic(this, &UGA_PoliceSwing::OnAttackMontageCancelled);
 	MontageTask->ReadyForActivation();
 
-	// UAbilityTask_WaitGameplayEvent* HitTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-	// 	this, HeistEventTags::Event_Hit);
-	// HitTask->EventReceived.AddDynamic(this, &UGA_PoliceSwing::OnHitEvent);
-	// HitTask->ReadyForActivation();
-
-	// 이 로직은 공격자의 Action을 HitReactionComponent에 캐싱해놓는 것이다.
+	// 현재 Swing의 hit 처리 함수를 HitReactionComponent에 등록합니다.
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	if (UHeistHitReactionComponent* HRC =
 		IsValid(Avatar) ? Avatar->FindComponentByClass<UHeistHitReactionComponent>() : nullptr)
 	{
-		HRC->OnMeleeHit.BindUObject(this, &UGA_PoliceSwing::OnHitEvent);
+		FHeistMeleeHitDelegate Handler;
+		Handler.BindUObject(this, &UGA_PoliceSwing::OnHitEvent);
+		HRC->SetMeleeHitHandler(Handler);
 	}
 }
 
 void UGA_PoliceSwing::OnHitEvent(const FGameplayEventData& Payload)
 {
-	AHeistCharacter* Target = Cast<AHeistCharacter>(const_cast<AActor*>(Payload.Target.Get()));
+	if (!HasAuthority(&CurrentActivationInfo)) return;
+
+	AThiefCharacter* Target = Cast<AThiefCharacter>(const_cast<AActor*>(Payload.Target.Get()));
 	if (!IsValid(Target)) return;
 	
 	UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
@@ -78,13 +76,15 @@ void UGA_PoliceSwing::OnHitEvent(const FGameplayEventData& Payload)
 	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Cuffed)) return;
 	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Injured)) return;
 	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Escorted)) return;
-
-	if (!HasAuthority(&CurrentActivationInfo)) return;
+	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_MoveDisabled)) return;
 
 	if (IsValid(InjuredEffectClass))
 	{
 		FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(InjuredEffectClass, 1.f);
-		TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+		if (Spec.IsValid() && Spec.Data.IsValid())
+		{
+			TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+		}
 	}
 }
 
@@ -116,7 +116,7 @@ void UGA_PoliceSwing::EndAbility(
 	if (UHeistHitReactionComponent* HRC =
 		IsValid(Avatar) ? Avatar->FindComponentByClass<UHeistHitReactionComponent>() : nullptr)
 	{
-		HRC->OnMeleeHit.Unbind();
+		HRC->ResetMeleeHitHandler();
 	}
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

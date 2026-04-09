@@ -11,8 +11,7 @@
  *
  * NotifyBegin -> NotifyEnd 구간에서 매 틱 지정한 소켓 위치 기준으로 스윕 감지
  * 이전 프레임 소켓 위치 -> 현재 프레임 소켓 위치 사이를 SweepMulti로 검사하여 자연스러운 타격 연출
- * 서버에서만 히트판정을 수행하고 공격자 ASC에 HitEventTag를 전달하도록 합니다
- *
+ * 공격자 컴포넌트에 바인딩된 delegate를 바로 실행함
  */
 UCLASS()
 class HEIST_API UHeistANS_MeleeAttack : public UAnimNotifyState

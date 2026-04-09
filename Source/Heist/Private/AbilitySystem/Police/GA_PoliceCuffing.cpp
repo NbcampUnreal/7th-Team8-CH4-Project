@@ -5,6 +5,7 @@
 #include "AbilitySystem/HeistTags_Ability.h"
 #include "AbilitySystem/HeistTags_Event.h"
 #include "AbilitySystemComponent.h"
+#include "Heist/Heist.h"
 
 UGA_PoliceCuffing::UGA_PoliceCuffing()
 {
@@ -33,9 +34,15 @@ void UGA_PoliceCuffing::ActivateAbility(
 	// 상호작용 처리
 	AActor* TargetActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Target.Get()) : nullptr;
 	TargetThief = Cast<AThiefCharacter>(TargetActor);
+	UE_LOG(LogTemp, Warning, TEXT("[Cuffing] Activate owner=%s target=%s authority=%d"),
+		*GetNameSafe(GetAvatarActorFromActorInfo()),
+		*GetNameSafe(TargetActor),
+		HasAuthority(&CurrentActivationInfo));
 
 	if (!IsValid(TargetThief))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cuffing] Activate failed owner=%s reason=InvalidTarget"),
+			*GetNameSafe(GetAvatarActorFromActorInfo()));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -45,6 +52,10 @@ void UGA_PoliceCuffing::ActivateAbility(
 
 void UGA_PoliceCuffing::OnChannelingCompleted()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[Cuffing] Completed owner=%s target=%s authority=%d"),
+		*GetNameSafe(GetAvatarActorFromActorInfo()),
+		*GetNameSafe(TargetThief),
+		HasAuthority(&CurrentActivationInfo));
 	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
 	{
 		UAbilitySystemComponent* TargetASC = TargetThief->GetAbilitySystemComponent();
@@ -69,14 +80,26 @@ void UGA_PoliceCuffing::OnChannelingCompleted()
 			{
 				FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(CuffedEffectClass, 1.f);
 				TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+				UE_LOG(LogTemp, Warning, TEXT("[Cuffing] Applied cuffed effect owner=%s target=%s effect=%s"),
+					*GetNameSafe(GetAvatarActorFromActorInfo()),
+					*GetNameSafe(TargetThief),
+					*GetNameSafe(CuffedEffectClass));
 			}
 		}
 	}
 
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	// NOTE:
+	// 채널링 종료는 UHeistGameplayAbility의 공통 흐름(타이머 만료 -> Outro/몽타주 종료 -> EndAbility)에 맡긴다.
+	// 여기서 직접 EndAbility(..., bReplicateEndAbility=true)를 호출하면
+	// LocalPredicted 클라이언트 인스턴스가 서버 authoritative 인스턴스보다 먼저 종료를 복제할 수 있고,
+	// 그 결과 서버가 Cuff 적용 완료 전에 종료되어 client 경찰에서 Cuffing이 실패할 수 있다.
+	// EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
 void UGA_PoliceCuffing::OnChannelingCancelled()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[Cuffing] Cancelled owner=%s target=%s"),
+		*GetNameSafe(GetAvatarActorFromActorInfo()),
+		*GetNameSafe(TargetThief));
 	TargetThief = nullptr;
 }

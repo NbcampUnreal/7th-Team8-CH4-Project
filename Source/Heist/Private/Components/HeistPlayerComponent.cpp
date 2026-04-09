@@ -169,11 +169,18 @@ void UHeistPlayerComponent::OnMoveDisabledTagChanged(const FGameplayTag Tag, int
 {
 	ACharacter* CharacterOwner = Cast<ACharacter>(GetOwner());
 	if (!IsValid(CharacterOwner)) return;
-	
+
 	UCharacterMovementComponent* MoveComp = CharacterOwner->GetCharacterMovement();
 	if (!IsValid(MoveComp)) return;
-
-	MoveComp->SetMovementMode(Count > 0 ? MOVE_None : MOVE_Walking);
+	
+	// MoveDisabled는 이동 입력 차단용 태그
+	// MovementMode 자체를 끄면 RootMotion/Knockback 같은 외부 이동까지 막히므로
+	// 현재 프레임에 누적된 입력만 비워서 즉시 멈추게 한다.
+	if (Count > 0)
+	{
+		MoveComp->StopMovementImmediately();
+		CharacterOwner->ConsumeMovementInputVector();
+	}
 }
 
 void UHeistPlayerComponent::HandleMoveInput(const FInputActionValue& Value)
@@ -181,22 +188,25 @@ void UHeistPlayerComponent::HandleMoveInput(const FInputActionValue& Value)
 	APawn* Pawn = GetPawn<APawn>();
 	if (!IsValid(Pawn)) return;
 
+	UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(Pawn);
+	if (!IsValid(PawnExtension)) return;
+
+	UHeistAbilitySystemComponent* ASC = PawnExtension->GetAbilitySystemComponent();
+	if (!IsValid(ASC)) return;
+
+	if (ASC->HasMatchingGameplayTag(HeistStateTags::State_MoveDisabled))
+	{
+		return;
+	}
+
 	// 이동 입력이 0이 아닐 때 ASC로 이동 이벤트 전달
 	const FVector2D MoveVector = Value.Get<FVector2D>();
 	if (!MoveVector.IsNearlyZero())
 	{
-		UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(Pawn);
-		if (IsValid(PawnExtension))
-		{
-			UHeistAbilitySystemComponent* ASC = PawnExtension->GetAbilitySystemComponent();
-			if (IsValid(ASC))
-			{
-				FGameplayEventData Payload;
-				Payload.Instigator = Pawn;
+		FGameplayEventData Payload;
+		Payload.Instigator = Pawn;
 
-				ASC->HandleGameplayEvent(HeistEventTags::Event_Input_Move, &Payload);
-			}
-		}
+		ASC->HandleGameplayEvent(HeistEventTags::Event_Input_Move, &Payload);
 	}
 	Pawn->AddMovementInput(FVector::ForwardVector, MoveVector.Y);
 	Pawn->AddMovementInput(FVector::RightVector, MoveVector.X);
