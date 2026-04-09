@@ -8,8 +8,10 @@
 
 UGA_PoliceCuffing::UGA_PoliceCuffing()
 {
+	ActivationPolicy = EHeistAbilityActivationPolicy::OnGameplayEvent;
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+	
 	AbilityTags.AddTag(HeistAbilityTags::Ability_Police_Cuffing);
 
 	FAbilityTriggerData TriggerData;
@@ -43,7 +45,7 @@ void UGA_PoliceCuffing::ActivateAbility(
 
 void UGA_PoliceCuffing::OnChannelingCompleted()
 {
-	if (IsValid(TargetThief))
+	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
 	{
 		UAbilitySystemComponent* TargetASC = TargetThief->GetAbilitySystemComponent();
 		if (IsValid(TargetASC))
@@ -55,8 +57,19 @@ void UGA_PoliceCuffing::OnChannelingCompleted()
 			TargetASC->HandleGameplayEvent(HeistEventTags::Event_CuffingComplete, &Payload);
 
 			// [테스트 코드] 도둑 파트가 없어서 경찰이 직접 태그 교체
-			TargetASC->RemoveLooseGameplayTag(HeistStateTags::State_Thief_Injured);
-			TargetASC->AddLooseGameplayTag(HeistStateTags::State_Thief_Cuffed);
+			//TargetASC->RemoveLooseGameplayTag(HeistStateTags::State_Thief_Injured);
+			//TargetASC->AddLooseGameplayTag(HeistStateTags::State_Thief_Cuffed);
+
+			// Injured GE 제거 후 Cuffed GE 적용
+			FGameplayEffectQuery InjuredQuery = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(
+				FGameplayTagContainer(HeistStateTags::State_Thief_Injured));
+			TargetASC->RemoveActiveEffects(InjuredQuery);
+
+			if (IsValid(CuffedEffectClass))
+			{
+				FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(CuffedEffectClass, 1.f);
+				TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+			}
 		}
 	}
 

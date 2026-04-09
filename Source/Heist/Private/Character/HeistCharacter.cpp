@@ -6,9 +6,11 @@
 #include "Core/HeistPlayerState.h"
 #include "Data/HeistPawnData.h"
 #include "Input/HeistInputComponent.h"
+#include "Character/HeistTags_State.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Components/HeistHitReactionComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AHeistCharacter::AHeistCharacter(const FObjectInitializer& ObjectInitializer)
@@ -41,6 +43,8 @@ AHeistCharacter::AHeistCharacter(const FObjectInitializer& ObjectInitializer)
 
 	TopDownCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
 	TopDownCamera->SetupAttachment(CameraSpringArm, USpringArmComponent::SocketName);
+	
+	HitReactionComponent = CreateDefaultSubobject<UHeistHitReactionComponent>(TEXT("HitReactionComponent"));
 }
 
 UAbilitySystemComponent* AHeistCharacter::GetAbilitySystemComponent() const

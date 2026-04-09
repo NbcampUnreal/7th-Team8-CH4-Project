@@ -6,6 +6,7 @@
 #include "Components/HeistInteractionComponent.h"
 #include "HeistCharacter.generated.h"
 
+class UHeistHitReactionComponent;
 class UHeistPawnExtensionComponent;
 class UHeistPlayerComponent;
 class UHeistAbilitySystemComponent;
@@ -67,6 +68,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Camera", meta = (AllowPrivateAccess = true))
 	TObjectPtr<UCameraComponent> TopDownCamera;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components", meta = (AllowPrivateAccess = true))
+	TObjectPtr<UHeistHitReactionComponent> HitReactionComponent;
+	
 	// 캐시 — 소유는 AHeistPlayerState
 	UPROPERTY()
 	TObjectPtr<UHeistAbilitySystemComponent> AbilitySystemComponent;

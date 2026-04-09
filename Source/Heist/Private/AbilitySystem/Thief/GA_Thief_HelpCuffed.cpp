@@ -10,15 +10,13 @@
 
 UGA_Thief_HelpCuffed::UGA_Thief_HelpCuffed()
 {
-	ActivationPolicy = EHeistAbilityActivationPolicy::WhileInputActive;
+	ActivationPolicy = EHeistAbilityActivationPolicy::OnGameplayEvent;
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	
 	AbilityTags.AddTag(HeistAbilityTags::Ability_Thief_HelpCuffed);
-
-	// 무력화 상태일 경우 진입 차단함
-	ActivationBlockedTags.AddTag(HeistStateTags::State_ActionDisabled);
-
+	//CancelAbilitiesWithTag.AddTag(HeistStateTags::State_Stunned);
+	
 	// Trigger Data를 세팅해주는 것 만으로 이 어빌리티 시스템은 GAS에 등록된 이상
 	// GameplayEvent에 의해 Actiavated 될 수 있습니다. 와우
 	FAbilityTriggerData TriggerData;
@@ -72,12 +70,13 @@ void UGA_Thief_HelpCuffed::EndAbility(const FGameplayAbilitySpecHandle Handle,
 void UGA_Thief_HelpCuffed::OnChannelingCompleted()
 {
 	if (!TargetASC.IsValid()) return;
-	
+	if (!HasAuthority(&CurrentActivationInfo)) return;
+
 	// 수갑 GE 탐색 후 제거 로직
 	FGameplayEffectQuery CuffedQuery = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(
 		FGameplayTagContainer(HeistStateTags::State_Thief_Cuffed));
 	TargetASC->RemoveActiveEffects(CuffedQuery);
-	
+
 	// 부상 상태 GE 적용
 	if (IsValid(InjuredEffectClass))
 	{

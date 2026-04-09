@@ -36,6 +36,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	bool bIsCuffed = false;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsInjured = false;
+
 private:
 	TWeakObjectPtr<UAbilitySystemComponent> CachedASC;
 	bool bTagBindingReady = false;
@@ -43,6 +46,8 @@ private:
 	FDelegateHandle SneakingTagChangedHandle;
 	FDelegateHandle CuffedTagChangedHandle;
 	FDelegateHandle EscortedTagChangedHandle;
+	FDelegateHandle InjuredTagChangedHandle;
+	
 #pragma endregion AbilitySystem
 	
 #pragma region AnimIK

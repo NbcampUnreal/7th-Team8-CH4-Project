@@ -25,6 +25,13 @@ void UHeistInteractSphereComponent::BeginPlay()
 	// SphereComponent를 동적 생성합니다
 	InteractSphere = NewObject<USphereComponent>(GetOwner(), TEXT("InteractSphere"));
 	InteractSphere->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+	
+	// 1. 실제로 스피어의 반지름을 데이터 테이블 값으로 설정 (누락된 부분 추가)
+	InteractSphere->SetSphereRadius(CachedRadius);
+	
+	// 2. 게임 내에서 스피어 콜리전이 보이도록 설정 (디버그용)
+	InteractSphere->SetHiddenInGame(false);
+	
 	InteractSphere->RegisterComponent();
 	InteractSphere->AttachToComponent(GetOwner()->GetRootComponent(),
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale);

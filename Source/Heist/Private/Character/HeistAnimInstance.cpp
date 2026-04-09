@@ -92,6 +92,7 @@ void UHeistAnimInstance::SyncAllTagsEvents(UAbilitySystemComponent* ASC)
 	// 새 상태 추가시 여기 수정
 	bIsEscorted = ASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Escorted);
 	bIsCuffed = ASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Cuffed);
+	bIsInjured = ASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Injured);
 	
 	RefreshIKFootSpeedThresholdCached(); // IK 임계값 캐시 초기화
 }
@@ -113,6 +114,10 @@ void UHeistAnimInstance::BindAllTagsEvents(UAbilitySystemComponent* ASC)
 		HeistStateTags::State_Thief_Escorted,
 		EGameplayTagEventType::NewOrRemoved
 	).AddUObject(this, &UHeistAnimInstance::HandleTagChanged);
+	InjuredTagChangedHandle = ASC->RegisterGameplayTagEvent(
+		HeistStateTags::State_Thief_Injured,
+		EGameplayTagEventType::NewOrRemoved
+	).AddUObject(this, &UHeistAnimInstance::HandleTagChanged);
 }
 
 void UHeistAnimInstance::HandleTagChanged(const FGameplayTag Tag, int32 NewCount)
@@ -127,6 +132,9 @@ void UHeistAnimInstance::HandleTagChanged(const FGameplayTag Tag, int32 NewCount
 	} else if (Tag == HeistStateTags::State_Thief_Escorted)
 	{
 		bIsEscorted = bActive;
+	} else if (Tag == HeistStateTags::State_Thief_Injured)
+	{
+		bIsInjured = bActive;
 	}
 	
 	if (Tag == HeistStateTags::State_Thief_Cuffed)

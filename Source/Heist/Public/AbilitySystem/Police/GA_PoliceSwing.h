@@ -4,18 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/HeistGameplayAbility.h"
-#include "GA_Thief_Kick.generated.h"
+#include "GA_PoliceSwing.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class HEIST_API UGA_Thief_Kick : public UHeistGameplayAbility
+class HEIST_API UGA_PoliceSwing : public UHeistGameplayAbility
 {
 	GENERATED_BODY()
-	
+
 public:
-	UGA_Thief_Kick();
+	UGA_PoliceSwing();
 
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
@@ -23,23 +23,24 @@ protected:
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Ability")
-	TObjectPtr<UAnimMontage> KickMontage;
-	
-	// 피격자에게 적용할 GE (State_Stunned / ActionDisabled / MoveDisabled)
+	TObjectPtr<UAnimMontage> AttackMontage;
+
+	// 도둑에게 부착할 GE (State_Thief_Injured 부여)
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Effects")
-	TSubclassOf<UGameplayEffect> StunGEClass;
+	TSubclassOf<UGameplayEffect> InjuredEffectClass;
 
+	// 시전 중 이동 속도 감소 GE (완전 봉인 대신 느린 이동)
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Effects")
-	float StunDuration = 2.f;
+	TSubclassOf<UGameplayEffect> AttackSlowEffectClass;
 
-	// GA_KickStagger에 EventMagnitude로 전달되는 넉백 힘
-	UPROPERTY(EditDefaultsOnly, Category = "Heist|Effects")
-	float KnockbackForce = 300.f;
-	
-	// AnimNotify >> 자신(공격자)에게 Event_BackAttackHit 발행 >> Payload.Target = 피격 대상(경찰/도둑)
-	void OnBackAttackHit(const FGameplayEventData& Payload); // non-dynamic
+	FActiveGameplayEffectHandle AttackSlowEffectHandle;
 
-	UFUNCTION() void OnKickMontageCompleted();
-	UFUNCTION() void OnKickMontageCancelled();
+	UFUNCTION()
+	void OnHitEvent(const FGameplayEventData& Payload);
 
+	UFUNCTION()
+	void OnAttackMontageCompleted();
+
+	UFUNCTION()
+	void OnAttackMontageCancelled();
 };

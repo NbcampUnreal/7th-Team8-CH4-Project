@@ -5,6 +5,7 @@ namespace HeistStateTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Sneaking, "State.Sneaking");
 	UE_DEFINE_GAMEPLAY_TAG(State_Stunned, "State.Stunned");
 	UE_DEFINE_GAMEPLAY_TAG(State_ActionDisabled, "State.ActionDisabled");
+	UE_DEFINE_GAMEPLAY_TAG(State_MoveDisabled, "State.MoveDisabled");
 	UE_DEFINE_GAMEPLAY_TAG(State_Channeling, "State.Channeling");
 	
 	UE_DEFINE_GAMEPLAY_TAG(State_Thief_Normal, "State.Thief.Normal");

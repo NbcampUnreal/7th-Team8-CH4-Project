@@ -26,7 +26,10 @@ void UGA_Sneak::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
 	if (!IsValid(ASC)) return;
 
-	ASC->AddReplicatedLooseGameplayTag(HeistStateTags::State_Sneaking);
+	if (HasAuthority(&CurrentActivationInfo))
+	{
+		ASC->AddReplicatedLooseGameplayTag(HeistStateTags::State_Sneaking);
+	}
 
 	if (IsValid(SneakEffect))
 	{
@@ -45,7 +48,10 @@ void UGA_Sneak::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
 	if (IsValid(ASC))
 	{
-		ASC->RemoveReplicatedLooseGameplayTag(HeistStateTags::State_Sneaking);
+		if (HasAuthority(&CurrentActivationInfo))
+		{
+			ASC->RemoveReplicatedLooseGameplayTag(HeistStateTags::State_Sneaking);
+		}
 
 		if (SneakEffectHandle.IsValid())
 		{
