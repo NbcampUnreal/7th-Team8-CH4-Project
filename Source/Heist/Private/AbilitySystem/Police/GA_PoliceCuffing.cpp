@@ -34,15 +34,9 @@ void UGA_PoliceCuffing::ActivateAbility(
 	// 상호작용 처리
 	AActor* TargetActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Target.Get()) : nullptr;
 	TargetThief = Cast<AThiefCharacter>(TargetActor);
-	UE_LOG(LogTemp, Warning, TEXT("[Cuffing] Activate owner=%s target=%s authority=%d"),
-		*GetNameSafe(GetAvatarActorFromActorInfo()),
-		*GetNameSafe(TargetActor),
-		HasAuthority(&CurrentActivationInfo));
 
 	if (!IsValid(TargetThief))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Cuffing] Activate failed owner=%s reason=InvalidTarget"),
-			*GetNameSafe(GetAvatarActorFromActorInfo()));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -52,10 +46,6 @@ void UGA_PoliceCuffing::ActivateAbility(
 
 void UGA_PoliceCuffing::OnChannelingCompleted()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[Cuffing] Completed owner=%s target=%s authority=%d"),
-		*GetNameSafe(GetAvatarActorFromActorInfo()),
-		*GetNameSafe(TargetThief),
-		HasAuthority(&CurrentActivationInfo));
 	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
 	{
 		UAbilitySystemComponent* TargetASC = TargetThief->GetAbilitySystemComponent();
@@ -80,10 +70,6 @@ void UGA_PoliceCuffing::OnChannelingCompleted()
 			{
 				FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(CuffedEffectClass, 1.f);
 				TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-				UE_LOG(LogTemp, Warning, TEXT("[Cuffing] Applied cuffed effect owner=%s target=%s effect=%s"),
-					*GetNameSafe(GetAvatarActorFromActorInfo()),
-					*GetNameSafe(TargetThief),
-					*GetNameSafe(CuffedEffectClass));
 			}
 		}
 	}
@@ -98,8 +84,5 @@ void UGA_PoliceCuffing::OnChannelingCompleted()
 
 void UGA_PoliceCuffing::OnChannelingCancelled()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[Cuffing] Cancelled owner=%s target=%s"),
-		*GetNameSafe(GetAvatarActorFromActorInfo()),
-		*GetNameSafe(TargetThief));
 	TargetThief = nullptr;
 }
