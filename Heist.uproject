@@ -58,6 +58,10 @@
 		{
 			"Name": "SteamSockets",
 			"Enabled": true
+		},
+		{
+			"Name": "DebugUI",
+			"Enabled": true
 		}
 	]
 }

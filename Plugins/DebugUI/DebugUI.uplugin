@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "DebugUI",
+	"Description": "Multiplayer Debugging Tool",
+	"Category": "Debugging",
+	"CreatedBy": "CSH",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "DebugUI",
+			"Type": "Runtime", 
+			"LoadingPhase": "Default"
+		}
+	]
+}
