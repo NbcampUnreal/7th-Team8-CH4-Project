@@ -2,54 +2,121 @@
 
 #include "Components/BoxComponent.h"
 #include "AbilitySystem/HeistTags_FlagTags.h"
+#include "Data/ItemData.h"
 #include "Net/UnrealNetwork.h"
+#include "AbilitySystemInterface.h"
+#include "AbilitySystemComponent.h"
+#include "Character/HeistCharacter.h"
 
 AItemActor::AItemActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
-	bReplicates = true;
+	bReplicates = true; 
+	SetReplicateMovement(true);
 
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
 
-	BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollision"));
-	BoxCollision->SetupAttachment(GetRootComponent());
+	BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
+	BoxCollision->SetupAttachment(SceneRoot);
 
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(BoxCollision);
+
+	Mesh->SetSimulatePhysics(false);
+
+	InteractSphereComponent = CreateDefaultSubobject<UHeistInteractSphereComponent>(TEXT("InteractSphereComponent"));
 }
+
+void AItemActor::Multicast_OnItemPhysicsEvent_Implementation(FVector ImpulseDir, float Force)
+{
+	BoxCollision->SetSimulatePhysics(true);
+	BoxCollision->AddImpulse(ImpulseDir * Force, NAME_None, true);
+
+    // 3. 서버에서만 착지 감지 및 타이머 시작
+    if (HasAuthority())
+    {
+        GetWorldTimerManager().SetTimer(PhysicsTimeoutHandle, this, &AItemActor::FinalizePhysicsLocation, 2.0f, false);
+
+        // 폭발물인 경우 낙하 시 폭발 체크
+		if (const FItemData* Data = GetItemData())
+		{
+			if (Data->bExplosive)
+			{ 
+				OnExplode();
+			}
+		}
+    }
+}
+
 
 void AItemActor::BeginPlay()
 {
 	Super::BeginPlay();
-
+	InitializeFromData();
 }
 
-bool AItemActor::CanInteract_Implementation(ACharacter* Interactor) const
+void AItemActor::InitializeFromData()
 {
-	// 기본적으로 Interact 가능, 필요시 로직 추가
-	return true;
+	const FItemData* Data = GetItemData();
+	if (!Data) return;
+
+	// 기획: 데이터 테이블에 따라 초기 상태 설정
+	// 예: GPS 발동 등급이면 서버에서 미리 마킹 준비 등
+	if (HasAuthority() && Data->bTriggerGPS)
+	{
+		// GPS 관련 로직 (Event.GPSActivated 등)
+	}
 }
 
-FGameplayTag AItemActor::GetInteractAbilityTag_Implementation(ACharacter* Interactor) const
+void AItemActor::OnExplode_Implementation()
 {
-	return HeistFlagTags::Tag_SoloCarrying;
+	//TODO: 폭발 로직 구현
 }
 
-float AItemActor::GetInteractRadius_Implementation() const
+const FItemData* AItemActor::GetItemData() const
 {
-	return 0.0f;
+	if (ItemData.IsNull()) return nullptr;
+
+	return ItemData.GetRow<FItemData>(TEXT("Context_ItemActor"));
 }
 
-void AItemActor::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+void AItemActor::UpdateCarryingState(const TArray<ACharacter*>& CurrentCarriers)
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ThisClass, bIsCarried);
+	// 기획에 따른 인원수 체크 및 Tag 부여 로직 (서버)
 }
 
-void AItemActor::OnRep_IsCarried()
+void AItemActor::FinalizePhysicsLocation()
 {
+	if (!HasAuthority()) return;
+
+	// 물리 비활성화 및 현재 위치 확정
+	Mesh->SetSimulatePhysics(false);
+
+	// 현재 위치가 ReplicatedMovement를 통해 클라이언트로 전파됨
+	FVector FinalLocation = GetActorLocation();
+	SetActorLocation(FinalLocation);
 }
 
+void AItemActor::OnPickedUp(AHeistCharacter* InCarrier, FName InSocketName)
+{
+	if (!InCarrier || !HasAuthority()) return;
+
+	AttachToComponent(InCarrier->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, InSocketName);
+}
+
+int32 AItemActor::GetRequiredCarriers() const
+{
+	return GetItemData()->RequiredCarriers;
+}
+
+float AItemActor::GetCarrySpeedMultiplier() const
+{
+	return GetItemData()->CarrySpeedMultiplier;
+}
+
+float AItemActor::GetSoloCarrySpeedMultiplier() const
+{
+	return GetItemData()->SoloCarrySpeedMultiplier;
+}

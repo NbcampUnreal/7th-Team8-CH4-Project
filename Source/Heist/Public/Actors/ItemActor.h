@@ -4,46 +4,70 @@
 #include "GameFramework/Actor.h"
 #include "Interaction/HeistInteractable.h"
 #include "Interaction/HeistCarryable.h"
+#include "Components/HeistInteractSphereComponent.h"
 #include "ItemActor.generated.h"
 
 class USceneComponent;
 class UBoxComponent;
 class UStaticMeshComponent;
+class AHeistCharacter;
 
 UCLASS()
-class HEIST_API AItemActor : public AActor, public IHeistInteractable, public IHeistCarryable
+class HEIST_API AItemActor : public AActor, public IHeistCarryable
 {
 	GENERATED_BODY()
 	
 public:	
 	AItemActor();
 
+	// 물리 이벤트 발생 시 호출 (서버 -> 전체 클라이언트)
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_OnItemPhysicsEvent(FVector ImpulseDir, float Force);
+
+	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
+	void OnPickedUp(AHeistCharacter* InCarrier, FName InSocketName);
+
+	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
+	int32 GetRequiredCarriers() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
+	float GetCarrySpeedMultiplier() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
+	float GetSoloCarrySpeedMultiplier() const;
+
 protected:
 	virtual void BeginPlay() override;
 
-	// --- IHeistInteractable Implementation ---
-	virtual bool CanInteract_Implementation(ACharacter* Interactor) const override;
-	virtual FGameplayTag GetInteractAbilityTag_Implementation(ACharacter* Interactor) const override;
-	virtual float GetInteractRadius_Implementation() const override;
+	// 데이터 테이블 기반 초기화
+	void InitializeFromData();
 
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-private:
-	UFUNCTION()
-	void OnRep_IsCarried();
+	UFUNCTION(BlueprintNativeEvent, Category = "Heist|Item")
+	void OnExplode();
+
+	const struct FItemData* GetItemData() const;
+
+	// 운반 인원 확인 및 페널티 계산 (서버 실행)
+	void UpdateCarryingState(const TArray<ACharacter*>& CurrentCarriers);
+
+	// 물리 종료 및 위치 확정 타이머
+	void FinalizePhysicsLocation();
 
 private:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess))
 	TObjectPtr<USceneComponent> SceneRoot;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess))
 	TObjectPtr<UBoxComponent> BoxCollision;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess))
 	TObjectPtr<UStaticMeshComponent> Mesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHeistInteractSphereComponent> InteractSphereComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
 	FDataTableRowHandle ItemData;
 
-	UPROPERTY(ReplicatedUsing = OnRep_IsCarried)
-	bool bIsCarried;
+	FTimerHandle PhysicsTimeoutHandle;
 };
