@@ -20,6 +20,10 @@ protected:
 	virtual void OnChannelingCancelled() override;
 
 private:
+	// 수갑 완료시 도둑에게 부착할 GE (State_Thief_Cuffed 부여)
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|Effects")
+	TSubclassOf<UGameplayEffect> CuffedEffectClass;
+
 	UPROPERTY()
 	TObjectPtr<AThiefCharacter> TargetThief;
 };

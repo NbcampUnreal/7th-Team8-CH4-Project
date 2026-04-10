@@ -12,11 +12,14 @@
 
 UGA_PoliceEscort::UGA_PoliceEscort()
 {
+	ActivationPolicy = EHeistAbilityActivationPolicy::OnGameplayEvent; // 게임 이벤트 트리거로 실행(상호작용)
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-
-	ActivationOwnedTags.AddTag(HeistStateTags::State_Police_Escorting);
-	ActivationBlockedTags.AddTag(HeistStateTags::State_Police_Escorting);
-	CancelAbilitiesWithTag.AddTag(HeistStateTags::State_Stunned);
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+		
+	ActivationOwnedTags.AddTag(HeistStateTags::State_Police_Escorting);   // 어빌리티 활성 동안 오너에게 Escorting 부착
+	ActivationBlockedTags.AddTag(HeistStateTags::State_Police_Escorting); // 해당 태그 보유시 발동 차단
+	
+	CancelAbilitiesWithTag.AddTag(HeistStateTags::State_Stunned); // 이송중엔 채널링이 없으므로 취소 태그를 달아준다 - 추후 Kick 구현시 제거 가능
 
 	AbilityTags.AddTag(HeistAbilityTags::Ability_Police_Escort);
 
@@ -39,30 +42,45 @@ void UGA_PoliceEscort::ActivateAbility(
 	// 상호작용 처리
 	AActor* TargetActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Target.Get()) : nullptr;
 	TargetThief = Cast<AThiefCharacter>(TargetActor);
-
-	if (!IsValid(TargetThief))
+	
+	AHeistCharacter* Police = Cast<AHeistCharacter>(GetAvatarActorFromActorInfo());
+	if (!IsValid(TargetThief) || !IsValid(Police))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
-	// 1. 도둑의 이동 차단
-	UCharacterMovementComponent* ThiefMovement = TargetThief->GetCharacterMovement();
-	if (IsValid(ThiefMovement))
+	
+	if (HasAuthority(&CurrentActivationInfo))
 	{
-		ThiefMovement->SetMovementMode(MOVE_None);
+		UThiefEscortComponent* EscortComp = TargetThief->GetThiefEscortComponent();
+		UAbilitySystemComponent* PoliceASC = GetAbilitySystemComponentFromActorInfo();
+		
+		if (!IsValid(EscortComp) || !IsValid(PoliceASC))
+		{
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+			return;
+		}
+		
+		const bool bEscortStarted = EscortComp->BeginEscort(Police, EscortedEffectClass, PoliceASC);
+		if (!bEscortStarted)
+		{
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+			return;
+		}
 	}
-
-	// 2. 위치 추종 시작
-	UThiefEscortComponent* EscortComp = TargetThief->GetThiefEscortComponent();
-	if (IsValid(EscortComp))
+	
+	//TODO(하민): 경찰에게 이속 40% 감소 GE 적용 -> 보원: Escorting에 40퍼 감소를, Escorted에 이동 차단을 넣죠!
+	if (IsValid(EscortingEffectClass))
 	{
-		EscortComp->SetEscortedBy(Cast<AHeistCharacter>(GetAvatarActorFromActorInfo()));
+		FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(EscortingEffectClass, 1.f);
+		if (Spec.IsValid() && Spec.Data.IsValid())
+		{
+			EscortingEffectHandle = ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, Spec);
+		}
 	}
-
-	//TODO(하민): 경찰에게 이속 40% 감소 GE 적용
-
-	UAbilityTask_WaitGameplayEvent* WaitCarEvent = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, HeistEventTags::Event_ArrivedAtCar);
+	
+	UAbilityTask_WaitGameplayEvent* WaitCarEvent = 
+		UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, HeistEventTags::Event_ArrivedAtCar);
 	WaitCarEvent->EventReceived.AddDynamic(this, &UGA_PoliceEscort::OnArrivedAtCar);
 	WaitCarEvent->ReadyForActivation();
 }
@@ -79,32 +97,34 @@ void UGA_PoliceEscort::EndAbility(
 	bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
-	if (IsValid(TargetThief))
+	if (EscortingEffectHandle.IsValid())
 	{
-		// 1. 도둑 위치 추종 해제
+		GetAbilitySystemComponentFromActorInfo()->RemoveActiveGameplayEffect(EscortingEffectHandle);
+		EscortingEffectHandle.Invalidate();
+	}
+	
+	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
+	{
 		UThiefEscortComponent* EscortComp = TargetThief->GetThiefEscortComponent();
-		if (IsValid(EscortComp))
+		if (IsValid(EscortComp) && EscortComp->IsEscorted())
 		{
-			EscortComp->SetEscortedBy(nullptr);
+			// 기존 취소 정책
+			// bWasCancelled == true 이면 cuffed 유지
+			EscortComp->InterruptEscort(
+				CuffedEffectClass, 
+				GetAbilitySystemComponentFromActorInfo(),
+				/* bConvertedToCuffed */ bWasCancelled);
 		}
-
-		// 2. 도둑 이동 모드 걷기로 복구
-		UCharacterMovementComponent* ThiefMovement = TargetThief->GetCharacterMovement();
-		if (IsValid(ThiefMovement))
-		{
-			ThiefMovement->SetMovementMode(MOVE_Walking);
-		}
-
-		// 3. 취소(발차기 등)인 경우에만 겹침 방지 밀어내기
+		
 		if (bWasCancelled)
 		{
 			AActor* PoliceActor = GetAvatarActorFromActorInfo();
 			if (IsValid(PoliceActor))
 			{
-				TargetThief->AddActorWorldOffset(PoliceActor->GetActorRightVector() * 50.0f, true);
+				TargetThief->AddActorWorldOffset(PoliceActor->GetActorRightVector() * EscortReleaseOffset, true);
 			}
 		}
 	}
-
+	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 };

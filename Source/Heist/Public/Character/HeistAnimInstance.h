@@ -29,6 +29,12 @@ public:
 	// AnimGraph에서 사용할 상태 boolean
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	bool bIsSneaking = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsStunned = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsKnockbacked = false;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	bool bIsEscorted = false;
@@ -36,13 +42,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	bool bIsCuffed = false;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsInjured = false;
+
 private:
 	TWeakObjectPtr<UAbilitySystemComponent> CachedASC;
 	bool bTagBindingReady = false;
 	
 	FDelegateHandle SneakingTagChangedHandle;
+	FDelegateHandle StunnedTagChangedHandle;
+	FDelegateHandle KnockbackTagChangedHandle;
 	FDelegateHandle CuffedTagChangedHandle;
 	FDelegateHandle EscortedTagChangedHandle;
+	FDelegateHandle InjuredTagChangedHandle;
+	
 #pragma endregion AbilitySystem
 	
 #pragma region AnimIK

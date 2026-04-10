@@ -11,6 +11,7 @@ enum class EHeistAbilityActivationPolicy : uint8
 	OnInputTriggered,  // 입력 시 한 번 발동
 	WhileInputActive,  // 입력 유지 중 활성
 	OnSpawn,           // 부여 즉시 발동
+	OnGameplayEvent,   // 입력 시스템을 경유하지 않고, AbilityTrigger와 GameplayEvent에 의해서만 발동함
 };
 
 /**
@@ -65,8 +66,13 @@ class HEIST_API UHeistGameplayAbility : public UGameplayAbility
 	GENERATED_BODY()
 
 public:
+	UHeistGameplayAbility();
+	
 	EHeistAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
-
+	
+	UFUNCTION(BlueprintPure, Category = "Heist|Ability")
+	bool IsToggleInteraction() const { return bToggleInteraction; }
+	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Ability")
 	EHeistAbilityActivationPolicy ActivationPolicy = EHeistAbilityActivationPolicy::OnInputTriggered;
@@ -78,7 +84,10 @@ protected:
 	// 채널링 Tag 관리용 GE 클래스, 모든 채널링 어빌리티가 공유한다.
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Channeling")
 	TSubclassOf<UGameplayEffect> ChannelingEffectClass;
-
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|Ability")
+	bool bToggleInteraction = false;
+	
 	FActiveGameplayEffectHandle ChannelingEffectHandle;
 	
 	// RowName으로 DataTable에서 채널링 데이터를 조회한다.

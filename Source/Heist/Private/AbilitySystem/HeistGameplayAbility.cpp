@@ -6,6 +6,13 @@
 
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Character/HeistTags_State.h"
+#include "Heist/Heist.h"
+
+UHeistGameplayAbility::UHeistGameplayAbility()
+{
+	ActivationBlockedTags.AddTag(HeistStateTags::State_ActionDisabled);
+}
 
 const FChannelingData* UHeistGameplayAbility::GetChannelingData(FName RowName) const
 {
@@ -16,7 +23,10 @@ const FChannelingData* UHeistGameplayAbility::GetChannelingData(FName RowName) c
 void UHeistGameplayAbility::StartChanneling(FName RowName)
 {
 	const FChannelingData* Data = GetChannelingData(RowName);
-	if (Data == nullptr) return;
+	if (Data == nullptr)
+	{
+		return;
+	}
 
 	bIsChanneling = true;
 

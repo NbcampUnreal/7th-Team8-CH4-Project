@@ -8,7 +8,7 @@ namespace HeistEventTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_EscortStarted, "Event.EscortStarted");
 	UE_DEFINE_GAMEPLAY_TAG(Event_EscortInterrupted, "Event.EscortInterrupted");
 	UE_DEFINE_GAMEPLAY_TAG(Event_ArrivedAtCar, "Event.ArrivedAtCar");
-	UE_DEFINE_GAMEPLAY_TAG(Event_BackAttackHit, "Event.BackAttackHit");
+	UE_DEFINE_GAMEPLAY_TAG(Event_KickHit, "Event.KickHit");
 	UE_DEFINE_GAMEPLAY_TAG(Event_StunExpired, "Event.StunExpired");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Move, "Event.Input.Move");
 }

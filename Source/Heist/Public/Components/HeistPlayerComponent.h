@@ -53,9 +53,13 @@ private:
 	void HandleInteractPressed();
 	void HandleInteractReleased();
 	
+	// State.MoveDisabled 설정 시
+	void OnMoveDisabledTagChanged(const FGameplayTag Tag, int32 Count);
+
 	FGameplayTag CurrentInteractAbilityTag; // 현재 상호작용 중인 어빌리티를 추적하는 용도입니다.
 	
 	bool bInputComponentReady = false;
+	bool bCurrentInteractIsToggle = false;
 	bool bInputBound = false;
 
 	TArray<uint32> AbilityInputBindHandles;

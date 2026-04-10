@@ -17,7 +17,13 @@
 #include "AbilitySystem/HeistTags_FlagTags.h"
 #include "Components/HeistInteractionComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Interaction/HeistInteractable.h"
+#include "Character/HeistTags_State.h"
+#include "DrawDebugHelpers.h"
+#include "AbilitySystem/HeistGameplayAbility.h"
+#include "Heist/Heist.h"
 
 const FName UHeistPlayerComponent::NAME_ActorFeatureName("Player");
 
@@ -146,7 +152,35 @@ void UHeistPlayerComponent::BindInput()
 	HeistInputComp->BindActionByTag(InputConfig, HeistInputTags::Input_Interact,
 	ETriggerEvent::Completed, this, &UHeistPlayerComponent::HandleInteractReleased);
 
+	// State.MoveDisabled 태그 상태 구독 - 이동 차단 처리
+	UHeistAbilitySystemComponent* ASC = PawnExtension->GetAbilitySystemComponent();
+	if (IsValid(ASC))
+	{
+		ASC->RegisterGameplayTagEvent(
+			HeistStateTags::State_MoveDisabled,
+			EGameplayTagEventType::NewOrRemoved
+		).AddUObject(this, &UHeistPlayerComponent::OnMoveDisabledTagChanged);
+	}
+
 	bInputBound = true;
+}
+
+void UHeistPlayerComponent::OnMoveDisabledTagChanged(const FGameplayTag Tag, int32 Count)
+{
+	ACharacter* CharacterOwner = Cast<ACharacter>(GetOwner());
+	if (!IsValid(CharacterOwner)) return;
+
+	UCharacterMovementComponent* MoveComp = CharacterOwner->GetCharacterMovement();
+	if (!IsValid(MoveComp)) return;
+	
+	// MoveDisabled는 이동 입력 차단용 태그
+	// MovementMode 자체를 끄면 RootMotion/Knockback 같은 외부 이동까지 막히므로
+	// 현재 프레임에 누적된 입력만 비워서 즉시 멈추게 한다.
+	if (Count > 0)
+	{
+		MoveComp->StopMovementImmediately();
+		CharacterOwner->ConsumeMovementInputVector();
+	}
 }
 
 void UHeistPlayerComponent::HandleMoveInput(const FInputActionValue& Value)
@@ -154,22 +188,25 @@ void UHeistPlayerComponent::HandleMoveInput(const FInputActionValue& Value)
 	APawn* Pawn = GetPawn<APawn>();
 	if (!IsValid(Pawn)) return;
 
+	UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(Pawn);
+	if (!IsValid(PawnExtension)) return;
+
+	UHeistAbilitySystemComponent* ASC = PawnExtension->GetAbilitySystemComponent();
+	if (!IsValid(ASC)) return;
+
+	if (ASC->HasMatchingGameplayTag(HeistStateTags::State_MoveDisabled))
+	{
+		return;
+	}
+
 	// 이동 입력이 0이 아닐 때 ASC로 이동 이벤트 전달
 	const FVector2D MoveVector = Value.Get<FVector2D>();
 	if (!MoveVector.IsNearlyZero())
 	{
-		UHeistPawnExtensionComponent* PawnExtension = UHeistPawnExtensionComponent::FindPawnExtensionComponent(Pawn);
-		if (IsValid(PawnExtension))
-		{
-			UHeistAbilitySystemComponent* ASC = PawnExtension->GetAbilitySystemComponent();
-			if (IsValid(ASC))
-			{
-				FGameplayEventData Payload;
-				Payload.Instigator = Pawn;
+		FGameplayEventData Payload;
+		Payload.Instigator = Pawn;
 
-				ASC->HandleGameplayEvent(HeistEventTags::Event_Input_Move, &Payload);
-			}
-		}
+		ASC->HandleGameplayEvent(HeistEventTags::Event_Input_Move, &Payload);
 	}
 	Pawn->AddMovementInput(FVector::ForwardVector, MoveVector.Y);
 	Pawn->AddMovementInput(FVector::RightVector, MoveVector.X);
@@ -230,17 +267,38 @@ void UHeistPlayerComponent::HandleInteractPressed()
 		HitResult,
 	WorldLocation,
 	WorldLocation + WorldDirection * 10000.f,
-	ECC_Visibility,
+		HEIST_ECC_Interact,
 		Params
 	);
+
+	// 마우스 레이캐스트 디버그 라인 추가
+	// DrawDebugLine(GetWorld(), WorldLocation, WorldLocation + WorldDirection * 10000.f, bHit ? FColor::Green : FColor::Red, false, 2.f, 0, 2.f);
+	//
+	// if (bHit && IsValid(HitResult.GetActor()))
+	// {
+	// 	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, FString::Printf(TEXT("Hit Actor: %s"), *HitResult.GetActor()->GetName()));
+	// }
+
 	if (!bHit || !IsValid(HitResult.GetActor())) return;
 	
-	// 기껏 쐈는데 인터렉터블 없으면 그냥 버림
-	if (!HitResult.GetActor()->Implements<UHeistInteractable>()) return; 
-	// 이 패턴은 IHeistInteractable이 아니라 UHeistInteractable를 참조해 타입 인자를 체크함
+	// 액터 본인이 구현했거나, 산하 ActorComponent 중 하나라도 인터랙터블을 구현했는지 범용적으로 체크합니다.
+	bool bIsInteractable = HitResult.GetActor()->Implements<UHeistInteractable>();
+	if (!bIsInteractable)
+	{
+		const TArray<UActorComponent*> InteractComps = HitResult.GetActor()->GetComponentsByInterface(UHeistInteractable::StaticClass());
+		if (InteractComps.Num() > 0)
+		{
+			bIsInteractable = true;
+		}
+	}
 	
+	if (!bIsInteractable) return; 
+	
+	// 마우스를 클릭한 "내 캐릭터(Pawn)"가 상호작용 목록을 추적하는 기능(HeistInteractionComponent)을 가지고 있는지 확인합니다.
+	// (위의 Interactable 검사는 '맞은 액터'를 검사한 것이고, 이것은 '나'를 검사하는 것이므로 중복이 아닙니다)
 	UHeistInteractionComponent* InteractComp = Pawn->FindComponentByClass<UHeistInteractionComponent>();
-	
+	if (!IsValid(InteractComp)) return;
+
 	// 인터렉티브 Sphere 안에 있고, 레이저 쏴서 그 액터도 인터렉티브 가능하면? -> 인터렉티브 Interface 상속한 액터 코드로 가서 'Tag' 만 때온다
 	FGameplayTag AbilityTag = InteractComp->ResolveInteractAbilityTag(HitResult.GetActor());
 	
@@ -248,6 +306,17 @@ void UHeistPlayerComponent::HandleInteractPressed()
 	
 	// 현재 상호작용 중인 AbilityTag 추적 - 맥락을 받아온다
 	CurrentInteractAbilityTag = AbilityTag;
+	
+	// 어빌리티 스펙 조회해서 Toggle 여부 캐싱
+	for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	{
+		if (Spec.Ability && Spec.Ability->AbilityTags.HasTag(AbilityTag))
+		{
+			if (UHeistGameplayAbility* HGA = Cast<UHeistGameplayAbility>(Spec.Ability))
+				bCurrentInteractIsToggle = HGA->IsToggleInteraction();
+			break;
+		}
+	}
 	
 	FGameplayEventData Payload;
 	Payload.Instigator = Pawn;
@@ -269,6 +338,13 @@ void UHeistPlayerComponent::HandleInteractReleased()
 
 	UHeistAbilitySystemComponent* ASC = PawnExtension->GetAbilitySystemComponent();
 	if (!IsValid(ASC)) return;
+	
+	if (bCurrentInteractIsToggle)
+	{
+		bCurrentInteractIsToggle = false;
+		CurrentInteractAbilityTag = FGameplayTag::EmptyTag;
+		return;  // 토글 어빌리티는 Release 시 아무것도 안 함
+	}
 	
 	// TODO: Release 시 상자 드롭하는 로직 - 가구현 각도를 어떻게 처리를 해야할걸요?
 	// if (ASC->HasMatchingGameplayTag(HeistFlagTags::Tag_Carrying))
