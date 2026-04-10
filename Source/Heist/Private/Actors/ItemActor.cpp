@@ -2,29 +2,36 @@
 
 #include "Components/BoxComponent.h"
 #include "AbilitySystem/HeistTags_FlagTags.h"
+#include "AbilitySystem/HeistTags_Event.h"
 #include "Data/ItemData.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
 #include "Character/HeistCharacter.h"
+#include "GameplayTagContainer.h"
+#include "Components/HeistInteractSphereComponent.h"
 
-AItemActor::AItemActor()
+AItemActor::AItemActor() : bIsCarried(false), bIsSoloCarried(false)
 {
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true; 
 	SetReplicateMovement(true);
 
-
-	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
-	SetRootComponent(SceneRoot);
+	//SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
+	//SetRootComponent(SceneRoot);
 
 	BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
-	BoxCollision->SetupAttachment(SceneRoot);
+	//BoxCollision->SetupAttachment(Mesh);
+	SetRootComponent(BoxCollision);
+
+	BoxCollision->SetSimulatePhysics(true);
+	BoxCollision->SetCollisionProfileName(TEXT("PhysicsActor"));
+	BoxCollision->SetUseCCD(true);
 
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(BoxCollision);
 
-	Mesh->SetSimulatePhysics(false);
+	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	InteractSphereComponent = CreateDefaultSubobject<UHeistInteractSphereComponent>(TEXT("InteractSphereComponent"));
 }
@@ -50,11 +57,13 @@ void AItemActor::Multicast_OnItemPhysicsEvent_Implementation(FVector ImpulseDir,
     }
 }
 
-
 void AItemActor::BeginPlay()
 {
 	Super::BeginPlay();
 	InitializeFromData();
+
+	InteractSphereComponent->OnCanInteract.BindUObject(this, &AItemActor::CheckCanInteract);
+	InteractSphereComponent->OnGetAbilityTag.BindUObject(this, &AItemActor::ResolveInteractAbilityTag);
 }
 
 void AItemActor::InitializeFromData()
@@ -99,11 +108,10 @@ void AItemActor::FinalizePhysicsLocation()
 	SetActorLocation(FinalLocation);
 }
 
-void AItemActor::OnPickedUp(AHeistCharacter* InCarrier, FName InSocketName)
+void AItemActor::OnPickedUp(AHeistCharacter* InCarrier)
 {
 	if (!InCarrier || !HasAuthority()) return;
-
-	AttachToComponent(InCarrier->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, InSocketName);
+	bIsCarried = true;
 }
 
 int32 AItemActor::GetRequiredCarriers() const
@@ -119,4 +127,15 @@ float AItemActor::GetCarrySpeedMultiplier() const
 float AItemActor::GetSoloCarrySpeedMultiplier() const
 {
 	return GetItemData()->SoloCarrySpeedMultiplier;
+}
+
+bool AItemActor::CheckCanInteract(ACharacter* Interactor) const
+{
+	if (bIsCarried && !bIsSoloCarried) return false;
+	return true;
+}
+
+FGameplayTag AItemActor::ResolveInteractAbilityTag(ACharacter* Interactor) const
+{
+	return HeistEventTags::Event_CarryStarted;
 }

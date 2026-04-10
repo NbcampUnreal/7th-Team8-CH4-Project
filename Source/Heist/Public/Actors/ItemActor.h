@@ -2,15 +2,15 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Interaction/HeistInteractable.h"
 #include "Interaction/HeistCarryable.h"
-#include "Components/HeistInteractSphereComponent.h"
 #include "ItemActor.generated.h"
 
 class USceneComponent;
 class UBoxComponent;
 class UStaticMeshComponent;
 class AHeistCharacter;
+class UHeistInteractSphereComponent;
+struct FGameplayTag;
 
 UCLASS()
 class HEIST_API AItemActor : public AActor, public IHeistCarryable
@@ -25,7 +25,7 @@ public:
 	void Multicast_OnItemPhysicsEvent(FVector ImpulseDir, float Force);
 
 	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
-	void OnPickedUp(AHeistCharacter* InCarrier, FName InSocketName);
+	void OnPickedUp(AHeistCharacter* InCarrier);
 
 	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
 	int32 GetRequiredCarriers() const;
@@ -53,6 +53,10 @@ protected:
 	// 물리 종료 및 위치 확정 타이머
 	void FinalizePhysicsLocation();
 
+	bool CheckCanInteract(ACharacter* Interactor) const;
+
+	FGameplayTag ResolveInteractAbilityTag(ACharacter* Interactor) const;
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess))
 	TObjectPtr<USceneComponent> SceneRoot;
@@ -68,6 +72,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
 	FDataTableRowHandle ItemData;
+
+	bool bIsCarried;
+	bool bIsSoloCarried;
 
 	FTimerHandle PhysicsTimeoutHandle;
 };

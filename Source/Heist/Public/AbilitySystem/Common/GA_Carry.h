@@ -12,7 +12,9 @@ UCLASS()
 class HEIST_API UGA_Carry : public UHeistGameplayAbility
 {
 	GENERATED_BODY()
-	
+
+public:
+	UGA_Carry();
 
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle,
