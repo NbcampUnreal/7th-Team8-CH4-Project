@@ -4,4 +4,4 @@
 
 #include "CoreMinimal.h"
 
-#define HEIST_ECC_Interact ECollisionChannel::ECC_GameTraceChannel1 
+#define HEIST_ECC_Interact ECollisionChannel::ECC_GameTraceChannel1
