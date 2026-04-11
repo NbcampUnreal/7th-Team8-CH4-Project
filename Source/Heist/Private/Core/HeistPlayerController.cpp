@@ -9,6 +9,9 @@
 
 #include "GameFramework/Pawn.h"
 #include "EnhancedInputComponent.h"
+#include "OnlineSubsystem.h"
+#include "Interfaces/VoiceInterface.h"
+#include "Interfaces/OnlineIdentityInterface.h"
 
 AHeistPlayerController::AHeistPlayerController()
 {
@@ -29,6 +32,68 @@ void AHeistPlayerController::Input_SystemMenu()
 {
 	UHeistMessageSubsystem& MessageSubsystem = UHeistMessageSubsystem::Get(this);
 	MessageSubsystem.BroadcastMessage(HeistMessageTags::Message_SystemMenu_Toggle, FHeistSystemMenuToggleMessage{});
+}
+
+void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
+{
+	Super::AcknowledgePossession(NewPawn);
+
+	if (!IsLocalController()) return;
+
+	StartTalking();
+
+	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
+	if (OSS == nullptr) return;
+
+	IOnlineVoicePtr VoiceInterface = OSS->GetVoiceInterface();
+	if (!VoiceInterface.IsValid()) return;
+
+	VoiceTalkingStateChangedHandle = VoiceInterface->AddOnPlayerTalkingStateChangedDelegate_Handle(
+		FOnPlayerTalkingStateChangedDelegate::CreateUObject(this, &ThisClass::HandleVoiceTalkingStateChanged));
+
+	UE_LOG(LogTemp, Warning, TEXT("[Voice] AcknowledgePossession - delegate registered. Pawn: %s"),
+		IsValid(NewPawn) ? *NewPawn->GetName() : TEXT("NULL"));
+}
+
+void AHeistPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (VoiceTalkingStateChangedHandle.IsValid())
+	{
+		IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
+		if (OSS != nullptr)
+		{
+			IOnlineVoicePtr VoiceInterface = OSS->GetVoiceInterface();
+			if (VoiceInterface.IsValid())
+			{
+				VoiceInterface->ClearOnPlayerTalkingStateChangedDelegate_Handle(VoiceTalkingStateChangedHandle);
+			}
+		}
+		VoiceTalkingStateChangedHandle.Reset();
+	}
+
+	Super::EndPlay(EndPlayReason);
+}
+
+void AHeistPlayerController::HandleVoiceTalkingStateChanged(FUniqueNetIdRef PlayerId, bool bIsTalking)
+{
+	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
+	if (OSS == nullptr) return;
+
+	IOnlineIdentityPtr IdentityInterface = OSS->GetIdentityInterface();
+	if (!IdentityInterface.IsValid()) return;
+
+	TSharedPtr<const FUniqueNetId> LocalPlayerId = IdentityInterface->GetUniquePlayerId(0);
+	if (!LocalPlayerId.IsValid() || *LocalPlayerId != *PlayerId) return;
+
+	UE_LOG(LogTemp, Warning, TEXT("[Voice] HandleVoiceTalkingStateChanged - bIsTalking: %s"),
+		bIsTalking ? TEXT("TRUE") : TEXT("FALSE"));
+
+	FHeistVoiceTalkingStateMessage Message;
+	Message.PlayerState = GetPlayerState<APlayerState>();
+	Message.bIsTalking = bIsTalking;
+
+	UHeistMessageSubsystem::Get(this).BroadcastMessage(
+		HeistMessageTags::Message_Voice_TalkingStateChanged, Message);
 }
 
 void AHeistPlayerController::PlayerTick(float DeltaTime)

@@ -16,4 +16,6 @@ namespace HeistMessageTags
     UE_DEFINE_GAMEPLAY_TAG(Message_Alarm_Theft, "Message.Alarm.Theft");
     UE_DEFINE_GAMEPLAY_TAG(Message_Alarm_GPS, "Message.Alarm.GPS");
     UE_DEFINE_GAMEPLAY_TAG(Message_Alarm_Global, "Message.Alarm.Global");
+
+    UE_DEFINE_GAMEPLAY_TAG(Message_Voice_TalkingStateChanged, "Message.Voice.TalkingStateChanged");
 }

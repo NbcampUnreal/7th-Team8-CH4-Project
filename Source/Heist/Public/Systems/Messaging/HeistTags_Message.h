@@ -18,4 +18,6 @@ namespace HeistMessageTags
     HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Alarm_Theft);
     HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Alarm_GPS);
     HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Alarm_Global);
+
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Voice_TalkingStateChanged);
 }
