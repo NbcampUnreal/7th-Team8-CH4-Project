@@ -12,9 +12,6 @@ void UHeistVoiceRoomWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	UE_LOG(LogTemp, Warning, TEXT("[VoiceRoom] NativeConstruct. EntryWidgetClass valid: %s"),
-		IsValid(EntryWidgetClass) ? TEXT("YES") : TEXT("NO"));
-
 	InitPlayerList();
 
 	TalkingStateListenerHandle = UHeistMessageSubsystem::Get(this).RegisterListener<FHeistVoiceTalkingStateMessage>(
@@ -37,8 +34,6 @@ void UHeistVoiceRoomWidget::InitPlayerList()
 	if (!IsValid(GameState)) return;
 	if (!IsValid(EntryWidgetClass)) return;
 
-	UE_LOG(LogTemp, Warning, TEXT("[VoiceRoom] InitPlayerList. PlayerArray count: %d"), GameState->PlayerArray.Num());
-
 	for (APlayerState* PlayerState : GameState->PlayerArray)
 	{
 		if (!IsValid(PlayerState) || EntryMap.Contains(PlayerState)) continue;
@@ -46,7 +41,6 @@ void UHeistVoiceRoomWidget::InitPlayerList()
 		UHeistVoiceEntryWidget* NewEntry = CreateWidget<UHeistVoiceEntryWidget>(GetOwningPlayer(), EntryWidgetClass);
 		if (!IsValid(NewEntry)) continue;
 
-		UE_LOG(LogTemp, Warning, TEXT("[VoiceRoom] Entry created for: %s"), *PlayerState->GetPlayerName());
 		NewEntry->UpdateEntry(PlayerState->GetPlayerName(), false);
 		PlayerList->AddChild(NewEntry);
 		EntryMap.Add(PlayerState, NewEntry);
@@ -56,9 +50,6 @@ void UHeistVoiceRoomWidget::InitPlayerList()
 void UHeistVoiceRoomWidget::OnTalkingStateChanged(FGameplayTag Channel, const FHeistVoiceTalkingStateMessage& Message)
 {
 	APlayerState* PlayerState = Message.PlayerState;
-	UE_LOG(LogTemp, Warning, TEXT("[VoiceRoom] OnTalkingStateChanged. PlayerState valid: %s, bIsTalking: %s"),
-		IsValid(PlayerState) ? TEXT("YES") : TEXT("NO"),
-		Message.bIsTalking ? TEXT("TRUE") : TEXT("FALSE"));
 	if (!IsValid(PlayerState)) return;
 
 	// 아직 목록에 없는 플레이어면 추가 (늦게 접속한 경우)

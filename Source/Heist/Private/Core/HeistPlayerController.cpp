@@ -50,9 +50,6 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 
 	VoiceTalkingStateChangedHandle = VoiceInterface->AddOnPlayerTalkingStateChangedDelegate_Handle(
 		FOnPlayerTalkingStateChangedDelegate::CreateUObject(this, &ThisClass::HandleVoiceTalkingStateChanged));
-
-	UE_LOG(LogTemp, Warning, TEXT("[Voice] AcknowledgePossession - delegate registered. Pawn: %s"),
-		IsValid(NewPawn) ? *NewPawn->GetName() : TEXT("NULL"));
 }
 
 void AHeistPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -84,9 +81,6 @@ void AHeistPlayerController::HandleVoiceTalkingStateChanged(FUniqueNetIdRef Play
 
 	TSharedPtr<const FUniqueNetId> LocalPlayerId = IdentityInterface->GetUniquePlayerId(0);
 	if (!LocalPlayerId.IsValid() || *LocalPlayerId != *PlayerId) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("[Voice] HandleVoiceTalkingStateChanged - bIsTalking: %s"),
-		bIsTalking ? TEXT("TRUE") : TEXT("FALSE"));
 
 	FHeistVoiceTalkingStateMessage Message;
 	Message.PlayerState = GetPlayerState<APlayerState>();
