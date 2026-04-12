@@ -48,6 +48,11 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 	IOnlineVoicePtr VoiceInterface = OSS->GetVoiceInterface();
 	if (!VoiceInterface.IsValid()) return;
 
+	if (VoiceTalkingStateChangedHandle.IsValid())
+	{
+		VoiceInterface->ClearOnPlayerTalkingStateChangedDelegate_Handle(VoiceTalkingStateChangedHandle);
+	}
+
 	VoiceTalkingStateChangedHandle = VoiceInterface->AddOnPlayerTalkingStateChangedDelegate_Handle(
 		FOnPlayerTalkingStateChangedDelegate::CreateUObject(this, &ThisClass::HandleVoiceTalkingStateChanged));
 }
