@@ -19,6 +19,7 @@ public class Heist : ModuleRules
 			"EnhancedInput",
 			"ModularGameplay",
 			"MultiplayerSessions",
+			"CableComponent",
 			"StructUtils",
 			"DebugUI",
 		});
