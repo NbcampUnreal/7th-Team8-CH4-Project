@@ -5,13 +5,24 @@
 #include "Systems/Messaging/HeistTags_Message.h"
 
 #include "GameFramework/PlayerState.h"
+#include "Components/AudioComponent.h"
 
 void UHeistVoipTalker::OnTalkingBegin(UAudioComponent* AudioComponent)
 {
 	APlayerState* OwnerPS = GetOwner<APlayerState>();
+
 	if (IsValid(OwnerPS) && IsValid(OwnerPS->GetPawn()))
 	{
 		Settings.ComponentToAttachTo = OwnerPS->GetPawn()->GetRootComponent();
+		AudioComponent->AttachToComponent(
+			OwnerPS->GetPawn()->GetRootComponent(),
+			FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	}
+
+	if (IsValid(Settings.AttenuationSettings))
+	{
+		AudioComponent->bAllowSpatialization = true;
+		AudioComponent->SetAttenuationSettings(Settings.AttenuationSettings);
 	}
 
 	Super::OnTalkingBegin(AudioComponent);

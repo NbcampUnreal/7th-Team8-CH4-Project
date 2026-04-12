@@ -26,6 +26,16 @@ void AHeistPlayerState::BeginPlay()
 	VoipTalker->RegisterWithPlayerState(this);
 }
 
+void AHeistPlayerState::OnSetUniqueId()
+{
+	Super::OnSetUniqueId();
+
+	if (IsValid(VoipTalker))
+	{
+		VoipTalker->RegisterWithPlayerState(this);
+	}
+}
+
 UAbilitySystemComponent* AHeistPlayerState::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;

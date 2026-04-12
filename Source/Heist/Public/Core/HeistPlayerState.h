@@ -28,6 +28,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void OnSetUniqueId() override;
 
 private:
 	UPROPERTY()

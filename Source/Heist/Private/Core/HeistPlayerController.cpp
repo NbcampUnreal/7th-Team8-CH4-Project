@@ -40,6 +40,8 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 
 	if (!IsLocalController()) return;
 
+	SetAudioListenerOverride(NewPawn->GetRootComponent(), FVector::ZeroVector, FRotator::ZeroRotator);
+
 	StartTalking();
 
 	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
