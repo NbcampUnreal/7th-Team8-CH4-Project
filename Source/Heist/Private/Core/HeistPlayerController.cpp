@@ -3,6 +3,7 @@
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "Character/HeistTags_State.h"
 #include "Core/HeistPlayerState.h"
+#include "Voice/HeistVoipTalker.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
 #include "Systems/Messaging/HeistTags_Message.h"
@@ -12,6 +13,8 @@
 #include "OnlineSubsystem.h"
 #include "Interfaces/VoiceInterface.h"
 #include "Interfaces/OnlineIdentityInterface.h"
+#include "DrawDebugHelpers.h"
+#include "Sound/SoundAttenuation.h"
 
 AHeistPlayerController::AHeistPlayerController()
 {
@@ -97,9 +100,34 @@ void AHeistPlayerController::HandleVoiceTalkingStateChanged(FUniqueNetIdRef Play
 		HeistMessageTags::Message_Voice_TalkingStateChanged, Message);
 }
 
+void AHeistPlayerController::DrawVoiceRangeDebug()
+{
+	APawn* ControlledPawn = GetPawn();
+	if (!IsValid(ControlledPawn)) return;
+
+	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPS)) return;
+
+	UHeistVoipTalker* VoipTalker = HeistPS->GetVoipTalker();
+	if (!IsValid(VoipTalker) || !IsValid(VoipTalker->Settings.AttenuationSettings)) return;
+
+	const FSoundAttenuationSettings& Attenuation = VoipTalker->Settings.AttenuationSettings->Attenuation;
+	const FVector Center = ControlledPawn->GetActorLocation();
+	const float InnerRadius = Attenuation.AttenuationShapeExtents.X;
+	const float OuterRadius = InnerRadius + Attenuation.FalloffDistance;
+
+	DrawDebugCircle(GetWorld(), Center, InnerRadius, 64, FColor::Green, false, -1.f, 0, 3.f, FVector::ForwardVector, FVector::RightVector);
+	DrawDebugCircle(GetWorld(), Center, OuterRadius, 64, FColor::Red,   false, -1.f, 0, 3.f, FVector::ForwardVector, FVector::RightVector);
+}
+
 void AHeistPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
+
+	if (bShowVoiceRange)
+	{
+		DrawVoiceRangeDebug();
+	}
 
 	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
 	if (!IsValid(HeistPS)) return;

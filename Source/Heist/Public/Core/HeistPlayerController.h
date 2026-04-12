@@ -28,5 +28,10 @@ private:
 
 	void Input_SystemMenu();
 
+	UPROPERTY(EditDefaultsOnly, Category = "Voice|Debug")
+	bool bShowVoiceRange = false;
+
+	void DrawVoiceRangeDebug();
+
 	FDelegateHandle VoiceTalkingStateChangedHandle;
 };
