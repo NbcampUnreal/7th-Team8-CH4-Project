@@ -8,6 +8,12 @@
 
 void UHeistVoipTalker::OnTalkingBegin(UAudioComponent* AudioComponent)
 {
+	APlayerState* OwnerPS = GetOwner<APlayerState>();
+	if (IsValid(OwnerPS) && IsValid(OwnerPS->GetPawn()))
+	{
+		Settings.ComponentToAttachTo = OwnerPS->GetPawn()->GetRootComponent();
+	}
+
 	Super::OnTalkingBegin(AudioComponent);
 	BroadcastTalkingState(true);
 }

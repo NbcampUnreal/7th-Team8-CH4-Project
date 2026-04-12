@@ -36,6 +36,6 @@ private:
 	UPROPERTY()
 	TObjectPtr<UHeistAttributeSet> AttributeSet;
 
-	UPROPERTY()
+	UPROPERTY(VisibleDefaultsOnly, Category = "Voice", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHeistVoipTalker> VoipTalker;
 };

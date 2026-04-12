@@ -15,6 +15,4 @@ public:
 
 private:
 	void BroadcastTalkingState(bool bIsTalking);
-
-	FDelegateHandle LocalVoiceDelegateHandle;
 };
