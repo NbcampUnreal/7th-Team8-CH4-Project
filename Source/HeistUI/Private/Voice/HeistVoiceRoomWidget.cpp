@@ -37,14 +37,35 @@ void UHeistVoiceRoomWidget::InitPlayerList()
 	for (APlayerState* PlayerState : GameState->PlayerArray)
 	{
 		if (!IsValid(PlayerState) || EntryMap.Contains(PlayerState)) continue;
-
-		UHeistVoiceEntryWidget* NewEntry = CreateWidget<UHeistVoiceEntryWidget>(GetOwningPlayer(), EntryWidgetClass);
-		if (!IsValid(NewEntry)) continue;
-
-		NewEntry->UpdateEntry(PlayerState->GetPlayerName(), false);
-		PlayerList->AddChild(NewEntry);
-		EntryMap.Add(PlayerState, NewEntry);
+		AddPlayerEntry(PlayerState);
 	}
+}
+
+void UHeistVoiceRoomWidget::AddPlayerEntry(APlayerState* PlayerState)
+{
+	if (!IsValid(EntryWidgetClass)) return;
+
+	UHeistVoiceEntryWidget* NewEntry = CreateWidget<UHeistVoiceEntryWidget>(GetOwningPlayer(), EntryWidgetClass);
+	if (!IsValid(NewEntry)) return;
+
+	NewEntry->UpdateEntry(PlayerState->GetPlayerName(), false);
+	PlayerList->AddChild(NewEntry);
+	EntryMap.Add(PlayerState, NewEntry);
+
+	PlayerState->OnDestroyed.AddDynamic(this, &UHeistVoiceRoomWidget::OnPlayerStateDestroyed);
+}
+
+void UHeistVoiceRoomWidget::OnPlayerStateDestroyed(AActor* DestroyedActor)
+{
+	APlayerState* PlayerState = Cast<APlayerState>(DestroyedActor);
+	if (!IsValid(PlayerState)) return;
+
+	UHeistVoiceEntryWidget* Entry = EntryMap.FindRef(PlayerState);
+	if (IsValid(Entry))
+	{
+		Entry->RemoveFromParent();
+	}
+	EntryMap.Remove(PlayerState);
 }
 
 void UHeistVoiceRoomWidget::OnTalkingStateChanged(FGameplayTag Channel, const FHeistVoiceTalkingStateMessage& Message)
@@ -55,13 +76,7 @@ void UHeistVoiceRoomWidget::OnTalkingStateChanged(FGameplayTag Channel, const FH
 	// 아직 목록에 없는 플레이어면 추가 (늦게 접속한 경우)
 	if (!EntryMap.Contains(PlayerState))
 	{
-		if (!IsValid(EntryWidgetClass)) return;
-
-		UHeistVoiceEntryWidget* NewEntry = CreateWidget<UHeistVoiceEntryWidget>(GetOwningPlayer(), EntryWidgetClass);
-		if (!IsValid(NewEntry)) return;
-
-		PlayerList->AddChild(NewEntry);
-		EntryMap.Add(PlayerState, NewEntry);
+		AddPlayerEntry(PlayerState);
 	}
 
 	EntryMap[PlayerState]->UpdateEntry(PlayerState->GetPlayerName(), Message.bIsTalking);

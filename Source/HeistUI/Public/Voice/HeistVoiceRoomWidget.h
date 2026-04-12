@@ -34,4 +34,8 @@ private:
 
 	void InitPlayerList();
 	void OnTalkingStateChanged(FGameplayTag Channel, const FHeistVoiceTalkingStateMessage& Message);
+	void AddPlayerEntry(APlayerState* PlayerState);
+
+	UFUNCTION()
+	void OnPlayerStateDestroyed(AActor* DestroyedActor);
 };
