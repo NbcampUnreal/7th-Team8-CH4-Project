@@ -114,6 +114,12 @@ void AItemActor::OnPickedUp(AHeistCharacter* InCarrier)
 	bIsCarried = true;
 }
 
+void AItemActor::OnDropOff(AHeistCharacter* InCarrier)
+{
+	if (!InCarrier || !HasAuthority()) return;
+	bIsCarried = false;
+}
+
 int32 AItemActor::GetRequiredCarriers() const
 {
 	return GetItemData()->RequiredCarriers;

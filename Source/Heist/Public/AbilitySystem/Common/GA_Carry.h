@@ -5,6 +5,8 @@
 #include "GameplayEffectTypes.h"
 #include "GA_Carry.generated.h"
 
+class AItemActor;
+
 /**
  * 
  */
@@ -34,4 +36,6 @@ private:
 	TSubclassOf<UGameplayEffect> CarryEffect;
 
 	FActiveGameplayEffectHandle CarryEffectHandle;
+
+	AItemActor* Item;
 };

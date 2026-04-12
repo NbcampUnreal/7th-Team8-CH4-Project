@@ -13,6 +13,8 @@ UGA_Carry::UGA_Carry()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
+	AbilityTags.AddTag(HeistFlagTags::Tag_Carrying);
+
 	ActivationOwnedTags.AddTag(HeistFlagTags::Tag_Carrying);
 	ActivationBlockedTags.AddTag(HeistFlagTags::Tag_Carrying);
 
@@ -25,8 +27,6 @@ UGA_Carry::UGA_Carry()
 void UGA_Carry::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-	UE_LOG(LogTemp, Warning, TEXT("carry"));
-
 
 	float SpeedMult = 1.0f;
 			
@@ -34,7 +34,7 @@ void UGA_Carry::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 	if (TriggerEventData && TriggerEventData->Target)
 	{
 		AActor* TargetActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Target.Get()) : nullptr;
-		AItemActor* Item = Cast<AItemActor>(TargetActor);
+		Item = Cast<AItemActor>(TargetActor);
 		int32 Carriers = Item->GetRequiredCarriers();
 		if (Carriers == 1)
 		{
@@ -63,11 +63,15 @@ void UGA_Carry::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 
 void UGA_Carry::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
-	if (IsValid(ASC))
+	UE_LOG(LogTemp, Warning, TEXT("EndAbility Called!"));
+	if (CarryEffectHandle.IsValid())
 	{
-		ASC->RemoveReplicatedLooseGameplayTag(HeistFlagTags::Tag_Carrying);
+		GetAbilitySystemComponentFromActorInfo()->RemoveActiveGameplayEffect(CarryEffectHandle);
+		CarryEffectHandle.Invalidate();
 	}
+
+	AHeistCharacter* Carrier = Cast<AHeistCharacter>(GetAvatarActorFromActorInfo());
+	Item->OnDropOff(Carrier);
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

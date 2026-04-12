@@ -347,14 +347,15 @@ void UHeistPlayerComponent::HandleInteractReleased()
 	}
 	
 	// TODO: Release 시 상자 드롭하는 로직 - 가구현 각도를 어떻게 처리를 해야할걸요?
-	// if (ASC->HasMatchingGameplayTag(HeistFlagTags::Tag_Carrying))
-	// {
-	// 	FGameplayEventData Payload;
-	// 	Payload.Instigator = Pawn;
-	// 	ASC->HandleGameplayEvent(HeistAbilityTags::Ability_Thief_Drop, &Payload);
-	// 	CurrentInteractAbilityTag = FGameplayTag::EmptyTag;
-	// 	return;
-	// }
+	if (ASC->HasMatchingGameplayTag(HeistFlagTags::Tag_Carrying))
+	{
+		FGameplayTagContainer Tags;
+		Tags.AddTag(HeistFlagTags::Tag_Carrying);
+		ASC->CancelAbilities(&Tags);
+
+		CurrentInteractAbilityTag = FGameplayTag::EmptyTag;
+		return;
+	}
 	
 	// 나머지 WhileInputActive(채널링 중) GA 취소 (HelpCuffed, Heal 등)
 	if (CurrentInteractAbilityTag.IsValid())

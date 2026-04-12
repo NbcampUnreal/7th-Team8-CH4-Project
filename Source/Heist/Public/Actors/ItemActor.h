@@ -28,6 +28,9 @@ public:
 	void OnPickedUp(AHeistCharacter* InCarrier);
 
 	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
+	void OnDropOff(AHeistCharacter* InCarrier);
+
+	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
 	int32 GetRequiredCarriers() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
