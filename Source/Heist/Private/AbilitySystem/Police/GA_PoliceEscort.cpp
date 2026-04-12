@@ -1,3 +1,4 @@
+
 #include "AbilitySystem/Police/GA_PoliceEscort.h"
 
 #include "Character/ThiefCharacter.h"
@@ -103,10 +104,11 @@ void UGA_PoliceEscort::EndAbility(
 		EscortingEffectHandle.Invalidate();
 	}
 	
+	AHeistCharacter* PoliceActor = Cast<AHeistCharacter>(GetAvatarActorFromActorInfo());
 	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
 	{
 		UThiefEscortComponent* EscortComp = TargetThief->GetThiefEscortComponent();
-		if (IsValid(EscortComp) && EscortComp->IsEscorted())
+		if (IsValid(EscortComp) && IsValid(PoliceActor) && EscortComp->IsEscortedBy(PoliceActor))
 		{
 			// 기존 취소 정책
 			// bWasCancelled == true 이면 cuffed 유지
@@ -118,7 +120,6 @@ void UGA_PoliceEscort::EndAbility(
 		
 		if (bWasCancelled)
 		{
-			AActor* PoliceActor = GetAvatarActorFromActorInfo();
 			if (IsValid(PoliceActor))
 			{
 				TargetThief->AddActorWorldOffset(PoliceActor->GetActorRightVector() * EscortReleaseOffset, true);
