@@ -38,6 +38,18 @@ void UHeistInteractSphereComponent::BeginPlay()
 
 	InteractSphere->OnComponentBeginOverlap.AddDynamic(this, &UHeistInteractSphereComponent::OnSphereBeginOverlap);
 	InteractSphere->OnComponentEndOverlap.AddDynamic(this, &UHeistInteractSphereComponent::OnSphereEndOverlap);
+
+	// BeginOverlap를 놓친 초기 겹침분을 보정한다.
+	TArray<AActor*> OverlappingActors;
+	InteractSphere->GetOverlappingActors(OverlappingActors);
+
+	for (AActor* OverlappingActor : OverlappingActors)
+	{
+		if (UHeistInteractionComponent* IC = OverlappingActor->FindComponentByClass<UHeistInteractionComponent>())
+		{
+			IC->RegisterInteractable(TScriptInterface<IHeistInteractable>(this));
+		}
+	}
 }
 
 bool UHeistInteractSphereComponent::CanInteract_Implementation(ACharacter* Interactor) const

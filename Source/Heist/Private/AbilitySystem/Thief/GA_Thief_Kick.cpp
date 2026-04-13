@@ -86,13 +86,12 @@ void UGA_Thief_Kick::ApplyKickToTarget(AHeistCharacter* Target, UAbilitySystemCo
 
 	AActor* Self = GetAvatarActorFromActorInfo();
 	if (!IsValid(Self)) return;
-
-	if (AThiefCharacter* EscortedThief = UThiefEscortComponent::FindEscortedThiefByPolice(Target))
+	
+	if (UThiefEscortComponent::FindEscortedThiefByPolice(Target))
 	{
-		if (UThiefEscortComponent* EscortComp = EscortedThief->GetThiefEscortComponent())
-		{
-			EscortComp->InterruptEscort(GetAbilitySystemComponentFromActorInfo(), false);
-		}
+		FGameplayTagContainer EscortAbilityTags;
+		EscortAbilityTags.AddTag(HeistAbilityTags::Ability_Police_Escort);
+		TargetASC->CancelAbilities(&EscortAbilityTags, nullptr, nullptr);
 	}
 
 	FVector LaunchDirection = Target->GetActorLocation() - Self->GetActorLocation();

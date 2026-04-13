@@ -4,6 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "Character/HeistTags_State.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -20,6 +21,7 @@ void UHeistAnimInstance::NativeInitializeAnimation()
 
 void UHeistAnimInstance::NativeUninitializeAnimation()
 {
+	ClearRestraintHandGoal();
 	UnbindAbilitySystem();
 	Super::NativeUninitializeAnimation();
 }
@@ -40,6 +42,7 @@ void UHeistAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		if (!IsValid(PlayerChar)) return;
 	}
 	
+	UpdateRestraintHandGoal();
 	UpdateIK(DeltaSeconds);
 }
 
@@ -119,6 +122,7 @@ void UHeistAnimInstance::SyncAllTagsEvents(UAbilitySystemComponent* ASC)
 	bIsCuffed = ASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Cuffed);
 	bIsInjured = ASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Injured);
 	
+	ApplyRestraintPresentationState();
 	RefreshIKFootSpeedThresholdCached(); // IK 임계값 캐시 초기화
 }
 
@@ -170,6 +174,7 @@ void UHeistAnimInstance::HandleTagChanged(const FGameplayTag Tag, int32 NewCount
 	} else if (Tag == HeistStateTags::State_Thief_Escorted)
 	{
 		bIsEscorted = bActive;
+		ApplyRestraintPresentationState();
 	} else if (Tag == HeistStateTags::State_Thief_Injured)
 	{
 		bIsInjured = bActive;
@@ -178,9 +183,187 @@ void UHeistAnimInstance::HandleTagChanged(const FGameplayTag Tag, int32 NewCount
 	if (Tag == HeistStateTags::State_Thief_Cuffed)
 	{
 		bIsCuffed = bActive;
+		ApplyRestraintPresentationState();
+	}
+}
+
+// 구속 소켓을 캐릭터 mesh component space로 변환해 AnimGraph가 바로 쓸 수 있는 goal을 만든다.
+void UHeistAnimInstance::UpdateRestraintHandGoal()
+{
+	if (!bUseRestrainedHandIK || !bAutoResolveRightHandGoal)
+	{
+		ClearRestraintHandGoal();
+		return;
 	}
 	
-	RefreshIKFootSpeedThresholdCached();
+	if (!IsValid(PlayerChar))
+	{
+		ClearRestraintHandGoal();
+		return;
+	}
+	
+	USkeletalMeshComponent* CharacterMesh = PlayerChar->GetMesh();
+	if (!IsValid(CharacterMesh))
+	{
+		ClearRestraintHandGoal();
+		return;
+	}
+	
+	USkeletalMeshComponent* GoalSource = ResolveRestraintGoalSource();
+	if (!IsValid(GoalSource))
+	{
+		ClearRestraintHandGoal();
+		return;
+	}
+	
+	const FTransform GoalSocket_SourceCS = GoalSource->GetSocketTransform(RightHandGoalSocketName, RTS_Component);
+	const FTransform GoalSourceToCharacterCS =
+		GoalSource->GetComponentTransform().GetRelativeTransform(CharacterMesh->GetComponentTransform());
+
+	RightHandGoal_CS = GoalSourceToCharacterCS.TransformPosition(GoalSocket_SourceCS.GetLocation());
+	RightHandGoalRot_CS =
+		GoalSourceToCharacterCS.TransformRotation(GoalSocket_SourceCS.GetRotation()).Rotator();
+	const FVector CurrentWrist_CS =
+		CharacterMesh->GetSocketTransform(TEXT("wrist_r"), RTS_Component).GetLocation();
+	RightHandGoalOffset_CS = RightHandGoal_CS - CurrentWrist_CS;
+	RightHandGoalAlpha = 1.f;
+	bHasRightHandGoal = true;
+}
+
+// 상태가 끝난 뒤 이전 프레임 goal이 남아 있지 않도록 즉시 초기화한다.
+void UHeistAnimInstance::ClearRestraintHandGoal()
+{
+	bHasRightHandGoal = false;
+	RightHandGoalAlpha = 0.f;
+	RightHandGoal_CS = FVector::ZeroVector;
+	RightHandGoalOffset_CS = FVector::ZeroVector;
+	RightHandGoalRot_CS = FRotator::ZeroRotator;
+}
+
+// 구속 상태 진입 시 발 IK 캐시를 즉시 비운다.
+void UHeistAnimInstance::ResetFootIKImmediate()
+{
+	IK_Offset_L = FVector::ZeroVector;
+	IK_Offset_R = FVector::ZeroVector;
+	IK_Offset_Pelvis = FVector::ZeroVector;
+	IK_Rotation_L = FRotator::ZeroRotator;
+	IK_Rotation_R = FRotator::ZeroRotator;
+	IK_Alpha_L = 0.f;
+	IK_Alpha_R = 0.f;
+	bIK_HitL = false;
+	bIK_HitR = false;
+	bLocalFootCacheInitialized = false;
+}
+
+void UHeistAnimInstance::SetEscortPelvisPhysicsEnabled(bool bEnabled)
+{
+	if (!bUseEscortPelvisPhysics)
+	{
+		bEnabled = false;
+	}
+
+	USkeletalMeshComponent* Mesh = IsValid(PlayerChar) ? PlayerChar->GetMesh() : nullptr;
+	if (!IsValid(Mesh) || EscortPhysicsRootBone.IsNone()) return;
+
+	const FName PhysicsRootBone = EscortPhysicsRootBone;
+	const FName LeftArmBone = EscortPhysicsLeftArmBone;
+	const FName RightArmBone = EscortPhysicsRightArmBone;
+	const FName ChestBone = EscortPhysicsChestBone;
+	const FName LeftUpperLegBone = EscortPhysicsLeftUpperLegBone;
+	const FName RightUpperLegBone = EscortPhysicsRightUpperLegBone;
+	const FName LeftFootBone = EscortPhysicsLeftFootBone;
+	const FName RightFootBone = EscortPhysicsRightFootBone;
+
+	auto EnablePhysicsBelow = [Mesh](const FName BoneName, float BlendWeight)
+	{
+		if (BoneName.IsNone()) return;
+
+		Mesh->SetAllBodiesBelowSimulatePhysics(BoneName, true, true);
+		Mesh->SetAllBodiesBelowPhysicsBlendWeight(BoneName, BlendWeight, false, true);
+	};
+
+	auto DisablePhysicsBelow = [Mesh](const FName BoneName, float BlendWeight)
+	{
+		if (BoneName.IsNone()) return;
+		
+		Mesh->SetAllBodiesBelowSimulatePhysics(BoneName, false, true);
+		Mesh->SetAllBodiesBelowPhysicsBlendWeight(BoneName, BlendWeight, false, true);
+	};
+
+	if (!bEnabled)
+	{
+		DisablePhysicsBelow(PhysicsRootBone, 0.f);
+		Mesh->ResetAllBodiesSimulatePhysics();
+		return;
+	}
+	
+	// hips부터 상체를 simulate 상태로 전환한다.
+	EnablePhysicsBelow(PhysicsRootBone, EscortHipsBlendWeight);
+
+	// 다리는 끌리는 실루엣을 유지하도록 별도 강도로 다시 활성화한다.
+	EnablePhysicsBelow(LeftUpperLegBone, EscortLegBlendWeight);
+	EnablePhysicsBelow(RightUpperLegBone, EscortLegBlendWeight);
+	EnablePhysicsBelow(LeftFootBone, EscortFootBlendWeight);
+	EnablePhysicsBelow(RightFootBone, EscortFootBlendWeight);
+	
+	// 수갑 포즈를 유지해야 하는 상체 chain은 blend를 0으로 잠근다.
+	EnablePhysicsBelow(ChestBone, EscortLockedLimbBlendWeight);
+	EnablePhysicsBelow(LeftArmBone, EscortLockedLimbBlendWeight);
+	EnablePhysicsBelow(RightArmBone, EscortLockedLimbBlendWeight);
+}
+
+/**
+ * Character에 미리 붙어 있는 수갑 SkeletalMeshComponent를 찾는다.
+ * RightHandTarget의 실제 소유자여야 한다.
+ */
+USkeletalMeshComponent* UHeistAnimInstance::ResolveRestraintGoalSource() const
+{ 
+	if (!IsValid(PlayerChar)) return nullptr;
+	
+	TArray<USkeletalMeshComponent*> SkeletalMeshComponents;
+	PlayerChar->GetComponents<USkeletalMeshComponent>(SkeletalMeshComponents);
+	
+	for (USkeletalMeshComponent* MeshComp : SkeletalMeshComponents)
+	{
+		if (!IsValid(MeshComp)) continue;
+
+		if (!MeshComp->ComponentHasTag(RestraintGoalSourceComponentTag))
+		{
+			continue;
+		}
+
+		if (!MeshComp->DoesSocketExist(RightHandGoalSocketName))
+		{
+			continue;
+		}
+
+		return MeshComp;
+	}
+	
+	return nullptr;
+}
+
+// StateMachine이 고른 포즈 위에 구속 상태용 procedural 연출 스위치를 얹는다.
+void UHeistAnimInstance::ApplyRestraintPresentationState()
+{
+	bIsRestrained = (bIsCuffed || bIsEscorted);
+	bUseRestrainedHandIK =
+		bIsRestrained && !(bDisableRestrainedHandIKWhileEscorted && bIsEscorted);
+
+	RightHandGoalAlpha = bUseRestrainedHandIK ? 1.f : 0.f;
+	
+	if (!bIsRestrained)
+	{
+		ClearRestraintHandGoal();
+	}
+	
+	if (bDisableFootIKWhenRestrained && bIsRestrained)
+	{
+		ResetFootIKImmediate();
+	}
+
+	SetEscortPelvisPhysicsEnabled(bIsEscorted);
+
 }
 #pragma endregion AbilitySystem
 
@@ -210,6 +393,12 @@ const FName UHeistAnimInstance::FootR(TEXT("foot_r"));
 
 void UHeistAnimInstance::UpdateIK(float DeltaSeconds)
 {
+	if (bDisableFootIKWhenRestrained && bIsRestrained)
+	{
+		ResetFootIKImmediate();
+		return;
+	}
+
     UCharacterMovementComponent* MovComp = PlayerChar->GetCharacterMovement();
     if (!IsValid(MovComp)) return;
 
