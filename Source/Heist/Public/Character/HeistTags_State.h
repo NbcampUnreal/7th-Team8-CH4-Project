@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "NativeGameplayTags.h"
 
@@ -8,7 +8,7 @@ namespace HeistStateTags
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Stunned);
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_ActionDisabled);
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Channeling);
-	
+
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Thief_Normal);
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Thief_Injured);
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Thief_Cuffed);
@@ -17,4 +17,8 @@ namespace HeistStateTags
 
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Police_Normal);
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Police_Escorting);
+
+	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Zone_Indoor);
+	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Zone_Outdoor);
+	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Thief_InFlashlight);
 }
