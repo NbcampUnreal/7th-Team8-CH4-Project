@@ -7,6 +7,7 @@
 
 class UHeistAbilitySystemComponent;
 class UHeistAttributeSet;
+class UHeistVoipTalker;
 
 /**
  * ASC를 소유한다. 리스폰 후에도 GAS 상태가 유지된다.
@@ -22,10 +23,20 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UHeistAbilitySystemComponent* GetHeistAbilitySystemComponent() const;
 
+	UFUNCTION(BlueprintPure, Category = "Voice")
+	UHeistVoipTalker* GetVoipTalker() const;
+
+protected:
+	virtual void BeginPlay() override;
+	virtual void OnSetUniqueId() override;
+
 private:
 	UPROPERTY()
 	TObjectPtr<UHeistAbilitySystemComponent> AbilitySystemComponent;
 
 	UPROPERTY()
 	TObjectPtr<UHeistAttributeSet> AttributeSet;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "Voice", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHeistVoipTalker> VoipTalker;
 };

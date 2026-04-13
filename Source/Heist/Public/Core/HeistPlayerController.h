@@ -16,12 +16,22 @@ public:
 protected:
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
+	virtual void AcknowledgePossession(APawn* NewPawn) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
 	void UpdateCursorRotation();
+	void HandleVoiceTalkingStateChanged(FUniqueNetIdRef PlayerId, bool bIsTalking);
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> SystemMenuInputAction;
 
 	void Input_SystemMenu();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Voice|Debug")
+	bool bShowVoiceRange = false;
+
+	void DrawVoiceRangeDebug();
+
+	FDelegateHandle VoiceTalkingStateChangedHandle;
 };

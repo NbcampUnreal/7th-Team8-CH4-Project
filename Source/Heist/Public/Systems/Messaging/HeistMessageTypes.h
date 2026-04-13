@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GameFramework/PlayerState.h"
 #include "HeistMessageTypes.generated.h"
 
 USTRUCT()
@@ -15,4 +16,17 @@ struct FHeistLobbyPlayersChangedMessage
 
     UPROPERTY()
     TArray<FString> PlayerNames;
+};
+
+USTRUCT()
+struct FHeistVoiceTalkingStateMessage
+{
+    GENERATED_BODY()
+
+    // 발화 상태가 바뀐 플레이어
+    UPROPERTY()
+    TObjectPtr<APlayerState> PlayerState = nullptr;
+
+    UPROPERTY()
+    bool bIsTalking = false;
 };

@@ -21,6 +21,7 @@ public class Heist : ModuleRules
 			"MultiplayerSessions",
 			"StructUtils",
 			"DebugUI",
+			"OnlineSubsystem",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
