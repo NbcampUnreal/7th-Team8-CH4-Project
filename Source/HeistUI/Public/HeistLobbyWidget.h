@@ -8,7 +8,8 @@
 class UTextBlock;
 class UButton;
 class UScrollBox;
-class UMultiplayerSessionsSubsystem;
+class AHeistPlayerController;
+class AHeistLobbyGameState;
 
 /**
  * 로비 맵 UI.
@@ -21,12 +22,9 @@ class HEISTUI_API UHeistLobbyWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
-public:
-	UFUNCTION(BlueprintCallable)
-	void Setup();
-
 protected:
 	virtual bool Initialize() override;
+	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 
 private:
@@ -39,15 +37,24 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> ButtonStartGame;
 
-	UPROPERTY()
-	TObjectPtr<UMultiplayerSessionsSubsystem> SessionsSubsystem;
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonReady;
 
 	FHeistMessageListenerHandle PlayersChangedListenerHandle;
+	FHeistMessageListenerHandle ReadyStateChangedListenerHandle;
+	FHeistMessageListenerHandle InviteCodeChangedListenerHandle;
 
 	void OnPlayersChangedMessageReceived(FGameplayTag Channel, const struct FHeistLobbyPlayersChangedMessage& Message);
+	void OnReadyStateChangedMessageReceived(FGameplayTag Channel, const struct FHeistLobbyReadyStateChangedMessage& Message);
+	void OnInviteCodeChangedMessageReceived(FGameplayTag Channel, const struct FHeistLobbyInviteCodeChangedMessage& Message);
 
-	void RefreshPlayerList(const TArray<FString>& PlayerNames);
+	void RefreshPlayerList();
+	void RefreshStartButtonState();
+	void RefreshInviteCode(const FString& NewInviteCode);
 
 	UFUNCTION()
 	void OnButtonStartGameClicked();
+
+	UFUNCTION()
+	void OnButtonReadyClicked();
 };

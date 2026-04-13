@@ -6,8 +6,8 @@
 
 /**
  * 로비 맵 전용 GameState.
- * 접속 중인 플레이어 이름 목록을 복제하고
- * 변경 시 HeistMessageSubsystem으로 브로드캐스트한다.
+ * 초대 코드를 복제하고 변경 시 HeistMessageSubsystem으로 브로드캐스트한다.
+ * 플레이어 목록은 GameStateBase::PlayerArray를 통해 직접 접근한다.
  */
 UCLASS()
 class HEIST_API AHeistLobbyGameState : public AGameStateBase
@@ -15,19 +15,24 @@ class HEIST_API AHeistLobbyGameState : public AGameStateBase
 	GENERATED_BODY()
 
 public:
-	void AddPlayer(const FString& PlayerName);
-	void RemovePlayer(const FString& PlayerName);
+	virtual void AddPlayerState(APlayerState* PlayerState) override;
+	virtual void RemovePlayerState(APlayerState* PlayerState) override;
 
-	const TArray<FString>& GetLobbyPlayerNames() const { return LobbyPlayerNames; }
+	void SetInviteCode(const FString& NewInviteCode);
+
+	const FString& GetInviteCode() const { return InviteCode; }
+
+	bool AreAllPlayersReady() const;
 
 private:
-	UPROPERTY(ReplicatedUsing = OnRep_LobbyPlayerNames)
-	TArray<FString> LobbyPlayerNames;
+	UPROPERTY(ReplicatedUsing = OnRep_InviteCode)
+	FString InviteCode;
 
 	UFUNCTION()
-	void OnRep_LobbyPlayerNames();
+	void OnRep_InviteCode();
 
 	void BroadcastPlayersChanged();
+	void BroadcastInviteCodeChanged();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

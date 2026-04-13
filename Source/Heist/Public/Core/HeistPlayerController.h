@@ -13,6 +13,9 @@ class HEIST_API AHeistPlayerController : public APlayerController
 public:
 	AHeistPlayerController();
 
+	UFUNCTION(Server, Reliable)
+	void ServerRequestSetReady(bool bReady);
+
 protected:
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;

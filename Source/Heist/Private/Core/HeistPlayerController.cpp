@@ -143,6 +143,14 @@ void AHeistPlayerController::PlayerTick(float DeltaTime)
 	ASC->ProcessAbilityInput(DeltaTime, false);
 }
 
+void AHeistPlayerController::ServerRequestSetReady_Implementation(bool bReady)
+{
+	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPS)) return;
+
+	HeistPS->SetIsReady(bReady);
+}
+
 void AHeistPlayerController::UpdateCursorRotation()
 {
 	APawn* ControlledPawn = GetPawn();
