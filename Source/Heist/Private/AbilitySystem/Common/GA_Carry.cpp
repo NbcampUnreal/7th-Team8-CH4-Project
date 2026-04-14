@@ -1,11 +1,15 @@
-#include "AbilitySystem/Common/GA_Carry.h"
+﻿#include "AbilitySystem/Common/GA_Carry.h"
 
 #include "AbilitySystem/HeistTags_FlagTags.h"
-#include "AbilitySystemComponent.h"
+#include "AbilitySystem/HeistTags_Event.h"
 #include "Actors/ItemActor.h"
 #include "Character/HeistCharacter.h"
 #include "Character/HeistTags_State.h"
-#include "AbilitySystem/HeistTags_Event.h"
+#include "Character/ThiefCharacter.h"
+#include "Components/HeistNoiseComponent.h"
+#include "Data/HeistSoundData.h"
+
+#include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 
 UGA_Carry::UGA_Carry()
@@ -30,18 +34,26 @@ void UGA_Carry::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
 	float SpeedMult = 1.0f;
-			
+
 	AHeistCharacter* Carrier = Cast<AHeistCharacter>(GetAvatarActorFromActorInfo());
 	if (TriggerEventData && TriggerEventData->Target)
 	{
 		AActor* TargetActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Target.Get()) : nullptr;
 		Item = Cast<AItemActor>(TargetActor);
 		Item->OnPickedUp(Carrier);
+
+		if (AThiefCharacter* Thief = Cast<AThiefCharacter>(Carrier))
+		{
+			if (UHeistNoiseComponent* NoiseComp = Thief->GetHeistNoiseComponent())
+			{
+				NoiseComp->StartChannelingNoise(EHeistSoundType::Carry);
+			}
+		}
 	}
 
 	UpdateCarryEffect();
 
-	UAbilityTask_WaitGameplayEvent* WaitUpdateTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this,	FGameplayTag::RequestGameplayTag(TEXT("Event.CarryUpdate")), nullptr, false, false);
+	UAbilityTask_WaitGameplayEvent* WaitUpdateTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, FGameplayTag::RequestGameplayTag(TEXT("Event.CarryUpdate")), nullptr, false, false);
 	WaitUpdateTask->EventReceived.AddDynamic(this, &UGA_Carry::OnCarryUpdateEventReceived);
 	WaitUpdateTask->ReadyForActivation();
 
@@ -60,6 +72,15 @@ void UGA_Carry::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGamep
 
 	AHeistCharacter* Carrier = Cast<AHeistCharacter>(GetAvatarActorFromActorInfo());
 	Item->OnDropOff(Carrier);
+
+	if (AThiefCharacter* Thief = Cast<AThiefCharacter>(Carrier))
+	{
+		if (UHeistNoiseComponent* NoiseComp = Thief->GetHeistNoiseComponent())
+		{
+			NoiseComp->StopChannelingNoise();
+			NoiseComp->MakeHeistNoise(EHeistSoundType::ItemDrop, Thief->GetActorLocation());
+		}
+	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
