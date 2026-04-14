@@ -7,6 +7,8 @@ namespace HeistMessageTags
     HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_SystemMenu_Toggle);
 
     HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Lobby_PlayersChanged);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Lobby_ReadyStateChanged);
+    HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Lobby_InviteCodeChanged);
 
     HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Ping);
     HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Ping_Danger);

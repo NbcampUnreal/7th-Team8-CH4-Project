@@ -2,12 +2,33 @@
 
 #include "Core/HeistLobbyGameState.h"
 #include "Core/HeistPlayerState.h"
+#include "MultiplayerSessionsSubsystem.h"
 
 AHeistLobbyGameMode::AHeistLobbyGameMode()
 {
 	GameStateClass = AHeistLobbyGameState::StaticClass();
-	GameMapPath = TEXT("/Game/Maps/Game");
+	GameMapPath = TEXT("/Game/Project_Heist/Maps/NewToyMuseum?listen");
 	MinPlayersToStart = 5;
+}
+
+void AHeistLobbyGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!IsValid(GameInstance)) return;
+
+	UMultiplayerSessionsSubsystem* SessionsSubsystem = GameInstance->GetSubsystem<UMultiplayerSessionsSubsystem>();
+	if (!IsValid(SessionsSubsystem)) return;
+
+	const FString InviteCode = SessionsSubsystem->GetLastCreatedSessionInviteCode();
+	if (InviteCode.IsEmpty()) return;
+
+	AHeistLobbyGameState* LobbyGameState = GetGameState<AHeistLobbyGameState>();
+	if (IsValid(LobbyGameState))
+	{
+		LobbyGameState->SetInviteCode(InviteCode);
+	}
 }
 
 void AHeistLobbyGameMode::PostLogin(APlayerController* NewPlayer)
@@ -16,13 +37,13 @@ void AHeistLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 
 	if (!IsValid(NewPlayer)) return;
 
-	const AHeistPlayerState* PlayerState = NewPlayer->GetPlayerState<AHeistPlayerState>();
+	AHeistPlayerState* PlayerState = NewPlayer->GetPlayerState<AHeistPlayerState>();
 	const FString PlayerName = IsValid(PlayerState) ? PlayerState->GetPlayerName() : TEXT("Unknown");
 
-	AHeistLobbyGameState* LobbyGameState = GetGameState<AHeistLobbyGameState>();
-	if (IsValid(LobbyGameState))
+	if (IsHostController(NewPlayer) && IsValid(PlayerState))
 	{
-		LobbyGameState->AddPlayer(PlayerName);
+		PlayerState->SetIsHost(true);
+		PlayerState->SetIsReady(true);
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] PostLogin: %s (Total: %d)"),
@@ -37,12 +58,6 @@ void AHeistLobbyGameMode::Logout(AController* Exiting)
 	{
 		const APlayerState* PlayerState = Exiting->GetPlayerState<APlayerState>();
 		const FString PlayerName = IsValid(PlayerState) ? PlayerState->GetPlayerName() : TEXT("Unknown");
-
-		AHeistLobbyGameState* LobbyGameState = GetGameState<AHeistLobbyGameState>();
-		if (IsValid(LobbyGameState))
-		{
-			LobbyGameState->RemovePlayer(PlayerName);
-		}
 
 		UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] Logout: %s"), *PlayerName);
 	}
@@ -70,10 +85,26 @@ void AHeistLobbyGameMode::RequestStartGame(APlayerController* Requester)
 		return;
 	}
 
+	AHeistLobbyGameState* LobbyGameState = GetGameState<AHeistLobbyGameState>();
+	if (!IsValid(LobbyGameState) || !LobbyGameState->AreAllPlayersReady())
+	{
+		UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] RequestStartGame: Not all players are ready."));
+		return;
+	}
+
 	ensureAlwaysMsgf(!GameMapPath.IsEmpty(), TEXT("AHeistLobbyGameMode: GameMapPath is not set."));
 
 	UWorld* World = GetWorld();
 	if (!IsValid(World)) return;
+
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (IsValid(PC))
+		{
+			PC->StopTalking();
+		}
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] Starting game. Traveling to: %s"), *GameMapPath);
 	World->ServerTravel(GameMapPath);

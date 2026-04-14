@@ -19,6 +19,21 @@ struct FHeistLobbyPlayersChangedMessage
 };
 
 USTRUCT()
+struct FHeistLobbyInviteCodeChangedMessage
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FString InviteCode;
+};
+
+USTRUCT()
+struct FHeistLobbyReadyStateChangedMessage
+{
+    GENERATED_BODY()
+};
+
+USTRUCT()
 struct FHeistVoiceTalkingStateMessage
 {
     GENERATED_BODY()
