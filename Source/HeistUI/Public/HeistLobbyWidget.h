@@ -40,6 +40,9 @@ private:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> ButtonReady;
 
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonCopyInviteCode;
+
 	FHeistMessageListenerHandle PlayersChangedListenerHandle;
 	FHeistMessageListenerHandle ReadyStateChangedListenerHandle;
 	FHeistMessageListenerHandle InviteCodeChangedListenerHandle;
@@ -47,6 +50,8 @@ private:
 	void OnPlayersChangedMessageReceived(FGameplayTag Channel, const struct FHeistLobbyPlayersChangedMessage& Message);
 	void OnReadyStateChangedMessageReceived(FGameplayTag Channel, const struct FHeistLobbyReadyStateChangedMessage& Message);
 	void OnInviteCodeChangedMessageReceived(FGameplayTag Channel, const struct FHeistLobbyInviteCodeChangedMessage& Message);
+
+	FString CurrentInviteCode;
 
 	void RefreshPlayerList();
 	void RefreshStartButtonState();
@@ -57,4 +62,7 @@ private:
 
 	UFUNCTION()
 	void OnButtonReadyClicked();
+
+	UFUNCTION()
+	void OnButtonCopyInviteCodeClicked();
 };

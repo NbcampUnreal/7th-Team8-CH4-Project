@@ -11,6 +11,7 @@
 #include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
 #include "GameFramework/PlayerController.h"
+#include "HAL/PlatformApplicationMisc.h"
 
 bool UHeistLobbyWidget::Initialize()
 {
@@ -50,6 +51,11 @@ bool UHeistLobbyWidget::Initialize()
 	if (ButtonReady)
 	{
 		ButtonReady->OnClicked.AddDynamic(this, &ThisClass::OnButtonReadyClicked);
+	}
+
+	if (ButtonCopyInviteCode)
+	{
+		ButtonCopyInviteCode->OnClicked.AddDynamic(this, &ThisClass::OnButtonCopyInviteCodeClicked);
 	}
 
 	return true;
@@ -110,6 +116,8 @@ void UHeistLobbyWidget::OnInviteCodeChangedMessageReceived(FGameplayTag Channel,
 
 void UHeistLobbyWidget::RefreshInviteCode(const FString& NewInviteCode)
 {
+	CurrentInviteCode = NewInviteCode;
+
 	if (TextBlockInviteCode)
 	{
 		TextBlockInviteCode->SetText(FText::FromString(NewInviteCode));
@@ -170,4 +178,11 @@ void UHeistLobbyWidget::OnButtonReadyClicked()
 	if (!IsValid(HeistPS)) return;
 
 	HeistPC->ServerRequestSetReady(!HeistPS->GetIsReady());
+}
+
+void UHeistLobbyWidget::OnButtonCopyInviteCodeClicked()
+{
+	if (CurrentInviteCode.IsEmpty()) return;
+
+	FPlatformApplicationMisc::ClipboardCopy(*CurrentInviteCode);
 }

@@ -22,6 +22,7 @@ public class HeistUI : ModuleRules
 		{
 			"MultiplayerSessions",
 			"OnlineSubsystem",
+			"ApplicationCore",
 		});
 	}
 }
