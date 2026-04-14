@@ -1,10 +1,13 @@
 ﻿#include "Character/ThiefCharacter.h"
 
-#include "AbilitySystemComponent.h"
 #include "AbilitySystem/HeistTags_Ability.h"
 #include "Character/HeistTags_State.h"
 #include "Components/HeistInteractSphereComponent.h"
 #include "Components/ThiefEscortComponent.h"
+#include "Components/HeistNoiseComponent.h"
+#include "Data/HeistSoundData.h"
+
+#include "AbilitySystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AThiefCharacter::AThiefCharacter(const FObjectInitializer& ObjectInitializer)
@@ -14,6 +17,7 @@ AThiefCharacter::AThiefCharacter(const FObjectInitializer& ObjectInitializer)
 
 	EscortComponent = CreateDefaultSubobject<UThiefEscortComponent>(TEXT("EscortComponent"));
 	InteractSphereComp = CreateDefaultSubobject<UHeistInteractSphereComponent>(TEXT("InteractSphereComp"));
+	NoiseComponent = CreateDefaultSubobject<UHeistNoiseComponent>(TEXT("NoiseComponent"));
 }
 
 void AThiefCharacter::BeginPlay()
@@ -22,6 +26,15 @@ void AThiefCharacter::BeginPlay()
 
 	InteractSphereComp->OnCanInteract.BindUObject(this, &AThiefCharacter::CheckCanInteract);
 	InteractSphereComp->OnGetAbilityTag.BindUObject(this, &AThiefCharacter::ResolveInteractAbilityTag);
+}
+
+void AThiefCharacter::ReportFootstep()
+{
+	if (!IsValid(NoiseComponent)) return;
+
+	if (GetVelocity().IsNearlyZero()) return;
+
+	NoiseComponent->MakeHeistNoise(EHeistSoundType::Footstep, GetActorLocation());
 }
 
 bool AThiefCharacter::CheckCanInteract(ACharacter* Interactor) const
@@ -48,5 +61,4 @@ FGameplayTag AThiefCharacter::ResolveInteractAbilityTag(ACharacter* Interactor) 
 	if (bInjured && !bIsThief) return HeistAbilityTags::Ability_Police_Cuffing;
 
 	return FGameplayTag::EmptyTag;
-
 }
