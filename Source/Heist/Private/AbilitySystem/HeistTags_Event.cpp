@@ -1,4 +1,4 @@
-﻿#include "AbilitySystem/HeistTags_Event.h"
+#include "AbilitySystem/HeistTags_Event.h"
 
 namespace HeistEventTags
 {
@@ -11,4 +11,7 @@ namespace HeistEventTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_KickHit, "Event.KickHit");
 	UE_DEFINE_GAMEPLAY_TAG(Event_StunExpired, "Event.StunExpired");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Move, "Event.Input.Move");
+	UE_DEFINE_GAMEPLAY_TAG(Event_CarryStarted, "Event.CarryStarted");
+	UE_DEFINE_GAMEPLAY_TAG(Event_CarryUpdate, "Event.CarryUpdate");
+	UE_DEFINE_GAMEPLAY_TAG(Event_CarryDrop, "Event.CarryDrop");
 }

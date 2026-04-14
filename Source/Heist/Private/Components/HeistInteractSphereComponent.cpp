@@ -35,7 +35,7 @@ void UHeistInteractSphereComponent::BeginPlay()
 	InteractSphere->RegisterComponent();
 	InteractSphere->AttachToComponent(GetOwner()->GetRootComponent(),
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-
+	InteractSphere->SetHiddenInGame(false); // 디버그용
 	InteractSphere->OnComponentBeginOverlap.AddDynamic(this, &UHeistInteractSphereComponent::OnSphereBeginOverlap);
 	InteractSphere->OnComponentEndOverlap.AddDynamic(this, &UHeistInteractSphereComponent::OnSphereEndOverlap);
 

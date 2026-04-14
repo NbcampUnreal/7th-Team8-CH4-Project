@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "NativeGameplayTags.h"
 #include "Abilities/GameplayAbilityTargetTypes.h"
@@ -15,6 +15,9 @@ namespace HeistEventTags
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_KickHit);
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_StunExpired);
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Move);
+	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_CarryStarted);
+	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_CarryUpdate);
+	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_CarryDrop);
 }
 
 /*
