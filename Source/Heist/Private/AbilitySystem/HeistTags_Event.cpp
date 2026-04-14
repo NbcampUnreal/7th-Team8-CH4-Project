@@ -11,4 +11,5 @@ namespace HeistEventTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_KickHit, "Event.KickHit");
 	UE_DEFINE_GAMEPLAY_TAG(Event_StunExpired, "Event.StunExpired");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Move, "Event.Input.Move");
+	UE_DEFINE_GAMEPLAY_TAG(Event_SoundDetected, "Event.SoundDetected");
 }
