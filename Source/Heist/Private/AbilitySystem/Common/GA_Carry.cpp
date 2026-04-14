@@ -6,6 +6,7 @@
 #include "Character/HeistCharacter.h"
 #include "Character/HeistTags_State.h"
 #include "AbilitySystem/HeistTags_Event.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 
 UGA_Carry::UGA_Carry()
 {
@@ -35,20 +36,54 @@ void UGA_Carry::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 	{
 		AActor* TargetActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Target.Get()) : nullptr;
 		Item = Cast<AItemActor>(TargetActor);
-		int32 Carriers = Item->GetRequiredCarriers();
-		if (Carriers == 1)
-		{
-			SpeedMult = Item->GetCarrySpeedMultiplier();
-			Item->OnPickedUp(Carrier);
-		}
-		else
-		{
-			//TODO : 2인 이상 물건 로직 구현
-		}
+		Item->OnPickedUp(Carrier);
 	}
 
-	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+	UpdateCarryEffect();
+
+	UAbilityTask_WaitGameplayEvent* WaitUpdateTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this,	FGameplayTag::RequestGameplayTag(TEXT("Event.CarryUpdate")), nullptr, false, false);
+	WaitUpdateTask->EventReceived.AddDynamic(this, &UGA_Carry::OnCarryUpdateEventReceived);
+	WaitUpdateTask->ReadyForActivation();
+
+	UAbilityTask_WaitGameplayEvent* WaitDropTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, FGameplayTag::RequestGameplayTag(TEXT("Event.CarryDrop")), nullptr, false, false);
+	WaitDropTask->EventReceived.AddDynamic(this, &UGA_Carry::OnCarryDropEventReceived);
+	WaitDropTask->ReadyForActivation();
+}
+
+void UGA_Carry::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	if (CarryEffectHandle.IsValid())
+	{
+		GetAbilitySystemComponentFromActorInfo()->RemoveActiveGameplayEffect(CarryEffectHandle);
+		CarryEffectHandle.Invalidate();
+	}
+
+	AHeistCharacter* Carrier = Cast<AHeistCharacter>(GetAvatarActorFromActorInfo());
+	Item->OnDropOff(Carrier);
+
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UGA_Carry::OnCarryUpdateEventReceived(FGameplayEventData Payload)
+{
+	UpdateCarryEffect();
+}
+
+void UGA_Carry::UpdateCarryEffect()
+{
+	if (!IsValid(Item)) return;
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 	if (!IsValid(ASC)) return;
+
+	if (CarryEffectHandle.IsValid())
+	{
+		ASC->RemoveActiveGameplayEffect(CarryEffectHandle);
+		CarryEffectHandle.Invalidate();
+	}
+
+	int32 CurrentCarriers = Item->GetCurrentCarrierCount();
+	float SpeedMult = AItemActor::Execute_GetCarrySpeedMultiplier(Item, CurrentCarriers);
 
 	if (IsValid(CarryEffect))
 	{
@@ -61,17 +96,7 @@ void UGA_Carry::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 	}
 }
 
-void UGA_Carry::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+void UGA_Carry::OnCarryDropEventReceived(FGameplayEventData Payload)
 {
-	UE_LOG(LogTemp, Warning, TEXT("EndAbility Called!"));
-	if (CarryEffectHandle.IsValid())
-	{
-		GetAbilitySystemComponentFromActorInfo()->RemoveActiveGameplayEffect(CarryEffectHandle);
-		CarryEffectHandle.Invalidate();
-	}
-
-	AHeistCharacter* Carrier = Cast<AHeistCharacter>(GetAvatarActorFromActorInfo());
-	Item->OnDropOff(Carrier);
-
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+	CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 }

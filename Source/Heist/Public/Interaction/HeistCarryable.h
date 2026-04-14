@@ -19,12 +19,12 @@ class HEIST_API IHeistCarryable
 
 public:
 	//// 권장 운반 인원 반환 (RequiredCarriers)
-	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Heist|Carry")
-	//int32 GetRequiredCarriers() const;
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Heist|Carry")
+	int32 GetRequiredCarriers() const;
 
 	//// 현재 운반 인원에 따른 이속 배율 반환 (CarrySpeedMultiplier 또는 SoloCarrySpeedMultiplier)
-	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Heist|Carry")
-	//float GetCurrentCarrySpeedMultiplier(int32 CurrentCarrierCount) const;
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Heist|Carry")
+	float GetCarrySpeedMultiplier(int32 CarrierCount) const;
 
 	//// 단독 운반 시 적용할 소음 배율 (SoloCarryNoiseMultiplier)
 	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Heist|Carry")

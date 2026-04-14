@@ -30,6 +30,14 @@ protected:
 		bool bReplicateEndAbility,
 		bool bWasCancelled) override;
 
+	UFUNCTION()
+	void OnCarryUpdateEventReceived(FGameplayEventData Payload);
+
+	void UpdateCarryEffect();
+
+	UFUNCTION()
+	void OnCarryDropEventReceived(FGameplayEventData Payload);
+
 private:
 	// 에디터에서 GE_Carry 지정. MoveSpeed를 감소시키는 Infinite GE.
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Carry")

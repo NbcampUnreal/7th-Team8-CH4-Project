@@ -20,10 +20,6 @@ class HEIST_API AItemActor : public AActor, public IHeistCarryable
 public:	
 	AItemActor();
 
-	// 물리 이벤트 발생 시 호출 (서버 -> 전체 클라이언트)
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_OnItemPhysicsEvent(FVector ImpulseDir, float Force);
-
 	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
 	void OnPickedUp(AHeistCharacter* InCarrier);
 
@@ -31,16 +27,20 @@ public:
 	void OnDropOff(AHeistCharacter* InCarrier);
 
 	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
-	int32 GetRequiredCarriers() const;
+	virtual int32 GetRequiredCarriers_Implementation() const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
-	float GetCarrySpeedMultiplier() const;
+	virtual float GetCarrySpeedMultiplier_Implementation(int32 CarrierCount) const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
-	float GetSoloCarrySpeedMultiplier() const;
+	int32 GetCurrentCarrierCount() { return CurrentCarrierCount; }
 
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void Tick(float DeltaTime) override;
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// 데이터 테이블 기반 초기화
 	void InitializeFromData();
@@ -50,15 +50,15 @@ protected:
 
 	const struct FItemData* GetItemData() const;
 
-	// 운반 인원 확인 및 페널티 계산 (서버 실행)
-	void UpdateCarryingState(const TArray<ACharacter*>& CurrentCarriers);
-
-	// 물리 종료 및 위치 확정 타이머
-	void FinalizePhysicsLocation();
+	void CheckDrop();
 
 	bool CheckCanInteract(ACharacter* Interactor) const;
 
 	FGameplayTag ResolveInteractAbilityTag(ACharacter* Interactor) const;
+
+	void NotifyCarriersUpdate();
+
+	void DropCarrier(AHeistCharacter* Carrier);
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess))
@@ -76,8 +76,23 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
 	FDataTableRowHandle ItemData;
 
-	bool bIsCarried;
-	bool bIsSoloCarried;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	TMap<AHeistCharacter*, FRotator> CurrentCarriers;
+
+	UPROPERTY(Replicated)
+	int32 CurrentCarrierCount;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	float CarryDistance = 120.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	float MaxFollowSpeed = 1000.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	float DropAngleMax = 90.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	float CarryDistanceMax = 200.f;
 
 	FTimerHandle PhysicsTimeoutHandle;
 };
