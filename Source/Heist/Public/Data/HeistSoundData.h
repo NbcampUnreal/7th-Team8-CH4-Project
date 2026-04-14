@@ -17,7 +17,8 @@ enum class EHeistSoundType : uint8
 	Carry      UMETA(DisplayName = "Carry"),
 	ItemDrop   UMETA(DisplayName = "ItemDrop"),
 	Cuffing    UMETA(DisplayName = "Cuffing"),
-	Voice      UMETA(DisplayName = "Voice")
+	Voice      UMETA(DisplayName = "Voice"),
+	Kick       UMETA(DisplayName = "Kick")
 };
 
 USTRUCT(BlueprintType)
