@@ -12,7 +12,6 @@ public class Heist : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
-			"UMG",
 			"InputCore",
 			"GameplayAbilities",
 			"GameplayTags",

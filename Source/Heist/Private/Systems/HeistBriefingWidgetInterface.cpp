@@ -1,5 +1,0 @@
-
-
-#include "Systems/HeistBriefingWidgetInterface.h"
-
-

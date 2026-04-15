@@ -3,7 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Systems/HeistBriefingWidgetInterface.h"
+#include "HeistBriefingWidgetInterface.h"
 #include "HeistBriefingScreenWidget.generated.h"
 
 class UButton;

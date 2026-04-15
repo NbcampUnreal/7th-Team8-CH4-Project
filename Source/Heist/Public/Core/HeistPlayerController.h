@@ -2,9 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "Blueprint/UserWidget.h"
 #include "InputAction.h"
-#include "Systems/HeistBriefingWidgetInterface.h"
 #include "HeistPlayerController.generated.h"
 
 class UHeistBriefingPlayerComponent;
@@ -33,7 +31,6 @@ protected:
 private:
 	void UpdateCursorRotation();
 	void HandleVoiceTalkingStateChanged(FUniqueNetIdRef PlayerId, bool bIsTalking);
-	void RemoveBriefingWidget();
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> SystemMenuInputAction;
@@ -48,15 +45,12 @@ private:
 	FDelegateHandle VoiceTalkingStateChangedHandle;
 
 	/**
-	 * BP_PlayerController에서 WBP_BriefingMap 클래스를 할당한다.
-	 * 할당할 위젯은 반드시 IHeistBriefingWidget을 구현해야 한다.
+	 * BP_PlayerController에서 WBP_BriefingScreen 클래스를 할당한다.
+	 * UUserWidget 참조 없이 UClass*로 보관해 UMG 종속을 제거한다.
+	 * 실제 위젯 생성은 UHeistBriefingUISubsystem(HeistUI 모듈)이 담당한다.
 	 */
-	UPROPERTY(EditDefaultsOnly, Category = "Heist|Briefing")
-	TSubclassOf<UUserWidget> BriefingWidgetClass;
-
-	/** 생성된 브리핑 위젯 인스턴스. 한 번만 생성되며 IHeistBriefingWidget으로 캐스트해 초기화한다. */
-	UPROPERTY()
-	TObjectPtr<UUserWidget> BriefingWidgetInstance;
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|Briefing", meta = (AllowedClasses = "UserWidget"))
+	TObjectPtr<UClass> BriefingWidgetClass;
 
 	void TryBindBriefingEventsFromPlayerState();
 	void HandleBriefingContextReady();
