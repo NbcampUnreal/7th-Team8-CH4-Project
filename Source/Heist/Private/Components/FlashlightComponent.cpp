@@ -1,4 +1,4 @@
-﻿#include "Components/FlashlightComponent.h"
+#include "Components/FlashlightComponent.h"
 
 #include "Character/ThiefCharacter.h"
 #include "Character/HeistTags_State.h"
@@ -48,15 +48,15 @@ bool UFlashlightComponent::IsThiefInFlashlight(AThiefCharacter* Thief, bool bWas
 	FVector PoliceLoc = OwnerActor->GetActorLocation();
 	FVector ThiefLoc = Thief->GetActorLocation();
 
-	PoliceLoc.Z = 0.f;
-	ThiefLoc.Z = 0.f;
+	FVector PoliceLoc2D = FVector(PoliceLoc.X, PoliceLoc.Y, 0.f);
+	FVector ThiefLoc2D = FVector(ThiefLoc.X, ThiefLoc.Y, 0.f);
 
-	if (FVector::Distance(PoliceLoc, ThiefLoc) > FlashlightRadius)
+	if (FVector::Distance(PoliceLoc2D, ThiefLoc2D) > FlashlightRadius)
 	{
 		return false;
 	}
 
-	FVector DirectionToThief = (ThiefLoc - PoliceLoc).GetSafeNormal();
+	FVector DirectionToThief = (ThiefLoc2D - PoliceLoc2D).GetSafeNormal();
 	FVector PoliceForward = OwnerActor->GetActorForwardVector();
 	PoliceForward.Z = 0.f;
 	PoliceForward.Normalize();
@@ -64,7 +64,29 @@ bool UFlashlightComponent::IsThiefInFlashlight(AThiefCharacter* Thief, bool bWas
 	const float EffectiveHalfAngle = bWasPreviouslyVisible ? (FlashlightHalfAngle + 2.0f) : FlashlightHalfAngle;
 	const float CosineThreshold = FMath::Cos(FMath::DegreesToRadians(EffectiveHalfAngle));
 
-	return FVector::DotProduct(PoliceForward, DirectionToThief) >= CosineThreshold;
+	if (FVector::DotProduct(PoliceForward, DirectionToThief) < CosineThreshold)
+	{
+		return false;
+	}
+
+	FHitResult HitResult;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(OwnerActor);
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		PoliceLoc,
+		ThiefLoc,
+		ECC_Visibility,
+		QueryParams
+	);
+
+	if (bHit && HitResult.GetActor() != Thief)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void UFlashlightComponent::ProcessLocalVision()
