@@ -95,6 +95,7 @@ void AHeistMatchGameMode::TryStartBriefingFlow()
 	}
 
 	bBriefingFlowStarted = true;
+	GatherBriefingStartPoints();
 	PhaseManagerComponent->StartMatchFlow();
 	SpawnAllPlayersAtBriefingStart();
 }

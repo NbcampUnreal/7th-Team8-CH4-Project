@@ -75,6 +75,7 @@ void UHeistLobbyWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	RefreshPlayerList();
+	RefreshStartButtonState();
 
 	const bool bIsHost = IsValid(GetWorld()->GetAuthGameMode());
 

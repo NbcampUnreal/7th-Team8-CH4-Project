@@ -12,28 +12,28 @@ class UHeistExecutionPhaseComponent;
 class APlayerStart;
 
 /**
- * 
+ *
  */
 UCLASS()
 class HEIST_API AHeistMatchGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
-	
+
 public:
 	AHeistMatchGameMode();
-	
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void GenericPlayerInitialization(AController* C) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
 	TObjectPtr<UHeistPhaseManagerComponent> PhaseManagerComponent;
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
 	TObjectPtr<UHeistBriefingPhaseComponent> BriefingPhaseComponent;
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
 	TObjectPtr<UHeistExecutionPhaseComponent> ExecutionPhaseComponent;
 
