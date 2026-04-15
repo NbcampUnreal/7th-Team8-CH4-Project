@@ -11,6 +11,7 @@ public class HeistUI : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
+			"InputCore",
 			"UMG",
 			"Slate",
 			"SlateCore",

@@ -12,6 +12,7 @@ public class Heist : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
+			"UMG",
 			"InputCore",
 			"GameplayAbilities",
 			"GameplayTags",
@@ -23,6 +24,7 @@ public class Heist : ModuleRules
 			"StructUtils",
 			"DebugUI",
 			"OnlineSubsystem",
+			"NavigationSystem",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
