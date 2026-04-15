@@ -1,12 +1,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/HeistMatchTypes.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
 #include "HeistPlayerState.generated.h"
 
 class UHeistAbilitySystemComponent;
 class UHeistAttributeSet;
+class UHeistBriefingPlayerComponent;
 class UHeistVoipTalker;
 
 /**
@@ -23,6 +25,15 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UHeistAbilitySystemComponent* GetHeistAbilitySystemComponent() const;
 
+	UFUNCTION(BlueprintPure, Category = "Heist|Briefing")
+	EHeistTeam GetAssignedTeam() const { return AssignedTeam; }
+
+	UFUNCTION(BlueprintPure, Category = "Heist|Briefing")
+	bool IsThief() const { return AssignedTeam == EHeistTeam::Thief; }
+
+	UFUNCTION(BlueprintPure, Category = "Heist|Briefing")
+	bool IsPolice() const { return AssignedTeam == EHeistTeam::Police; }
+
 	UFUNCTION(BlueprintPure, Category = "Voice")
 	UHeistVoipTalker* GetVoipTalker() const;
 
@@ -32,11 +43,16 @@ public:
 	bool GetIsHost() const { return bIsHost; }
 	void SetIsHost(bool bNewIsHost);
 
+	UHeistBriefingPlayerComponent* GetBriefingPlayerComponent() const { return BriefingPlayerComponent; }
+
+	void SetAssignedTeam(EHeistTeam InTeam);
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnSetUniqueId() override;
 	virtual void OnRep_PlayerName() override;
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
 	UPROPERTY()
@@ -62,4 +78,10 @@ private:
 
 	void BroadcastPlayersChanged() const;
 	void BroadcastReadyStateChanged() const;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "Heist|Briefing", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHeistBriefingPlayerComponent> BriefingPlayerComponent;
+
+	UPROPERTY(Replicated, VisibleInstanceOnly, Category = "Heist|Briefing", meta = (AllowPrivateAccess = "true"))
+	EHeistTeam AssignedTeam = EHeistTeam::None;
 };

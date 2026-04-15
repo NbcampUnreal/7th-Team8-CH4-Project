@@ -2,6 +2,8 @@
 
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "AbilitySystem/HeistAttributeSet.h"
+#include "Components/HeistBriefingPlayerComponent.h"
+
 #include "Voice/HeistVoipTalker.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
@@ -18,6 +20,8 @@ AHeistPlayerState::AHeistPlayerState()
 	AttributeSet = CreateDefaultSubobject<UHeistAttributeSet>(TEXT("AttributeSet"));
 
 	VoipTalker = CreateDefaultSubobject<UHeistVoipTalker>(TEXT("VoipTalker"));
+
+	BriefingPlayerComponent = CreateDefaultSubobject<UHeistBriefingPlayerComponent>(TEXT("BriefingPlayerComponent"));
 
 	// PlayerState는 NetUpdateFrequency 기본값이 낮으므로 GAS 반응성을 위해 높인다.
 	SetNetUpdateFrequency(100.0f);
@@ -52,6 +56,7 @@ void AHeistPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 	DOREPLIFETIME(AHeistPlayerState, bIsReady);
 	DOREPLIFETIME(AHeistPlayerState, bIsHost);
+	DOREPLIFETIME(AHeistPlayerState, AssignedTeam);
 }
 
 void AHeistPlayerState::SetIsReady(bool bNewIsReady)
@@ -110,4 +115,9 @@ UHeistAbilitySystemComponent* AHeistPlayerState::GetHeistAbilitySystemComponent(
 UHeistVoipTalker* AHeistPlayerState::GetVoipTalker() const
 {
 	return VoipTalker;
+}
+
+void AHeistPlayerState::SetAssignedTeam(EHeistTeam InTeam)
+{
+	AssignedTeam = InTeam;
 }

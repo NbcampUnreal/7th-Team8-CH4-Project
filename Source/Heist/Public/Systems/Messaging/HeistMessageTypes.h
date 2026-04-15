@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Core/HeistMatchTypes.h"
 #include "GameFramework/PlayerState.h"
 #include "GameplayTagContainer.h"
 #include "HeistMessageTypes.generated.h"
@@ -7,44 +8,65 @@
 USTRUCT()
 struct FHeistSystemMenuToggleMessage
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 };
 
 USTRUCT()
 struct FHeistLobbyPlayersChangedMessage
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-	UPROPERTY()
-	TArray<FString> PlayerNames;
+    UPROPERTY()
+    TArray<FString> PlayerNames;
 };
 
 USTRUCT()
 struct FHeistLobbyInviteCodeChangedMessage
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-	UPROPERTY()
-	FString InviteCode;
+    UPROPERTY()
+    FString InviteCode;
 };
 
 USTRUCT()
 struct FHeistLobbyReadyStateChangedMessage
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 };
 
 USTRUCT()
 struct FHeistVoiceTalkingStateMessage
 {
+    GENERATED_BODY()
+
+    // 발화 상태가 바뀐 플레이어
+    UPROPERTY()
+    TObjectPtr<APlayerState> PlayerState = nullptr;
+
+    UPROPERTY()
+    bool bIsTalking = false;
+};
+
+USTRUCT()
+struct FHeistPhaseChangedMessage
+{
 	GENERATED_BODY()
 
-	// 발화 상태가 바뀐 플레이어
 	UPROPERTY()
-	TObjectPtr<APlayerState> PlayerState = nullptr;
+	EHeistMatchPhase CurrentPhase = EHeistMatchPhase::None;
 
 	UPROPERTY()
-	bool bIsTalking = false;
+	bool bBriefingSelectionLocked = false;
+};
+
+USTRUCT()
+struct FHeistPhaseTimeUpdatedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	float RemainingTime = 0.f;
 };
 
 USTRUCT(BlueprintType)

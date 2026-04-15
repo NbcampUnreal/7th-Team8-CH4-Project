@@ -7,6 +7,8 @@ namespace HeistMessageTags
 	UE_DEFINE_GAMEPLAY_TAG(Message_Lobby_PlayersChanged, "Message.Lobby.PlayersChanged");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Lobby_ReadyStateChanged, "Message.Lobby.ReadyStateChanged");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Lobby_InviteCodeChanged, "Message.Lobby.InviteCodeChanged");
+    UE_DEFINE_GAMEPLAY_TAG(Message_Phase_Changed, "Message.Phase.Changed");
+    UE_DEFINE_GAMEPLAY_TAG(Message_Phase_TimeUpdated, "Message.Phase.TimeUpdated");
 
 	UE_DEFINE_GAMEPLAY_TAG(Message_Ping, "Message.Ping");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Ping_Danger, "Message.Ping.Danger");

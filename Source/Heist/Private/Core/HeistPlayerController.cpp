@@ -3,6 +3,8 @@
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "Character/HeistTags_State.h"
 #include "Core/HeistPlayerState.h"
+#include "Core/HeistBriefingDrawingBoard.h"
+#include "Components/HeistBriefingPlayerComponent.h"
 #include "Voice/HeistVoipTalker.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
@@ -45,6 +47,8 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 
 	SetAudioListenerOverride(NewPawn->GetRootComponent(), FVector::ZeroVector, FRotator::ZeroRotator);
 
+	TryBindBriefingEventsFromPlayerState();
+
 	StartTalking();
 
 	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
@@ -60,6 +64,18 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 
 	VoiceTalkingStateChangedHandle = VoiceInterface->AddOnPlayerTalkingStateChangedDelegate_Handle(
 		FOnPlayerTalkingStateChangedDelegate::CreateUObject(this, &ThisClass::HandleVoiceTalkingStateChanged));
+}
+
+void AHeistPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	TryBindBriefingEventsFromPlayerState();
 }
 
 void AHeistPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -149,6 +165,74 @@ void AHeistPlayerController::ServerRequestSetReady_Implementation(bool bReady)
 	if (!IsValid(HeistPS)) return;
 
 	HeistPS->SetIsReady(bReady);
+}
+
+void AHeistPlayerController::ClientEndBriefingPresentation_Implementation()
+{
+	RemoveBriefingWidget();
+}
+
+void AHeistPlayerController::TryBindBriefingEventsFromPlayerState()
+{
+	if (BriefingContextReadyHandle.IsValid()) return;
+
+	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPS)) return;
+
+	UHeistBriefingPlayerComponent* BriefingComp = HeistPS->GetBriefingPlayerComponent();
+	if (!IsValid(BriefingComp)) return;
+
+	BriefingContextReadyHandle = BriefingComp->OnBriefingContextReady.AddUObject(
+		this, &ThisClass::HandleBriefingContextReady);
+
+	// 늦게 바인딩된 경우(이미 컨텍스트가 준비된 상태) 즉시 처리
+	if (IsValid(BriefingComp->GetDrawingBoard()))
+	{
+		HandleBriefingContextReady();
+	}
+}
+
+void AHeistPlayerController::HandleBriefingContextReady()
+{
+	if (!IsValid(BriefingWidgetClass)) return;
+
+	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPS)) return;
+
+	UHeistBriefingPlayerComponent* BriefingComp = HeistPS->GetBriefingPlayerComponent();
+	if (!IsValid(BriefingComp)) return;
+
+	AHeistBriefingDrawingBoard* Board = BriefingComp->GetDrawingBoard();
+	if (!IsValid(Board)) return;
+
+	if (!IsValid(BriefingWidgetInstance))
+	{
+		BriefingWidgetInstance = CreateWidget<UUserWidget>(this, BriefingWidgetClass);
+		if (!IsValid(BriefingWidgetInstance)) return;
+
+		BriefingWidgetInstance->AddToViewport();
+	}
+
+	// IHeistBriefingWidget을 구현한 위젯에만 초기화를 위임한다.
+	// BriefingWidgetClass에 할당된 위젯이 인터페이스를 구현하지 않으면 조용히 무시된다.
+	if (IHeistBriefingWidgetInterface* BriefingWidget = Cast<IHeistBriefingWidgetInterface>(BriefingWidgetInstance))
+	{
+		BriefingWidget->InitializeForBriefing(
+			BriefingComp,
+			Board->GetDrawingSyncComponent(),
+			BriefingComp->GetViewMode());
+	}
+}
+
+void AHeistPlayerController::RemoveBriefingWidget()
+{
+	if (!IsValid(BriefingWidgetInstance))
+	{
+		return;
+	}
+
+	BriefingWidgetInstance->RemoveFromParent();
+	BriefingWidgetInstance = nullptr;
 }
 
 void AHeistPlayerController::UpdateCursorRotation()
