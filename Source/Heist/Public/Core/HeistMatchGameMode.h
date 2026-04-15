@@ -26,6 +26,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void GenericPlayerInitialization(AController* C) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
 	TObjectPtr<UHeistPhaseManagerComponent> PhaseManagerComponent;
@@ -48,6 +49,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="Heist|Briefing")
 	FName PoliceBriefingStartTag = TEXT("StartPoint_Briefing_Police");
+
+	UPROPERTY(EditDefaultsOnly, Category="Heist|Pawn")
+	TSubclassOf<APawn> ThiefPawnClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="Heist|Pawn")
+	TSubclassOf<APawn> PolicePawnClass;
 
 	UPROPERTY(EditDefaultsOnly, Category="Heist|Briefing", meta=(ClampMin="1"))
 	int32 RequiredPlayersToStartBriefing = 5;

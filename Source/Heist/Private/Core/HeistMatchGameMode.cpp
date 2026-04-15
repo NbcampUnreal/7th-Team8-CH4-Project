@@ -56,6 +56,32 @@ void AHeistMatchGameMode::PostLogin(APlayerController* NewPlayer)
 	SpawnPlayerAtBriefingStart(NewPlayer, HeistPS->GetAssignedTeam());
 }
 
+UClass* AHeistMatchGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
+{
+	if (!IsValid(InController))
+	{
+		return Super::GetDefaultPawnClassForController_Implementation(InController);
+	}
+
+	const AHeistPlayerState* HeistPS = InController->GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPS) || HeistPS->GetAssignedTeam() == EHeistTeam::None)
+	{
+		return Super::GetDefaultPawnClassForController_Implementation(InController);
+	}
+
+	if (HeistPS->IsPolice() && IsValid(PolicePawnClass))
+	{
+		return PolicePawnClass;
+	}
+
+	if (HeistPS->IsThief() && IsValid(ThiefPawnClass))
+	{
+		return ThiefPawnClass;
+	}
+
+	return Super::GetDefaultPawnClassForController_Implementation(InController);
+}
+
 void AHeistMatchGameMode::TryStartBriefingFlow()
 {
 	if (bBriefingFlowStarted || !HasAuthority())
