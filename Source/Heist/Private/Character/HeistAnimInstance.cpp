@@ -399,118 +399,118 @@ void UHeistAnimInstance::UpdateIK(float DeltaSeconds)
 		return;
 	}
 
-    UCharacterMovementComponent* MovComp = PlayerChar->GetCharacterMovement();
-    if (!IsValid(MovComp)) return;
+	UCharacterMovementComponent* MovComp = PlayerChar->GetCharacterMovement();
+	if (!IsValid(MovComp)) return;
 
-    const float SafeDelta = FMath::Max(DeltaSeconds, KINDA_SMALL_NUMBER);
+	const float SafeDelta = FMath::Max(DeltaSeconds, KINDA_SMALL_NUMBER);
 
-    if (MovComp->IsFalling())
-    {
-        IK_Offset_L.Z      = FMath::FInterpTo(IK_Offset_L.Z,      0.f, DeltaSeconds, IK_InterpSpeed);
-        IK_Offset_R.Z      = FMath::FInterpTo(IK_Offset_R.Z,      0.f, DeltaSeconds, IK_InterpSpeed);
-        IK_Offset_Pelvis.Z = FMath::FInterpTo(IK_Offset_Pelvis.Z, 0.f, DeltaSeconds, IK_InterpSpeed);
-        IK_Alpha_L         = FMath::FInterpTo(IK_Alpha_L, 0.f, DeltaSeconds, IK_InterpSpeed);
-        IK_Alpha_R         = FMath::FInterpTo(IK_Alpha_R, 0.f, DeltaSeconds, IK_InterpSpeed);
-        IK_Rotation_L      = FMath::RInterpTo(IK_Rotation_L, FRotator::ZeroRotator, DeltaSeconds, IK_InterpSpeed);
-        IK_Rotation_R      = FMath::RInterpTo(IK_Rotation_R, FRotator::ZeroRotator, DeltaSeconds, IK_InterpSpeed);
-        bLocalFootCacheInitialized = false;
-        return;
-    }
+	if (MovComp->IsFalling())
+	{
+		IK_Offset_L.Z      = FMath::FInterpTo(IK_Offset_L.Z,      0.f, DeltaSeconds, IK_InterpSpeed);
+		IK_Offset_R.Z      = FMath::FInterpTo(IK_Offset_R.Z,      0.f, DeltaSeconds, IK_InterpSpeed);
+		IK_Offset_Pelvis.Z = FMath::FInterpTo(IK_Offset_Pelvis.Z, 0.f, DeltaSeconds, IK_InterpSpeed);
+		IK_Alpha_L         = FMath::FInterpTo(IK_Alpha_L, 0.f, DeltaSeconds, IK_InterpSpeed);
+		IK_Alpha_R         = FMath::FInterpTo(IK_Alpha_R, 0.f, DeltaSeconds, IK_InterpSpeed);
+		IK_Rotation_L      = FMath::RInterpTo(IK_Rotation_L, FRotator::ZeroRotator, DeltaSeconds, IK_InterpSpeed);
+		IK_Rotation_R      = FMath::RInterpTo(IK_Rotation_R, FRotator::ZeroRotator, DeltaSeconds, IK_InterpSpeed);
+		bLocalFootCacheInitialized = false;
+		return;
+	}
 
-    USkeletalMeshComponent* Mesh = PlayerChar->GetMesh();
-    if (!IsValid(Mesh)) return;
+	USkeletalMeshComponent* Mesh = PlayerChar->GetMesh();
+	if (!IsValid(Mesh)) return;
 
-    const FTransform MeshTransform = Mesh->GetComponentTransform();
-    const FVector SocketL_Local = MeshTransform.InverseTransformPosition(Mesh->GetSocketLocation(FootL));
-    const FVector SocketR_Local = MeshTransform.InverseTransformPosition(Mesh->GetSocketLocation(FootR));
+	const FTransform MeshTransform = Mesh->GetComponentTransform();
+	const FVector SocketL_Local = MeshTransform.InverseTransformPosition(Mesh->GetSocketLocation(FootL));
+	const FVector SocketR_Local = MeshTransform.InverseTransformPosition(Mesh->GetSocketLocation(FootR));
 
-    float LocalSpeedL = 0.f;
-    float LocalSpeedR = 0.f;
+	float LocalSpeedL = 0.f;
+	float LocalSpeedR = 0.f;
 
-    if (bLocalFootCacheInitialized)
-    {
-        LocalSpeedL = (SocketL_Local - PrevLocalL).Size() / SafeDelta;
-        LocalSpeedR = (SocketR_Local - PrevLocalR).Size() / SafeDelta;
-    }
-    else
-    {
-        bLocalFootCacheInitialized = true;
-    }
+	if (bLocalFootCacheInitialized)
+	{
+		LocalSpeedL = (SocketL_Local - PrevLocalL).Size() / SafeDelta;
+		LocalSpeedR = (SocketR_Local - PrevLocalR).Size() / SafeDelta;
+	}
+	else
+	{
+		bLocalFootCacheInitialized = true;
+	}
 
-    PrevLocalL = SocketL_Local;
-    PrevLocalR = SocketR_Local;
+	PrevLocalL = SocketL_Local;
+	PrevLocalR = SocketR_Local;
 
-    DoFootTrace(FootL, IK_Offset_L, IK_Rotation_L, bIK_HitL, DeltaSeconds);
-    DoFootTrace(FootR, IK_Offset_R, IK_Rotation_R, bIK_HitR, DeltaSeconds);
+	DoFootTrace(FootL, IK_Offset_L, IK_Rotation_L, bIK_HitL, DeltaSeconds);
+	DoFootTrace(FootR, IK_Offset_R, IK_Rotation_R, bIK_HitR, DeltaSeconds);
 
-    const float Threshold = IK_FootSpeedThreshold_Cached;
-    IK_Alpha_L = FMath::FInterpTo(IK_Alpha_L, (bIK_HitL && LocalSpeedL < Threshold) ? 1.f : 0.f, DeltaSeconds, IK_InterpSpeed);
-    IK_Alpha_R = FMath::FInterpTo(IK_Alpha_R, (bIK_HitR && LocalSpeedR < Threshold) ? 1.f : 0.f, DeltaSeconds, IK_InterpSpeed);
+	const float Threshold = IK_FootSpeedThreshold_Cached;
+	IK_Alpha_L = FMath::FInterpTo(IK_Alpha_L, (bIK_HitL && LocalSpeedL < Threshold) ? 1.f : 0.f, DeltaSeconds, IK_InterpSpeed);
+	IK_Alpha_R = FMath::FInterpTo(IK_Alpha_R, (bIK_HitR && LocalSpeedR < Threshold) ? 1.f : 0.f, DeltaSeconds, IK_InterpSpeed);
 
-    // 골반: 두 발 오프셋 중 낮은 값 기준, 항상 0 이하
-    const float TargetPelvisZ = FMath::Clamp(
-        FMath::Min(IK_Offset_L.Z, IK_Offset_R.Z),
-        -IK_ThighDeadZone, 0.f);
+	// 골반: 두 발 오프셋 중 낮은 값 기준, 항상 0 이하
+	const float TargetPelvisZ = FMath::Clamp(
+		FMath::Min(IK_Offset_L.Z, IK_Offset_R.Z),
+		-IK_ThighDeadZone, 0.f);
 
-    IK_Offset_Pelvis.Z = FMath::FInterpTo(IK_Offset_Pelvis.Z, TargetPelvisZ, SafeDelta, IK_InterpSpeed);
+	IK_Offset_Pelvis.Z = FMath::FInterpTo(IK_Offset_Pelvis.Z, TargetPelvisZ, SafeDelta, IK_InterpSpeed);
 }
 
 void UHeistAnimInstance::DoFootTrace(FName SocketName, FVector& OutOffset, FRotator& OutRotation, bool& OutHit, float DeltaSeconds)
 {
-    auto ResetToZero = [&]()
-    {
-        OutHit = false;
-    	OutOffset.Z = 0.f;  // 보간 제거
-    	OutRotation = FRotator::ZeroRotator;  // 보간 제거
-    };
+	auto ResetToZero = [&]()
+	{
+		OutHit = false;
+		OutOffset.Z = 0.f;  // 보간 제거
+		OutRotation = FRotator::ZeroRotator;  // 보간 제거
+	};
 
-    if (!IsValid(PlayerChar)) { ResetToZero(); return; }
+	if (!IsValid(PlayerChar)) { ResetToZero(); return; }
 
-    USkeletalMeshComponent* Mesh = PlayerChar->GetMesh();
-    if (!IsValid(Mesh)) { ResetToZero(); return; }
-    if (!Mesh->DoesSocketExist(SocketName)) { ResetToZero(); return; }
+	USkeletalMeshComponent* Mesh = PlayerChar->GetMesh();
+	if (!IsValid(Mesh)) { ResetToZero(); return; }
+	if (!Mesh->DoesSocketExist(SocketName)) { ResetToZero(); return; }
 
-    const FVector SocketLoc = Mesh->GetSocketLocation(SocketName);
-    const float CapsuleHalfHeight = PlayerChar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-    const float CapsuleBottomZ = PlayerChar->GetActorLocation().Z - CapsuleHalfHeight;
+	const FVector SocketLoc = Mesh->GetSocketLocation(SocketName);
+	const float CapsuleHalfHeight = PlayerChar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	const float CapsuleBottomZ = PlayerChar->GetActorLocation().Z - CapsuleHalfHeight;
 
-    // 트레이스: X/Y는 소켓 기준, Z는 캡슐 바닥 기준으로 고정 (피드백 루프 방지)
-    const FVector TraceStart = FVector(SocketLoc.X, SocketLoc.Y, CapsuleBottomZ + 20.f);
-    const FVector TraceEnd   = FVector(SocketLoc.X, SocketLoc.Y, CapsuleBottomZ - IK_Trace_Dist);
+	// 트레이스: X/Y는 소켓 기준, Z는 캡슐 바닥 기준으로 고정 (피드백 루프 방지)
+	const FVector TraceStart = FVector(SocketLoc.X, SocketLoc.Y, CapsuleBottomZ + 20.f);
+	const FVector TraceEnd   = FVector(SocketLoc.X, SocketLoc.Y, CapsuleBottomZ - IK_Trace_Dist);
 
-    FHitResult Hit;
-    const bool bHit = GetWorld()->LineTraceSingleByChannel(
-        Hit, TraceStart, TraceEnd, IK_TraceChannel, TraceParams);
+	FHitResult Hit;
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(
+		Hit, TraceStart, TraceEnd, IK_TraceChannel, TraceParams);
 
-    // DrawDebugLine(GetWorld(), TraceStart, bHit ? Hit.ImpactPoint : TraceEnd,
-    //     bHit ? FColor::Green : FColor::Red, false, -1.f, 0, 2.f);
-    // if (bHit)
-    //     DrawDebugSphere(GetWorld(), Hit.ImpactPoint, 3.f, 8, FColor::Green, false, -1.f);
+	// DrawDebugLine(GetWorld(), TraceStart, bHit ? Hit.ImpactPoint : TraceEnd,
+	//     bHit ? FColor::Green : FColor::Red, false, -1.f, 0, 2.f);
+	// if (bHit)
+	//     DrawDebugSphere(GetWorld(), Hit.ImpactPoint, 3.f, 8, FColor::Green, false, -1.f);
 
-    if (bHit && Hit.ImpactNormal.Z >= NormalThreshold)
-    {
-        OutHit = true;
+	if (bHit && Hit.ImpactNormal.Z >= NormalThreshold)
+	{
+		OutHit = true;
 
-        // Z 오프셋: 지면 높이 - 캡슐 바닥 (항상 양수 = 발이 올라가야 함)
-        // 캡슐 바닥 기준이므로 피드백 루프 없음
-        const float TargetZ = Hit.ImpactPoint.Z + FootHeight - CapsuleBottomZ;
-        OutOffset.Z = FMath::FInterpTo(OutOffset.Z, TargetZ, DeltaSeconds, IK_InterpSpeed);
+		// Z 오프셋: 지면 높이 - 캡슐 바닥 (항상 양수 = 발이 올라가야 함)
+		// 캡슐 바닥 기준이므로 피드백 루프 없음
+		const float TargetZ = Hit.ImpactPoint.Z + FootHeight - CapsuleBottomZ;
+		OutOffset.Z = FMath::FInterpTo(OutOffset.Z, TargetZ, DeltaSeconds, IK_InterpSpeed);
 
-    	// 경사 법선에서 캐릭터 전방 기준 Pitch각도만 추출
-    	const FVector CharForward = PlayerChar->GetActorForwardVector();
+		// 경사 법선에서 캐릭터 전방 기준 Pitch각도만 추출
+		const FVector CharForward = PlayerChar->GetActorForwardVector();
 
-    	// 전방 경사 (Pitch)
-    	const float PitchAngle = FMath::RadiansToDegrees(
+		// 전방 경사 (Pitch)
+		const float PitchAngle = FMath::RadiansToDegrees(
 			FMath::Atan2((Hit.ImpactNormal | CharForward), Hit.ImpactNormal.Z));
 
-    	// Pitch만 적용, Yaw/Roll은 0
-    	const FRotator TargetRotation = FRotator(0.f, 0.f, PitchAngle);
-    	OutRotation = FMath::RInterpTo(OutRotation, TargetRotation, DeltaSeconds, IK_InterpSpeed);
-    }
-    else
-    {
-        ResetToZero();
-    }
+		// Pitch만 적용, Yaw/Roll은 0
+		const FRotator TargetRotation = FRotator(0.f, 0.f, PitchAngle);
+		OutRotation = FMath::RInterpTo(OutRotation, TargetRotation, DeltaSeconds, IK_InterpSpeed);
+	}
+	else
+	{
+		ResetToZero();
+	}
 }
 
 #pragma endregion AnimIK
