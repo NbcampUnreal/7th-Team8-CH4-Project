@@ -1,8 +1,9 @@
 ﻿#include "Character/PoliceCharacter.h"
 
 #include "Components/FlashlightComponent.h"
-
 #include "Components/ThiefEscortComponent.h"
+#include "Components/SoundDetectionComponent.h"
+
 #include "GameFramework/CharacterMovementComponent.h"
 
 APoliceCharacter::APoliceCharacter(const FObjectInitializer& ObjectInitializer)
@@ -12,4 +13,5 @@ APoliceCharacter::APoliceCharacter(const FObjectInitializer& ObjectInitializer)
 
 	FlashlightComponent = CreateDefaultSubobject<UFlashlightComponent>(TEXT("FlashlightComponent"));
 	EscortComponent = CreateDefaultSubobject<UThiefEscortComponent>(TEXT("EscortComponent"));
+	SoundDetectionComponent = CreateDefaultSubobject<USoundDetectionComponent>(TEXT("SoundDetectionComponent"));
 }
