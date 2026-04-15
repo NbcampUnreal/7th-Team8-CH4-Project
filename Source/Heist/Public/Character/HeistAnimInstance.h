@@ -105,7 +105,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category="IK")                                                                                                                                                                                                                       
 	float IK_Alpha_L = 0.f;                                                                                                                                                                                                                                           
-                                                                                                                                                                                                                                                                    
+																																																																	
 	UPROPERTY(BlueprintReadOnly, Category="IK")                                                                                                                                                                                                                     
 	float IK_Alpha_R = 0.f;
 	

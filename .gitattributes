@@ -2,6 +2,14 @@
 [attr]lockonly lockable
 [attr]lfs filter=lfs diff=lfs merge=binary -text
 [attr]lfstext filter=lfs diff=lfstext merge=lfstext -text
+# Source files — LF in repo, CRLF on Windows checkout
+*.cpp    text eol=crlf
+*.h      text eol=crlf
+*.cs     text eol=crlf
+*.ini    text eol=crlf
+*.json   text eol=crlf
+*.md     text eol=crlf
+
 # Unreal Engine file types.
 *.uasset lock
 *.umap   lock
