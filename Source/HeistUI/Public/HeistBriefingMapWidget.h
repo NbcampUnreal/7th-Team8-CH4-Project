@@ -5,7 +5,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/Image.h"
 #include "Core/HeistMatchTypes.h"
-#include "Systems/HeistBriefingWidgetInterface.h"
+#include "HeistBriefingWidgetInterface.h"
 #include "HeistBriefingMapWidget.generated.h"
 
 class UHeistBriefingDrawingSyncComponent;

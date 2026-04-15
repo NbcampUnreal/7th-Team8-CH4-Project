@@ -3,6 +3,8 @@
 #include "Core/HeistMatchTypes.h"
 #include "GameFramework/PlayerState.h"
 #include "GameplayTagContainer.h"
+#include "Components/HeistBriefingPlayerComponent.h"
+#include "Core/HeistBriefingDrawingSyncComponent.h"
 #include "HeistMessageTypes.generated.h"
 
 USTRUCT()
@@ -88,4 +90,28 @@ struct FHeistFlashlightAlertMessage
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bIsDetected = false;
+};
+
+USTRUCT()
+struct FHeistBriefingContextReadyMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TObjectPtr<UHeistBriefingPlayerComponent> BriefingPlayerComponent;
+
+	UPROPERTY()
+	TObjectPtr<UHeistBriefingDrawingSyncComponent> DrawingSyncComponent;
+
+	EHeistBriefingViewMode ViewMode = EHeistBriefingViewMode::Thief;
+
+	/** CreateWidget에 사용할 위젯 클래스. PC BP에서 할당한 값을 그대로 전달한다. */
+	UPROPERTY()
+	TObjectPtr<UClass> WidgetClass;
+};
+
+USTRUCT()
+struct FHeistBriefingEndMessage
+{
+	GENERATED_BODY()
 };

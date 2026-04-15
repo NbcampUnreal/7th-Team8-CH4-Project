@@ -169,7 +169,8 @@ void AHeistPlayerController::ServerRequestSetReady_Implementation(bool bReady)
 
 void AHeistPlayerController::ClientEndBriefingPresentation_Implementation()
 {
-	RemoveBriefingWidget();
+	UHeistMessageSubsystem::Get(this).BroadcastMessage(
+		HeistMessageTags::Message_Briefing_End, FHeistBriefingEndMessage{});
 }
 
 void AHeistPlayerController::TryBindBriefingEventsFromPlayerState()
@@ -194,8 +195,6 @@ void AHeistPlayerController::TryBindBriefingEventsFromPlayerState()
 
 void AHeistPlayerController::HandleBriefingContextReady()
 {
-	if (!IsValid(BriefingWidgetClass)) return;
-
 	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
 	if (!IsValid(HeistPS)) return;
 
@@ -205,34 +204,15 @@ void AHeistPlayerController::HandleBriefingContextReady()
 	AHeistBriefingDrawingBoard* Board = BriefingComp->GetDrawingBoard();
 	if (!IsValid(Board)) return;
 
-	if (!IsValid(BriefingWidgetInstance))
-	{
-		BriefingWidgetInstance = CreateWidget<UUserWidget>(this, BriefingWidgetClass);
-		if (!IsValid(BriefingWidgetInstance)) return;
+	// CreateWidget 대신 메시지 브로드캐스트
+	FHeistBriefingContextReadyMessage Msg;
+	Msg.BriefingPlayerComponent = BriefingComp;
+	Msg.DrawingSyncComponent = Board->GetDrawingSyncComponent();
+	Msg.ViewMode = BriefingComp->GetViewMode();
+	Msg.WidgetClass = BriefingWidgetClass;
 
-		BriefingWidgetInstance->AddToViewport();
-	}
-
-	// IHeistBriefingWidget을 구현한 위젯에만 초기화를 위임한다.
-	// BriefingWidgetClass에 할당된 위젯이 인터페이스를 구현하지 않으면 조용히 무시된다.
-	if (IHeistBriefingWidgetInterface* BriefingWidget = Cast<IHeistBriefingWidgetInterface>(BriefingWidgetInstance))
-	{
-		BriefingWidget->InitializeForBriefing(
-			BriefingComp,
-			Board->GetDrawingSyncComponent(),
-			BriefingComp->GetViewMode());
-	}
-}
-
-void AHeistPlayerController::RemoveBriefingWidget()
-{
-	if (!IsValid(BriefingWidgetInstance))
-	{
-		return;
-	}
-
-	BriefingWidgetInstance->RemoveFromParent();
-	BriefingWidgetInstance = nullptr;
+	UHeistMessageSubsystem::Get(this).BroadcastMessage(
+		HeistMessageTags::Message_Briefing_ContextReady, Msg);
 }
 
 void AHeistPlayerController::UpdateCursorRotation()
