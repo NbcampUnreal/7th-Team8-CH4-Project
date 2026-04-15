@@ -8,6 +8,9 @@
 
 class UHeistMessageSubsystem;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHeistOnSoundDetected, FVector, OriginLocation, float, DetectionRadius);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHeistOnFlashlightAlert, bool, bIsDetected);
+
 UENUM(BlueprintType)
 enum class EHeistMessageMatch : uint8
 {
@@ -39,6 +42,9 @@ class HEIST_API UHeistMessageSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
+
 	static UHeistMessageSubsystem& Get(const UObject* WorldContextObject);
 
 	template <typename T>
@@ -63,19 +69,25 @@ public:
 		NewListener.MatchType = MatchType;
 		NewListener.StructType = T::StaticStruct();
 		NewListener.Callback = [Callback](FGameplayTag Tag, const FInstancedStruct& Payload)
-		{
-			const T* Data = Payload.GetPtr<T>();
-			if (Data != nullptr)
 			{
-				Callback(Tag, *Data);
-			}
-		};
+				const T* Data = Payload.GetPtr<T>();
+				if (Data != nullptr)
+				{
+					Callback(Tag, *Data);
+				}
+			};
 
 		Listeners.Add(NewListener);
 		return FHeistMessageListenerHandle(this, Channel, NewID);
 	}
 
 	void UnregisterListener(FHeistMessageListenerHandle& Handle);
+
+	UPROPERTY(BlueprintAssignable, Category = "Heist|Messaging|UI")
+	FHeistOnSoundDetected OnSoundDetectedEvent;
+
+	UPROPERTY(BlueprintAssignable, Category = "Heist|Messaging|UI")
+	FHeistOnFlashlightAlert OnFlashlightAlertEvent;
 
 private:
 	struct FListenerData
@@ -95,4 +107,7 @@ private:
 
 	bool bIsBroadcasting = false;
 	TArray<uint32> PendingRemovals;
+
+	FHeistMessageListenerHandle SoundDetectedBridgeHandle;
+	FHeistMessageListenerHandle FlashlightAlertBridgeHandle;
 };
