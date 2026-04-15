@@ -103,7 +103,7 @@ void UHeistPawnExtensionComponent::HandleChangeInitState(UGameFrameworkComponent
 
 	if (DesiredState == HeistInitStateTags::InitState_GameplayReady)
 	{
-		if (IsValid(PawnData) && IsValid(PawnData->DefaultAbilitySet))
+		if (GetOwner()->HasAuthority() && IsValid(PawnData) && IsValid(PawnData->DefaultAbilitySet))
 		{
 			PawnData->DefaultAbilitySet->GiveToAbilitySystem(AbilitySystemComponent, &GrantedAbilitySetHandles);
 		}
