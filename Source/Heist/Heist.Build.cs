@@ -23,6 +23,7 @@ public class Heist : ModuleRules
 			"StructUtils",
 			"DebugUI",
 			"OnlineSubsystem",
+			"NavigationSystem",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

@@ -9,6 +9,7 @@ AHeistLobbyGameMode::AHeistLobbyGameMode()
 	GameStateClass = AHeistLobbyGameState::StaticClass();
 	GameMapPath = TEXT("/Game/Project_Heist/Maps/NewToyMuseum?listen");
 	MinPlayersToStart = 5;
+	bUseSeamlessTravel = true;
 }
 
 void AHeistLobbyGameMode::BeginPlay()

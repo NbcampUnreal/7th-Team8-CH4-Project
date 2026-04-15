@@ -37,16 +37,16 @@ struct FItemData : public FTableRowBase
 	float SoloCarryNoiseMultiplier = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly)
-	bool bTriggerGPS;
+	bool bTriggerGPS = false;
 
 	UPROPERTY(EditDefaultsOnly)
-	bool bTriggerAlarm;
+	bool bTriggerAlarm = false;
 
 	UPROPERTY(EditDefaultsOnly)
 	int32 Value = 1;
 
 	UPROPERTY(EditDefaultsOnly)
-	bool bExplosive;
+	bool bExplosive = false;
 
 	UPROPERTY(EditDefaultsOnly)
 	float ExplosionRadius = 10.0f;

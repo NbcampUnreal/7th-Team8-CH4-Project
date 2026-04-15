@@ -7,6 +7,8 @@ namespace HeistMessageTags
 	UE_DEFINE_GAMEPLAY_TAG(Message_Lobby_PlayersChanged, "Message.Lobby.PlayersChanged");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Lobby_ReadyStateChanged, "Message.Lobby.ReadyStateChanged");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Lobby_InviteCodeChanged, "Message.Lobby.InviteCodeChanged");
+	UE_DEFINE_GAMEPLAY_TAG(Message_Phase_Changed, "Message.Phase.Changed");
+	UE_DEFINE_GAMEPLAY_TAG(Message_Phase_TimeUpdated, "Message.Phase.TimeUpdated");
 
 	UE_DEFINE_GAMEPLAY_TAG(Message_Ping, "Message.Ping");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Ping_Danger, "Message.Ping.Danger");
@@ -18,7 +20,10 @@ namespace HeistMessageTags
 	UE_DEFINE_GAMEPLAY_TAG(Message_Alarm_Theft, "Message.Alarm.Theft");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Alarm_GPS, "Message.Alarm.GPS");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Alarm_Global, "Message.Alarm.Global");
-
+	
+	UE_DEFINE_GAMEPLAY_TAG(Message_Briefing_ContextReady, "Message.Briefing.ContextReady");
+	UE_DEFINE_GAMEPLAY_TAG(Message_Briefing_End, "Message.Briefing.End");
+	
 	UE_DEFINE_GAMEPLAY_TAG(Message_UI_SoundDetected, "Message.UI.SoundDetected");
 	UE_DEFINE_GAMEPLAY_TAG(Message_UI_FlashlightAlert, "Message.UI.FlashlightAlert");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Voice_TalkingStateChanged, "Message.Voice.TalkingStateChanged");

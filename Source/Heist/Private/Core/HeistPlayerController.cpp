@@ -3,6 +3,8 @@
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "Character/HeistTags_State.h"
 #include "Core/HeistPlayerState.h"
+#include "Core/HeistBriefingDrawingBoard.h"
+#include "Components/HeistBriefingPlayerComponent.h"
 #include "Voice/HeistVoipTalker.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
@@ -45,6 +47,8 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 
 	SetAudioListenerOverride(NewPawn->GetRootComponent(), FVector::ZeroVector, FRotator::ZeroRotator);
 
+	TryBindBriefingEventsFromPlayerState();
+
 	StartTalking();
 
 	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
@@ -60,6 +64,18 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 
 	VoiceTalkingStateChangedHandle = VoiceInterface->AddOnPlayerTalkingStateChangedDelegate_Handle(
 		FOnPlayerTalkingStateChangedDelegate::CreateUObject(this, &ThisClass::HandleVoiceTalkingStateChanged));
+}
+
+void AHeistPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	TryBindBriefingEventsFromPlayerState();
 }
 
 void AHeistPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -149,6 +165,54 @@ void AHeistPlayerController::ServerRequestSetReady_Implementation(bool bReady)
 	if (!IsValid(HeistPS)) return;
 
 	HeistPS->SetIsReady(bReady);
+}
+
+void AHeistPlayerController::ClientEndBriefingPresentation_Implementation()
+{
+	UHeistMessageSubsystem::Get(this).BroadcastMessage(
+		HeistMessageTags::Message_Briefing_End, FHeistBriefingEndMessage{});
+}
+
+void AHeistPlayerController::TryBindBriefingEventsFromPlayerState()
+{
+	if (BriefingContextReadyHandle.IsValid()) return;
+
+	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPS)) return;
+
+	UHeistBriefingPlayerComponent* BriefingComp = HeistPS->GetBriefingPlayerComponent();
+	if (!IsValid(BriefingComp)) return;
+
+	BriefingContextReadyHandle = BriefingComp->OnBriefingContextReady.AddUObject(
+		this, &ThisClass::HandleBriefingContextReady);
+
+	// 늦게 바인딩된 경우(이미 컨텍스트가 준비된 상태) 즉시 처리
+	if (IsValid(BriefingComp->GetDrawingBoard()))
+	{
+		HandleBriefingContextReady();
+	}
+}
+
+void AHeistPlayerController::HandleBriefingContextReady()
+{
+	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPS)) return;
+
+	UHeistBriefingPlayerComponent* BriefingComp = HeistPS->GetBriefingPlayerComponent();
+	if (!IsValid(BriefingComp)) return;
+
+	AHeistBriefingDrawingBoard* Board = BriefingComp->GetDrawingBoard();
+	if (!IsValid(Board)) return;
+
+	// CreateWidget 대신 메시지 브로드캐스트
+	FHeistBriefingContextReadyMessage Msg;
+	Msg.BriefingPlayerComponent = BriefingComp;
+	Msg.DrawingSyncComponent = Board->GetDrawingSyncComponent();
+	Msg.ViewMode = BriefingComp->GetViewMode();
+	Msg.WidgetClass = BriefingWidgetClass;
+
+	UHeistMessageSubsystem::Get(this).BroadcastMessage(
+		HeistMessageTags::Message_Briefing_ContextReady, Msg);
 }
 
 void AHeistPlayerController::UpdateCursorRotation()
