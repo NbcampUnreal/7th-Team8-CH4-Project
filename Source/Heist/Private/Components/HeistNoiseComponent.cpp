@@ -5,14 +5,15 @@
 #include "Character/HeistTags_State.h"
 #include "AbilitySystem/HeistTags_Event.h"
 #include "AbilitySystem/HeistTags_FlagTags.h"
-#include "Components/AudioComponent.h"
 
+#include "Components/AudioComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "Abilities/GameplayAbilityTargetTypes.h"
 
 UHeistNoiseComponent::UHeistNoiseComponent()
 {
@@ -233,8 +234,11 @@ void UHeistNoiseComponent::DetectPoliceAndSendEvent(const FHeistSoundData* Sound
 			Payload.Target = PoliceCharacter;
 			Payload.EventMagnitude = FinalRadius;
 
-			// TODO(하민): UI 방향 핑(Ping) 처리를 위해 오디오 원점(OriginLocation)을 
-			// TargetData나 ContextHandle 등에 담아 Payload로 넘기는 추가 작업 예정
+			FGameplayAbilityTargetData_LocationInfo* LocationData = new FGameplayAbilityTargetData_LocationInfo();
+			LocationData->TargetLocation.LiteralTransform = FTransform(OriginLocation);
+			LocationData->TargetLocation.LocationType = EGameplayAbilityTargetingLocationType::LiteralTransform;
+
+			Payload.TargetData.Add(LocationData);
 
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
 				PoliceCharacter,
@@ -244,3 +248,4 @@ void UHeistNoiseComponent::DetectPoliceAndSendEvent(const FHeistSoundData* Sound
 		}
 	}
 }
+

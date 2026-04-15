@@ -42,7 +42,7 @@ protected:
 private:
 	// TODO(하민): Data 에셋이나 테이블에서 관리하도록 추후 연결
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Vision")
-	float FlashlightRadius = 1500.0f;
+	float FlashlightRadius = 900.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Vision")
 	float FlashlightHalfAngle = 30.0f;

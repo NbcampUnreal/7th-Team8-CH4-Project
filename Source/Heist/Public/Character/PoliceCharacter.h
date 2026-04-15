@@ -6,13 +6,11 @@
 
 class UFlashlightComponent;
 class UThiefEscortComponent;
+class USoundDetectionComponent;
 
 /**
  * 경찰 전용 캐릭터.
  * 게임플레이 로직은 GA와 컴포넌트에 위임한다.
- *
- * TODO: 추후 추가 예정
- *   USoundDetectionComponent — 소리 탐지 핑
  */
 UCLASS()
 class HEIST_API APoliceCharacter : public AHeistCharacter
@@ -34,4 +32,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UFlashlightComponent> FlashlightComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USoundDetectionComponent> SoundDetectionComponent;
 };

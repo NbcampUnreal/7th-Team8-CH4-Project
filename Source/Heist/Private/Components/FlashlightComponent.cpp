@@ -2,8 +2,11 @@
 
 #include "Character/ThiefCharacter.h"
 #include "Character/HeistTags_State.h"
-#include "AbilitySystemComponent.h"
+#include "Systems/Messaging/HeistMessageTypes.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
+#include "Systems/Messaging/HeistTags_Message.h"
 
+#include "AbilitySystemComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "GameFramework/Pawn.h"
 #include "EngineUtils.h"
@@ -124,6 +127,17 @@ void UFlashlightComponent::ProcessLocalVision()
 		{
 			CurrentlyVisibleThieves.Add(Thief);
 		}
+	}
+	const bool bWasAnyVisible = (PreviouslyVisibleThieves.Num() > 0);
+	const bool bIsAnyVisible = (CurrentlyVisibleThieves.Num() > 0);
+
+	if (bWasAnyVisible != bIsAnyVisible)
+	{
+		FHeistFlashlightAlertMessage Message;
+		Message.bIsDetected = bIsAnyVisible;
+
+		UHeistMessageSubsystem& MessageSubsystem = UHeistMessageSubsystem::Get(GetWorld());
+		MessageSubsystem.BroadcastMessage(HeistMessageTags::Message_UI_FlashlightAlert, Message);
 	}
 
 	PreviouslyVisibleThieves = CurrentlyVisibleThieves;
