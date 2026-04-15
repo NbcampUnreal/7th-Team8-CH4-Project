@@ -1,9 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AbilitySystem/Thief/GA_Thief_Kick.h"
 
-#include "AbilitySystemComponent.h"
-#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "AbilitySystem/HeistTags_Ability.h"
 #include "AbilitySystem/HeistTags_Data.h"
 #include "Character/HeistCharacter.h"
@@ -11,6 +9,11 @@
 #include "Character/ThiefCharacter.h"
 #include "Components/HeistHitReactionComponent.h"
 #include "Components/ThiefEscortComponent.h"
+#include "Components/HeistNoiseComponent.h"
+#include "Data/HeistSoundData.h"
+
+#include "AbilitySystemComponent.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
@@ -36,12 +39,20 @@ void UGA_Thief_Kick::ActivateAbility(
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo)) return;
 
+	if (AThiefCharacter* Thief = Cast<AThiefCharacter>(GetAvatarActorFromActorInfo()))
+	{
+		if (UHeistNoiseComponent* NoiseComp = Thief->GetHeistNoiseComponent())
+		{
+			NoiseComp->MakeHeistNoise(EHeistSoundType::Kick, Thief->GetActorLocation());
+		}
+	}
+
 	if (!IsValid(KickMontage))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-	
+
 	// 현재 Kick의 hit 처리 함수를 HitReactionComponent에 등록합니다.
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	if (UHeistHitReactionComponent* HRC =
@@ -64,7 +75,7 @@ void UGA_Thief_Kick::ActivateAbility(
 void UGA_Thief_Kick::OnBackAttackHit(const FGameplayEventData& Payload)
 {
 	if (!HasAuthority(&CurrentActivationInfo)) return;
-	
+
 	AHeistCharacter* Target = Cast<AHeistCharacter>(const_cast<AActor*>(Payload.Target.Get()));
 	if (!IsValid(Target)) return;
 
@@ -86,7 +97,7 @@ void UGA_Thief_Kick::ApplyKickToTarget(AHeistCharacter* Target, UAbilitySystemCo
 
 	AActor* Self = GetAvatarActorFromActorInfo();
 	if (!IsValid(Self)) return;
-	
+
 	if (UThiefEscortComponent::FindEscortedThiefByPolice(Target))
 	{
 		FGameplayTagContainer EscortAbilityTags;
@@ -130,18 +141,18 @@ void UGA_Thief_Kick::ApplyKickToTarget(AHeistCharacter* Target, UAbilitySystemCo
 	const float LocalStunDuration = StunDuration;
 	FTimerDelegate ApplyStunDelegate;
 	ApplyStunDelegate.BindLambda([WeakSourceASC, WeakTargetASC, LocalStunEffectClass, LocalStunDuration]()
-	{
-		if (!WeakSourceASC.IsValid() || !WeakTargetASC.IsValid() || !LocalStunEffectClass) return;
+		{
+			if (!WeakSourceASC.IsValid() || !WeakTargetASC.IsValid() || !LocalStunEffectClass) return;
 
-		FGameplayEffectContextHandle EffectContext = WeakSourceASC->MakeEffectContext();
-		FGameplayEffectSpecHandle StunSpec = WeakSourceASC->MakeOutgoingSpec(LocalStunEffectClass, 1.f, EffectContext);
-		if (!StunSpec.IsValid() || !StunSpec.Data.IsValid()) return;
+			FGameplayEffectContextHandle EffectContext = WeakSourceASC->MakeEffectContext();
+			FGameplayEffectSpecHandle StunSpec = WeakSourceASC->MakeOutgoingSpec(LocalStunEffectClass, 1.f, EffectContext);
+			if (!StunSpec.IsValid() || !StunSpec.Data.IsValid()) return;
 
-		StunSpec.Data->SetSetByCallerMagnitude(
-			HeistDataTags::Data_Duration_Stun,
-			LocalStunDuration);
-		WeakTargetASC->ApplyGameplayEffectSpecToSelf(*StunSpec.Data.Get());
-	});
+			StunSpec.Data->SetSetByCallerMagnitude(
+				HeistDataTags::Data_Duration_Stun,
+				LocalStunDuration);
+			WeakTargetASC->ApplyGameplayEffectSpecToSelf(*StunSpec.Data.Get());
+		});
 
 	FTimerHandle TimerHandle;
 	World->GetTimerManager().SetTimer(TimerHandle, ApplyStunDelegate, KnockbackDuration, false);

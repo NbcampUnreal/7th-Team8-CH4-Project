@@ -4,6 +4,9 @@
 #include "Character/HeistTags_State.h"
 #include "AbilitySystem/HeistTags_Ability.h"
 #include "AbilitySystem/HeistTags_Event.h"
+#include "Components/HeistNoiseComponent.h"
+#include "Data/HeistSoundData.h"
+
 #include "AbilitySystemComponent.h"
 #include "Heist/Heist.h"
 
@@ -12,7 +15,7 @@ UGA_PoliceCuffing::UGA_PoliceCuffing()
 	ActivationPolicy = EHeistAbilityActivationPolicy::OnGameplayEvent;
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
-	
+
 	AbilityTags.AddTag(HeistAbilityTags::Ability_Police_Cuffing);
 
 	FAbilityTriggerData TriggerData;
@@ -42,12 +45,27 @@ void UGA_PoliceCuffing::ActivateAbility(
 	}
 
 	StartChanneling(FName("Cuffing"));
+
+	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
+	{
+		UHeistNoiseComponent* NoiseComponent = TargetThief->GetHeistNoiseComponent();
+		if (IsValid(NoiseComponent))
+		{
+			NoiseComponent->StartChannelingNoise(EHeistSoundType::Cuffing);
+		}
+	}
 }
 
 void UGA_PoliceCuffing::OnChannelingCompleted()
 {
 	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
 	{
+		UHeistNoiseComponent* NoiseComponent = TargetThief->GetHeistNoiseComponent();
+		if (IsValid(NoiseComponent))
+		{
+			NoiseComponent->StopChannelingNoise();
+		}
+
 		UAbilitySystemComponent* TargetASC = TargetThief->GetAbilitySystemComponent();
 		if (IsValid(TargetASC))
 		{
@@ -56,10 +74,6 @@ void UGA_PoliceCuffing::OnChannelingCompleted()
 			Payload.Target = TargetThief;
 
 			TargetASC->HandleGameplayEvent(HeistEventTags::Event_CuffingComplete, &Payload);
-
-			// [테스트 코드] 도둑 파트가 없어서 경찰이 직접 태그 교체
-			//TargetASC->RemoveLooseGameplayTag(HeistStateTags::State_Thief_Injured);
-			//TargetASC->AddLooseGameplayTag(HeistStateTags::State_Thief_Cuffed);
 
 			// Injured GE 제거 후 Cuffed GE 적용
 			FGameplayEffectQuery InjuredQuery = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(
@@ -84,5 +98,14 @@ void UGA_PoliceCuffing::OnChannelingCompleted()
 
 void UGA_PoliceCuffing::OnChannelingCancelled()
 {
+	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
+	{
+		UHeistNoiseComponent* NoiseComponent = TargetThief->GetHeistNoiseComponent();
+		if (IsValid(NoiseComponent))
+		{
+			NoiseComponent->StopChannelingNoise();
+		}
+	}
+
 	TargetThief = nullptr;
 }
