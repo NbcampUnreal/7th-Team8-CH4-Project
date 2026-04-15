@@ -82,16 +82,16 @@ private:
 	UPROPERTY(Replicated)
 	int32 CurrentCarrierCount;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
 	float CarryDistance = 120.f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
 	float MaxFollowSpeed = 1000.f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
 	float DropAngleMax = 90.f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess))
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
 	float CarryDistanceMax = 200.f;
 
 	FTimerHandle PhysicsTimeoutHandle;
