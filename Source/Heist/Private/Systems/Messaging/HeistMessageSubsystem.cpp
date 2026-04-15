@@ -1,5 +1,8 @@
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 
+#include "Systems/Messaging/HeistTags_Message.h"
+#include "Systems/Messaging/HeistMessageTypes.h"
+
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 
@@ -19,6 +22,44 @@ void FHeistMessageListenerHandle::Unregister()
 	{
 		SubsystemPtr->UnregisterListener(*this);
 	}
+}
+
+void UHeistMessageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+
+	// 1. 소리 감지 메시지 브릿지 연동
+	SoundDetectedBridgeHandle = RegisterListener<FHeistSoundDetectedMessage>(
+		HeistMessageTags::Message_UI_SoundDetected,
+		[this](FGameplayTag Channel, const FHeistSoundDetectedMessage& Message)
+		{
+			OnSoundDetectedEvent.Broadcast(Message.OriginLocation, Message.DetectionRadius);
+		}
+	);
+
+	// 2. 플래시라이트 경고 메시지 브릿지 연동
+	FlashlightAlertBridgeHandle = RegisterListener<FHeistFlashlightAlertMessage>(
+		HeistMessageTags::Message_UI_FlashlightAlert,
+		[this](FGameplayTag Channel, const FHeistFlashlightAlertMessage& Message)
+		{
+			OnFlashlightAlertEvent.Broadcast(Message.bIsDetected);
+		}
+	);
+}
+
+void UHeistMessageSubsystem::Deinitialize()
+{
+	if (SoundDetectedBridgeHandle.IsValid())
+	{
+		SoundDetectedBridgeHandle.Unregister();
+	}
+
+	if (FlashlightAlertBridgeHandle.IsValid())
+	{
+		FlashlightAlertBridgeHandle.Unregister();
+	}
+
+	Super::Deinitialize();
 }
 
 UHeistMessageSubsystem& UHeistMessageSubsystem::Get(const UObject* WorldContextObject)
@@ -44,9 +85,9 @@ void UHeistMessageSubsystem::UnregisterListener(FHeistMessageListenerHandle& Han
 	else
 	{
 		Listeners.RemoveAll([ID = Handle.ID](const FListenerData& Entry)
-		{
-			return Entry.ID == ID;
-		});
+			{
+				return Entry.ID == ID;
+			});
 	}
 
 	Handle.ID = 0;
@@ -70,9 +111,9 @@ void UHeistMessageSubsystem::BroadcastMessageInternal(FGameplayTag Channel, cons
 	for (uint32 PendingID : PendingRemovals)
 	{
 		Listeners.RemoveAll([PendingID](const FListenerData& Entry)
-		{
-			return Entry.ID == PendingID;
-		});
+			{
+				return Entry.ID == PendingID;
+			});
 	}
 	PendingRemovals.Reset();
 }
