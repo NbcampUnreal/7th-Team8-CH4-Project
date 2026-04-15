@@ -33,10 +33,7 @@ void AHeistPlayerState::BeginPlay()
 void AHeistPlayerState::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	// World 정리 전에 VoipListenerSynthComponent가 Transient에 남지 않도록 해제한다.
-	if (IsValid(VoipTalker))
-	{
-		VoipTalker->UnregisterFromPlayerState(this);
-	}
+	UVOIPStatics::ResetPlayerVoiceTalker(this);
 
 	Super::EndPlay(EndPlayReason);
 }
