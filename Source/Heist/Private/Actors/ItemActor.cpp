@@ -28,6 +28,7 @@ AItemActor::AItemActor() : CurrentCarrierCount(0)
 	BoxCollision->SetSimulatePhysics(true);
 	BoxCollision->SetCollisionProfileName(TEXT("PhysicsActor"));
 	BoxCollision->SetUseCCD(true);
+	BoxCollision->ComponentTags.Add(FName("MainBody"));
 
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(BoxCollision);
@@ -35,6 +36,12 @@ AItemActor::AItemActor() : CurrentCarrierCount(0)
 	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	InteractSphereComponent = CreateDefaultSubobject<UHeistInteractSphereComponent>(TEXT("InteractSphereComponent"));
+}
+
+int32 AItemActor::GetItemValue()
+{
+	if(GetItemData()) return GetItemData()->Value;
+	return 0;
 }
 
 void AItemActor::BeginPlay()
