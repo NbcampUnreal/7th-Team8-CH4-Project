@@ -15,3 +15,33 @@ APoliceCharacter::APoliceCharacter(const FObjectInitializer& ObjectInitializer)
 	EscortComponent = CreateDefaultSubobject<UThiefEscortComponent>(TEXT("EscortComponent"));
 	SoundDetectionComponent = CreateDefaultSubobject<USoundDetectionComponent>(TEXT("SoundDetectionComponent"));
 }
+
+void APoliceCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	if (IsValid(FlashlightComponent))
+	{
+		FlashlightComponent->TryStartLocalVision();
+	}
+}
+
+void APoliceCharacter::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+
+	if (IsValid(FlashlightComponent))
+	{
+		FlashlightComponent->TryStartLocalVision();
+	}
+}
+
+void APoliceCharacter::UnPossessed()
+{
+	if (IsValid(FlashlightComponent))
+	{
+		FlashlightComponent->StopLocalVision();
+	}
+
+	Super::UnPossessed();
+}

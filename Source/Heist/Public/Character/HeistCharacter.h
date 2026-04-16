@@ -44,6 +44,7 @@ protected:
 	// [SERVER] PlayerState 준비 완료 후 ASC 초기화
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void UnPossessed() override;
+	virtual void OnRep_Controller() override;
 
 	// [CLIENT] PlayerState 복제 완료 후 ASC 캐싱
 	virtual void OnRep_PlayerState() override;

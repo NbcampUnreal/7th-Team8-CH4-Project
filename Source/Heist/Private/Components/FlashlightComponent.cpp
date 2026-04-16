@@ -24,12 +24,30 @@ UFlashlightComponent::UFlashlightComponent()
 void UFlashlightComponent::BeginPlay()
 {
 	Super::BeginPlay();
+}
 
+void UFlashlightComponent::TryStartLocalVision()
+{
 	APawn* OwnerPawn = Cast<APawn>(GetOwner());
-
-	if (IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled())
+	if (!IsValid(OwnerPawn) || !OwnerPawn->IsLocallyControlled())
 	{
-		GetWorld()->GetTimerManager().SetTimer(VisionCheckTimerHandle, this, &UFlashlightComponent::ProcessLocalVision, 0.1f, true);
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!IsValid(World) || World->GetTimerManager().IsTimerActive(VisionCheckTimerHandle))
+	{
+		return;
+	}
+
+	World->GetTimerManager().SetTimer(VisionCheckTimerHandle, this, &UFlashlightComponent::ProcessLocalVision, 0.1f, true);
+}
+
+void UFlashlightComponent::StopLocalVision()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(VisionCheckTimerHandle);
 	}
 }
 
