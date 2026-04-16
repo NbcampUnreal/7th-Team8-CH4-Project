@@ -4,6 +4,8 @@
 #include "Core/HeistPlayerState.h"
 #include "MultiplayerSessionsSubsystem.h"
 
+#include "Net/VoiceConfig.h"
+
 AHeistLobbyGameMode::AHeistLobbyGameMode()
 {
 	GameStateClass = AHeistLobbyGameState::StaticClass();
@@ -98,12 +100,11 @@ void AHeistLobbyGameMode::RequestStartGame(APlayerController* Requester)
 	UWorld* World = GetWorld();
 	if (!IsValid(World)) return;
 
-	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	for (APlayerState* PS : GameState->PlayerArray)
 	{
-		APlayerController* PC = It->Get();
-		if (IsValid(PC))
+		if (IsValid(PS))
 		{
-			PC->StopTalking();
+			UVOIPStatics::ResetPlayerVoiceTalker(PS);
 		}
 	}
 
