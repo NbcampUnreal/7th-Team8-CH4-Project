@@ -1,6 +1,7 @@
-﻿#include "Character/ThiefCharacter.h"
+#include "Character/ThiefCharacter.h"
 
 #include "AbilitySystem/HeistTags_Ability.h"
+#include "Character/PoliceCharacter.h"
 #include "Character/HeistTags_State.h"
 #include "Components/HeistInteractSphereComponent.h"
 #include "Components/ThiefEscortComponent.h"
@@ -26,6 +27,16 @@ void AThiefCharacter::BeginPlay()
 
 	InteractSphereComp->OnCanInteract.BindUObject(this, &AThiefCharacter::CheckCanInteract);
 	InteractSphereComp->OnGetAbilityTag.BindUObject(this, &AThiefCharacter::ResolveInteractAbilityTag);
+
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (IsValid(PC))
+	{
+		APawn* LocalPawn = PC->GetPawn();
+		if (IsValid(LocalPawn) && LocalPawn->IsA<APoliceCharacter>())
+		{
+			GetMesh()->SetVisibility(false, true);
+		}
+	}
 }
 
 void AThiefCharacter::ReportFootstep()

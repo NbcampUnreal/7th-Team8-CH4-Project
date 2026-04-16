@@ -7,9 +7,9 @@
 #include "Systems/Messaging/HeistTags_Message.h"
 
 #include "AbilitySystemComponent.h"
-#include "Kismet/KismetSystemLibrary.h"
 #include "GameFramework/Pawn.h"
 #include "EngineUtils.h"
+#include "TimerManager.h"
 
 // TODO(하민): Material 적용할 때 디버깅 라인 제거
 #if !UE_BUILD_SHIPPING
@@ -45,6 +45,8 @@ bool UFlashlightComponent::IsThiefInFlashlight(AThiefCharacter* Thief, bool bWas
 	}
 
 	AActor* OwnerActor = GetOwner();
+	if (!IsValid(OwnerActor)) return false;
+
 	FVector PoliceLoc = OwnerActor->GetActorLocation();
 	FVector ThiefLoc = Thief->GetActorLocation();
 
@@ -61,7 +63,7 @@ bool UFlashlightComponent::IsThiefInFlashlight(AThiefCharacter* Thief, bool bWas
 	PoliceForward.Z = 0.f;
 	PoliceForward.Normalize();
 
-	const float EffectiveHalfAngle = bWasPreviouslyVisible ? (FlashlightHalfAngle + 2.0f) : FlashlightHalfAngle;
+	const float EffectiveHalfAngle = bWasPreviouslyVisible ? (FlashlightHalfAngle + FlashlightHysteresisAngle) : FlashlightHalfAngle;
 	const float CosineThreshold = FMath::Cos(FMath::DegreesToRadians(EffectiveHalfAngle));
 
 	if (FVector::DotProduct(PoliceForward, DirectionToThief) < CosineThreshold)
@@ -96,6 +98,9 @@ void UFlashlightComponent::ProcessLocalVision()
 
 	// TODO(하민): Material 적용할 때 디버깅 라인 제거
 #if !UE_BUILD_SHIPPING
+	constexpr int32 DebugConeSegments = 16;
+	constexpr float DebugConeLifeTime = 0.15f;
+
 	DrawDebugCone(
 		GetWorld(),
 		OwnerActor->GetActorLocation(),
@@ -103,10 +108,10 @@ void UFlashlightComponent::ProcessLocalVision()
 		FlashlightRadius,
 		FMath::DegreesToRadians(FlashlightHalfAngle),
 		FMath::DegreesToRadians(FlashlightHalfAngle),
-		16,
+		DebugConeSegments,
 		FColor::Yellow,
 		false,
-		0.15f,
+		DebugConeLifeTime,
 		0,
 		1.0f
 	);
@@ -127,12 +132,12 @@ void UFlashlightComponent::ProcessLocalVision()
 
 		if (bIsNowVisible != bWasPreviouslyVisible)
 		{
-			if (USkeletalMeshComponent* ThiefMesh = Thief->GetMesh())
+			USkeletalMeshComponent* ThiefMesh = Thief->GetMesh();
+			if (IsValid(ThiefMesh))
 			{
 				ThiefMesh->SetVisibility(bIsNowVisible, true);
 			}
 
-			// 진입/이탈 델리게이트 브로드캐스트 (HUD, 사운드에서 구독)
 			if (bIsNowVisible)
 			{
 				OnThiefSpotted.Broadcast(Thief);
@@ -150,6 +155,7 @@ void UFlashlightComponent::ProcessLocalVision()
 			CurrentlyVisibleThieves.Add(Thief);
 		}
 	}
+
 	const bool bWasAnyVisible = (PreviouslyVisibleThieves.Num() > 0);
 	const bool bIsAnyVisible = (CurrentlyVisibleThieves.Num() > 0);
 
