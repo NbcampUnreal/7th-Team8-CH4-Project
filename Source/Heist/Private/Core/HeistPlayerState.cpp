@@ -30,26 +30,38 @@ AHeistPlayerState::AHeistPlayerState()
 void AHeistPlayerState::BeginPlay()
 {
 	Super::BeginPlay();
-
-	VoipTalker->RegisterWithPlayerState(this);
+	BindVoipTalker();
 }
 
 void AHeistPlayerState::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// World 정리 전에 VoipListenerSynthComponent가 Transient에 남지 않도록 해제한다.
-	UVOIPStatics::ResetPlayerVoiceTalker(this);
-
+	UnbindVoipTalker();
 	Super::EndPlay(EndPlayReason);
+}
+
+void AHeistPlayerState::SeamlessTravelTo(APlayerState* NewPlayerState)
+{
+	// carry-over 직전에 VoipListenerSynthComponent를 해제한다.
+	// EndPlay()는 SeamlessTravel에서 구 World 클린업 후에 호출되므로 타이밍이 늦다.
+	UnbindVoipTalker();
+	Super::SeamlessTravelTo(NewPlayerState);
 }
 
 void AHeistPlayerState::OnSetUniqueId()
 {
 	Super::OnSetUniqueId();
+	BindVoipTalker();
+}
 
-	if (IsValid(VoipTalker))
-	{
-		VoipTalker->RegisterWithPlayerState(this);
-	}
+void AHeistPlayerState::BindVoipTalker()
+{
+	if (!IsValid(VoipTalker)) return;
+	VoipTalker->RegisterWithPlayerState(this);
+}
+
+void AHeistPlayerState::UnbindVoipTalker()
+{
+	UVOIPStatics::ResetPlayerVoiceTalker(this);
 }
 
 void AHeistPlayerState::OnRep_PlayerName()

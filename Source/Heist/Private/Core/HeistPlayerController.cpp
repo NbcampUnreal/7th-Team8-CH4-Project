@@ -49,7 +49,7 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 
 	TryBindBriefingEventsFromPlayerState();
 
-	StartTalking();
+	StartVoiceCapture();
 
 	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
 	if (OSS == nullptr) return;
@@ -78,8 +78,33 @@ void AHeistPlayerController::OnRep_PlayerState()
 	TryBindBriefingEventsFromPlayerState();
 }
 
+void AHeistPlayerController::PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
+{
+	StopVoiceCapture();
+
+	// CleanupWorld 전에 모든 플레이어의 VoipListenerSynthComponent를 명시적으로 해제한다.
+	// StopTalking()은 마이크 캡처만 끊고 수신 측 컴포넌트는 정리하지 않는다.
+	if (UWorld* World = GetWorld())
+	{
+		if (AGameStateBase* GS = World->GetGameState())
+		{
+			for (APlayerState* PS : GS->PlayerArray)
+			{
+				if (IsValid(PS))
+				{
+					UVOIPStatics::ResetPlayerVoiceTalker(PS);
+				}
+			}
+		}
+	}
+
+	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
+}
+
 void AHeistPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	StopVoiceCapture();
+
 	if (VoiceTalkingStateChangedHandle.IsValid())
 	{
 		IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
@@ -95,6 +120,16 @@ void AHeistPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 
 	Super::EndPlay(EndPlayReason);
+}
+
+void AHeistPlayerController::StartVoiceCapture()
+{
+	StartTalking();
+}
+
+void AHeistPlayerController::StopVoiceCapture()
+{
+	StopTalking();
 }
 
 void AHeistPlayerController::HandleVoiceTalkingStateChanged(FUniqueNetIdRef PlayerId, bool bIsTalking)
