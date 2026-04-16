@@ -16,6 +16,7 @@
 #include "Interfaces/VoiceInterface.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "DrawDebugHelpers.h"
+#include "GameFramework/GameStateBase.h"
 #include "Sound/SoundAttenuation.h"
 
 AHeistPlayerController::AHeistPlayerController()
