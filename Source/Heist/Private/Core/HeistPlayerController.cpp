@@ -78,12 +78,10 @@ void AHeistPlayerController::OnRep_PlayerState()
 	TryBindBriefingEventsFromPlayerState();
 }
 
-void AHeistPlayerController::PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
+void AHeistPlayerController::SeamlessTravelTo(APlayerController* NewPC)
 {
 	StopVoiceCapture();
 
-	// CleanupWorld 전에 모든 플레이어의 VoipListenerSynthComponent를 명시적으로 해제한다.
-	// StopTalking()은 마이크 캡처만 끊고 수신 측 컴포넌트는 정리하지 않는다.
 	if (UWorld* World = GetWorld())
 	{
 		if (AGameStateBase* GS = World->GetGameState())
@@ -98,7 +96,7 @@ void AHeistPlayerController::PreClientTravel(const FString& PendingURL, ETravelT
 		}
 	}
 
-	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
+	Super::SeamlessTravelTo(NewPC);
 }
 
 void AHeistPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)

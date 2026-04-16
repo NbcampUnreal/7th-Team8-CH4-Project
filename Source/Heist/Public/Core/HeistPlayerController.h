@@ -27,7 +27,7 @@ protected:
 	virtual void AcknowledgePossession(APawn* NewPawn) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
+	virtual void SeamlessTravelTo(APlayerController* NewPC) override;
 
 private:
 	void StartVoiceCapture();
