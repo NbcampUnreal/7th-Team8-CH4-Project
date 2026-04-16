@@ -2,6 +2,9 @@
 #include "HeistBriefingScreenWidget.h"
 
 #include "Core/HeistMatchGameState.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
+#include "Systems/Messaging/HeistMessageTypes.h"
+#include "Systems/Messaging/HeistTags_Message.h"
 #include "Core/HeistBriefingPointDataAsset.h"
 #include "HeistBriefingMapWidget.h"
 #include "Blueprint/WidgetTree.h"
@@ -10,6 +13,7 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Components/HeistBriefingPlayerComponent.h"
 #include "Components/TextBlock.h"
+#include "Components/VerticalBox.h"
 
 void UHeistBriefingPointButtonBinding::Initialize(UHeistBriefingScreenWidget* InOwner, const FHeistSpawnPointData& InPointData)
 {
@@ -41,6 +45,13 @@ void UHeistBriefingScreenWidget::NativeDestruct()
 	{
 		MapWidget->OnBriefingMapInitialized.RemoveDynamic(this, &ThisClass::HandleMapInitialized);
 	}
+
+	if (IsValid(CachedBriefingPlayerComponent))
+	{
+		CachedBriefingPlayerComponent->OnThiefSelectionCountsReceived.Remove(SelectionCountsHandle);
+	}
+
+	PhaseChangedHandle.Unregister();
 
 	ClearBriefingPointButtons();
 
@@ -85,6 +96,20 @@ void UHeistBriefingScreenWidget::InitializeForBriefing(
 	CurrentViewMode = InViewMode;
 	bMapInitialized = false;
 
+	// 잠금 상태 초기화 및 리스너 등록
+	PhaseChangedHandle.Unregister();
+	PhaseChangedHandle = UHeistMessageSubsystem::Get(this).RegisterListener<FHeistPhaseChangedMessage>(
+		HeistMessageTags::Message_Phase_Changed,
+		[this](FGameplayTag, const FHeistPhaseChangedMessage& Msg)
+		{
+			HandlePhaseChanged(Msg);
+		});
+
+	if (const AHeistMatchGameState* HeistGS = GetWorld() ? GetWorld()->GetGameState<AHeistMatchGameState>() : nullptr)
+	{
+		bSelectionLocked = HeistGS->IsBriefingSelectionLocked();
+	}
+
 	if (!IsValid(MapWidget))
 	{
 		return;
@@ -94,11 +119,21 @@ void UHeistBriefingScreenWidget::InitializeForBriefing(
 		InBriefingPlayerComponent,
 		InDrawingSyncComponent,
 		InViewMode);
+
+	if (CurrentViewMode == EHeistBriefingViewMode::Thief && IsValid(InBriefingPlayerComponent))
+	{
+		SelectionCountsHandle = InBriefingPlayerComponent->OnThiefSelectionCountsReceived
+			.AddUObject(this, &ThisClass::HandleThiefSelectionCounts);
+
+		InBriefingPlayerComponent->ServerRequestThiefCounts();
+	}
+
+	RebuildSelectionList();
 }
 
 void UHeistBriefingScreenWidget::SelectBriefingPointByData(const FHeistSpawnPointData& InPointData)
 {
-	if (!IsValid(CachedBriefingPlayerComponent))
+	if (bSelectionLocked || !IsValid(CachedBriefingPlayerComponent))
 	{
 		return;
 	}
@@ -111,6 +146,7 @@ void UHeistBriefingScreenWidget::SelectBriefingPointByData(const FHeistSpawnPoin
 
 	case EHeistBriefingPointType::PoliceObjective:
 		CachedBriefingPlayerComponent->ServerSetPoliceObjectiveKey(InPointData.Key);
+		HandlePoliceLocalSelection(InPointData.Key);
 		break;
 
 	default:
@@ -208,6 +244,12 @@ void UHeistBriefingScreenWidget::RebuildBriefingPointButtonsInternal(const TArra
 		ConfigureBriefingPointButton(ButtonWidget, PointData);
 		SpawnedPointButtons.Add(ButtonWidget);
 	}
+
+	// 재빌드 후 현재 잠금 상태 반영
+	if (bSelectionLocked)
+	{
+		SetBriefingPointButtonsEnabled(false);
+	}
 }
 
 void UHeistBriefingScreenWidget::ClearBriefingPointButtons()
@@ -227,4 +269,80 @@ void UHeistBriefingScreenWidget::ClearBriefingPointButtons()
 void UHeistBriefingScreenWidget::HandleBriefingPointButtonClicked(const FHeistSpawnPointData& PointData)
 {
 	SelectBriefingPointByData(PointData);
+}
+
+void UHeistBriefingScreenWidget::HandlePhaseChanged(const FHeistPhaseChangedMessage& Message)
+{
+	bSelectionLocked = Message.bBriefingSelectionLocked;
+	SetBriefingPointButtonsEnabled(!bSelectionLocked);
+}
+
+void UHeistBriefingScreenWidget::SetBriefingPointButtonsEnabled(bool bEnabled)
+{
+	for (UUserWidget* ButtonWidget : SpawnedPointButtons)
+	{
+		if (IsValid(ButtonWidget))
+		{
+			ButtonWidget->SetIsEnabled(bEnabled);
+		}
+	}
+}
+
+void UHeistBriefingScreenWidget::RebuildSelectionList()
+{
+	SelectionListBox->ClearChildren();
+	SelectionRowMap.Reset();
+
+	if (!IsValid(BriefingPointData) || !IsValid(SelectionRowClass)) return;
+
+	for (const FHeistSpawnPointData& Point : BriefingPointData->Points)
+	{
+		if (Point.VisibleTo != CurrentViewMode) continue;
+
+		UUserWidget* Row = CreateWidget<UUserWidget>(this, SelectionRowClass);
+		if (!IsValid(Row)) continue;
+
+		if (UTextBlock* Name = Cast<UTextBlock>(Row->WidgetTree->FindWidget(TEXT("Text_PointName"))))
+			Name->SetText(Point.DisplayName);
+
+		if (UTextBlock* Count = Cast<UTextBlock>(Row->WidgetTree->FindWidget(TEXT("Text_Count"))))
+			Count->SetText(FText::GetEmpty());
+
+		SelectionListBox->AddChild(Row);
+		SelectionRowMap.Add(Point.Key, Row);
+	}
+}
+
+void UHeistBriefingScreenWidget::HandlePoliceLocalSelection(FName SelectedKey)
+{
+	CachedPoliceSelectedKey = SelectedKey;
+
+	for (auto& Pair : SelectionRowMap)
+	{
+		if (UTextBlock* Name = Cast<UTextBlock>(
+			Pair.Value->WidgetTree->FindWidget(TEXT("Text_PointName"))))
+		{
+			const bool bSelected = Pair.Key == SelectedKey;
+			Name->SetColorAndOpacity(bSelected
+				? FSlateColor(FLinearColor(1.f, 0.85f, 0.f))  // 노랑
+				: FSlateColor(FLinearColor::Black));
+		}
+	}
+}
+
+void UHeistBriefingScreenWidget::HandleThiefSelectionCounts(
+	const TArray<FHeistBriefingSelectionCount>& Counts)
+{
+	for (auto& Pair : SelectionRowMap)
+	{
+		const FHeistBriefingSelectionCount* Found = Counts.FindByPredicate(
+			[&](const FHeistBriefingSelectionCount& C){ return C.Key == Pair.Key; });
+
+		if (UTextBlock* CountText = Cast<UTextBlock>(
+			Pair.Value->WidgetTree->FindWidget(TEXT("Text_Count"))))
+		{
+			const int32 N = Found ? Found->Count : 0;
+			CountText->SetText(N > 0 ? FText::AsNumber(N) : FText::GetEmpty());
+		}
+	}
 }

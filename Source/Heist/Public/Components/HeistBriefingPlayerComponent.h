@@ -10,6 +10,8 @@ class AHeistBriefingDrawingBoard;
 class UHeistBriefingPhaseComponent;
 
 DECLARE_MULTICAST_DELEGATE(FOnHeistBriefingContextReady);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnThiefSelectionCountsReceived,
+	const TArray<FHeistBriefingSelectionCount>&);
 
 /**
  * 플레이어별 브리핑 입력 진입점.
@@ -52,8 +54,19 @@ public:
 	/** DrawingBoard 복제 완료(클라이언트) 또는 서버 세팅 완료 시 발동. */
 	FOnHeistBriefingContextReady OnBriefingContextReady;
 
+	/** 도둑 스폰 카운트 수신 시 발동. 위젯이 바인딩. */
+	FOnThiefSelectionCountsReceived OnThiefSelectionCountsReceived;
+
 	/** BriefingPhaseComponent 직접 참조. BindPlayersToBriefingActors에서 주입. 서버 전용. */
 	void SetBriefingPhase(UHeistBriefingPhaseComponent* InPhase);
+
+	/** 위젯 초기화 시 현재 카운트 요청. */
+	UFUNCTION(Server, Reliable)
+	void ServerRequestThiefCounts();
+
+	/** 서버 → 이 클라이언트로 카운트 전달. */
+	UFUNCTION(Client, Reliable)
+	void ClientReceiveThiefCounts(const TArray<FHeistBriefingSelectionCount>& Counts);
 
 private:
 	UFUNCTION()

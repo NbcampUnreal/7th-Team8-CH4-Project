@@ -4,7 +4,11 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "HeistBriefingWidgetInterface.h"
+#include "Components/VerticalBox.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "HeistBriefingScreenWidget.generated.h"
+
+struct FHeistPhaseChangedMessage;
 
 class UButton;
 class UCanvasPanel;
@@ -63,9 +67,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Heist|Briefing")
 	void RefreshBriefingPointButtons();
 
+	/** 도둑 스폰 카운트 수신 시 호출. OnThiefSelectionCountsReceived에 바인딩. */
+	void HandleThiefSelectionCounts(const TArray<FHeistBriefingSelectionCount>& Counts);
+
 	/** 버튼 위젯 내부 표시에 추가 커스터마이징이 필요하면 BP에서 보정한다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Heist|Briefing")
 	void ConfigureBriefingPointButton(UUserWidget* ButtonWidget, const FHeistSpawnPointData& PointData);
+
 
 protected:
 	virtual void NativeConstruct() override;
@@ -93,6 +101,20 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCanvasPanel> PointButtonCanvas;
 
+	/**
+	 * 선택 현황 리스트 컨테이너.
+	 * WBP_BriefingScreen에서 변수 이름을 반드시 "SelectionListBox"로 맞춘다.
+	 */
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UVerticalBox> SelectionListBox;
+
+	/**
+	 * 선택 현황 행 위젯 클래스.
+	 * 내부에 "Text_PointName"(UTextBlock), "Text_Count"(UTextBlock) 이름을 맞출 것.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Heist|Briefing")
+	TSubclassOf<UUserWidget> SelectionRowClass;
+
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Text_Timer;
 
@@ -115,8 +137,19 @@ private:
 	void ClearBriefingPointButtons();
 	void HandleBriefingPointButtonClicked(const FHeistSpawnPointData& PointData);
 
+	void RebuildSelectionList();
+	void HandlePoliceLocalSelection(FName SelectedKey);
+
+	void HandlePhaseChanged(const FHeistPhaseChangedMessage& Message);
+	void SetBriefingPointButtonsEnabled(bool bEnabled);
+
+	FDelegateHandle SelectionCountsHandle;
+	FHeistMessageListenerHandle PhaseChangedHandle;
+	FName CachedPoliceSelectedKey = NAME_None;
+
 	EHeistBriefingViewMode CurrentViewMode = EHeistBriefingViewMode::Thief;
 	bool bMapInitialized = false;
+	bool bSelectionLocked = false;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UHeistBriefingPlayerComponent> CachedBriefingPlayerComponent;
@@ -126,4 +159,8 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UHeistBriefingPointButtonBinding>> PointButtonBindings;
+
+	/** Key → 선택 현황 행 위젯. 카운트 갱신 시 직접 접근. */
+	UPROPERTY(Transient)
+	TMap<FName, TObjectPtr<UUserWidget>> SelectionRowMap;
 };

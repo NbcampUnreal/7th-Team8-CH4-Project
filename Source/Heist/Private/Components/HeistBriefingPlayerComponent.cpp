@@ -85,6 +85,18 @@ void UHeistBriefingPlayerComponent::SetBriefingPhase(UHeistBriefingPhaseComponen
 	BriefingPhase = InPhase;
 }
 
+void UHeistBriefingPlayerComponent::ServerRequestThiefCounts_Implementation()
+{
+	if (BriefingPhase.IsValid())
+		BriefingPhase->PushThiefCountsTo(this);
+}
+
+void UHeistBriefingPlayerComponent::ClientReceiveThiefCounts_Implementation(
+	const TArray<FHeistBriefingSelectionCount>& Counts)
+{
+	OnThiefSelectionCountsReceived.Broadcast(Counts);
+}
+
 void UHeistBriefingPlayerComponent::ServerSetThiefSpawnPoint_Implementation(FName InKey)
 {
 	AHeistPlayerState* HeistPS = Cast<AHeistPlayerState>(GetOwner());

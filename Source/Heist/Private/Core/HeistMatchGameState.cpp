@@ -26,6 +26,7 @@ void AHeistMatchGameState::SetPhaseRemainingTime(float InRemainingTime)
 void AHeistMatchGameState::SetBriefingSelectionLocked(bool bLocked)
 {
 	bBriefingSelectionLocked = bLocked;
+	OnRep_BriefingSelectionLocked(); // 서버 로컬에도 발동
 }
 
 void AHeistMatchGameState::SetPhaseEndServerTime(float InPhaseEndServerTime)

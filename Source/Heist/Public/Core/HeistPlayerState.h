@@ -52,10 +52,14 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void SeamlessTravelTo(APlayerState* NewPlayerState) override;
 	virtual void OnSetUniqueId() override;
 	virtual void OnRep_PlayerName() override;
 
 private:
+	void BindVoipTalker();
+	void UnbindVoipTalker();
+
 	UPROPERTY()
 	TObjectPtr<UHeistAbilitySystemComponent> AbilitySystemComponent;
 

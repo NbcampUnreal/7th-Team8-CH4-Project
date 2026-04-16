@@ -23,6 +23,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Heist|Components")
 	UThiefEscortComponent* GetThiefEscortComponent() const { return EscortComponent; }
 
+	UFUNCTION(BlueprintCallable, Category = "Heist|Components")
+	UFlashlightComponent* GetFlashlightComponent() const { return FlashlightComponent; }
+
+protected:
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_Controller() override;
+	virtual void UnPossessed() override;
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UThiefEscortComponent> EscortComponent;

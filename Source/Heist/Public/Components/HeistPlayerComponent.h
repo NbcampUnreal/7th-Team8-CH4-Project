@@ -43,6 +43,7 @@ public:
 
 	// AHeistCharacter::SetupPlayerInputComponent에서 호출
 	void OnPawnInputComponentReady(UInputComponent* InputComponent);
+	void NotifyOverlappingTransparencyTriggers();
 
 private:
 	void BindInput();

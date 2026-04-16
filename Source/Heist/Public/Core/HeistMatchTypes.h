@@ -80,6 +80,18 @@ struct FHeistSpawnPointData
 };
 
 USTRUCT(BlueprintType)
+struct FHeistBriefingSelectionCount
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName Key;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Count = 0;
+};
+
+USTRUCT(BlueprintType)
 struct FHeistBriefingStrokePoint
 {
 	GENERATED_BODY()

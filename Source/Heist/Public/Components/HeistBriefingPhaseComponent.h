@@ -3,6 +3,7 @@
 
 #include "ActiveGameplayEffectHandle.h"
 #include "CoreMinimal.h"
+#include "HeistBriefingPlayerComponent.h"
 #include "Components/ActorComponent.h"
 #include "Core/HeistMatchTypes.h"
 #include "HeistBriefingPhaseComponent.generated.h"
@@ -37,6 +38,9 @@ public:
 	void TrySetThiefSpawnSelection(APlayerState* PlayerState, FName InKey);
 	void TrySetPoliceObjectiveSelection(APlayerState* PlayerState, FName InKey);
 
+	/** 특정 컴포넌트 하나에 현재 카운트 push. ServerRequestThiefCounts 응답용. */
+	void PushThiefCountsTo(UHeistBriefingPlayerComponent* Target);
+
 	/** 도둑 스폰 포인트 맵. ExecutionPhaseComponent에서 사용. */
 	const TMap<FName, FVector>& GetThiefSpawnPointMap() const { return ThiefSpawnPointMap; }
 
@@ -47,7 +51,7 @@ private:
 	void AssignRandomRoles();
 	void SpawnBriefingActors();
 	void BindPlayersToBriefingActors();
-	
+
 	void FinalizeDefaultSelections();
 	void ApplyBriefingStateToPlayers();
 	void RemoveBriefingStateFromPlayers();

@@ -24,6 +24,7 @@
 #include "DrawDebugHelpers.h"
 #include "AbilitySystem/HeistGameplayAbility.h"
 #include "Heist/Heist.h"
+#include "Systems/TransparencyTriggerReceiver.h"
 
 const FName UHeistPlayerComponent::NAME_ActorFeatureName("Player");
 
@@ -63,6 +64,31 @@ void UHeistPlayerComponent::OnPawnInputComponentReady(UInputComponent* InputComp
 {
 	bInputComponentReady = true;
 	CheckDefaultInitialization();
+}
+
+void UHeistPlayerComponent::NotifyOverlappingTransparencyTriggers()
+{
+	APawn* Pawn = GetPawn<APawn>();
+	if (!IsValid(Pawn) || !Pawn->IsLocallyControlled())
+	{
+		return;
+	}
+
+	TArray<AActor*> OverlappingActors;
+	Pawn->GetOverlappingActors(OverlappingActors);
+
+	for (AActor* Actor : OverlappingActors)
+	{
+		if (!IsValid(Actor))
+		{
+			continue;
+		}
+
+		if (Actor->GetClass()->ImplementsInterface(UTransparencyTriggerReceiver::StaticClass()))
+		{
+			ITransparencyTriggerReceiver::Execute_EvaluateTransparencyForActor(Actor, Pawn);
+		}
+	}
 }
 
 bool UHeistPlayerComponent::CanChangeInitState(UGameFrameworkComponentManager* Manager,

@@ -71,6 +71,11 @@ void AHeistCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	InitializeGameplayAbilitySystem();
+
+	if (IsValid(PlayerComponent))
+	{
+		PlayerComponent->NotifyOverlappingTransparencyTriggers();
+	}
 }
 
 void AHeistCharacter::UnPossessed()
@@ -83,6 +88,16 @@ void AHeistCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 	InitializeGameplayAbilitySystem();
+}
+
+void AHeistCharacter::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+
+	if (IsValid(PlayerComponent))
+	{
+		PlayerComponent->NotifyOverlappingTransparencyTriggers();
+	}
 }
 
 void AHeistCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

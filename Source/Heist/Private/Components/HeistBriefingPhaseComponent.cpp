@@ -56,6 +56,31 @@ void UHeistBriefingPhaseComponent::TrySetPoliceObjectiveSelection(APlayerState* 
 	SetPoliceObjectiveSelection(PlayerState, InKey);
 }
 
+static TArray<FHeistBriefingSelectionCount> ComputeThiefCounts(
+	const TMap<TObjectPtr<APlayerState>, FName>& Selections)
+{
+	TMap<FName, int32> CountMap;
+	for (const auto& Pair : Selections)
+		if (Pair.Value != NAME_None)
+			CountMap.FindOrAdd(Pair.Value)++;
+
+	TArray<FHeistBriefingSelectionCount> Result;
+	for (const auto& Pair : CountMap)
+	{
+		FHeistBriefingSelectionCount Entry;
+		Entry.Key   = Pair.Key;
+		Entry.Count = Pair.Value;
+		Result.Add(Entry);
+	}
+	return Result;
+}
+
+void UHeistBriefingPhaseComponent::PushThiefCountsTo(UHeistBriefingPlayerComponent* Target)
+{
+	if (IsValid(Target))
+		Target->ClientReceiveThiefCounts(ComputeThiefCounts(ThiefSpawnSelections));
+}
+
 void UHeistBriefingPhaseComponent::SetThiefSpawnSelection(APlayerState* PlayerState, FName InKey)
 {
 	if (!IsValid(PlayerState))
@@ -64,6 +89,17 @@ void UHeistBriefingPhaseComponent::SetThiefSpawnSelection(APlayerState* PlayerSt
 	}
 
 	ThiefSpawnSelections.FindOrAdd(PlayerState) = InKey;
+
+	// 모든 플레이어에게 갱신 카운트 push
+	AGameStateBase* GS = GetWorld() ? GetWorld()->GetGameState() : nullptr;
+	if (IsValid(GS))
+	{
+		for (APlayerState* PS : GS->PlayerArray)
+		{
+			if (AHeistPlayerState* HPS = Cast<AHeistPlayerState>(PS))
+				PushThiefCountsTo(HPS->GetBriefingPlayerComponent());
+		}
+	}
 }
 
 void UHeistBriefingPhaseComponent::SetPoliceObjectiveSelection(APlayerState* PlayerState, FName InKey)
@@ -125,7 +161,7 @@ void UHeistBriefingPhaseComponent::AssignRandomRoles()
 	{
 		Players[i]->SetAssignedTeam(EHeistTeam::Thief);
 	}
-	
+
 	// 드로잉 테스트 코드
 	// for (AHeistPlayerState* Player : Players)
 	// {
