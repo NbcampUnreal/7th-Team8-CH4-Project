@@ -78,7 +78,7 @@ void UHeistMessageSubsystem::UnregisterListener(FHeistMessageListenerHandle& Han
 {
 	if (!Handle.IsValid()) return;
 
-	if (bIsBroadcasting)
+	if (BroadcastDepth > 0)
 	{
 		PendingRemovals.Add(Handle.ID);
 	}
@@ -96,7 +96,7 @@ void UHeistMessageSubsystem::UnregisterListener(FHeistMessageListenerHandle& Han
 
 void UHeistMessageSubsystem::BroadcastMessageInternal(FGameplayTag Channel, const FInstancedStruct& Payload)
 {
-	bIsBroadcasting = true;
+	BroadcastDepth++;
 
 	for (const FListenerData& Listener : Listeners)
 	{
@@ -106,16 +106,25 @@ void UHeistMessageSubsystem::BroadcastMessageInternal(FGameplayTag Channel, cons
 		Listener.Callback(Channel, Payload);
 	}
 
-	bIsBroadcasting = false;
+	BroadcastDepth--;
 
-	for (uint32 PendingID : PendingRemovals)
+	if (BroadcastDepth == 0)
 	{
-		Listeners.RemoveAll([PendingID](const FListenerData& Entry)
-			{
-				return Entry.ID == PendingID;
-			});
+		for (uint32 PendingID : PendingRemovals)
+		{
+			Listeners.RemoveAll([PendingID](const FListenerData& Entry)
+				{
+					return Entry.ID == PendingID;
+				});
+		}
+		PendingRemovals.Reset();
+
+		for (FListenerData& Addition : PendingAdditions)
+		{
+			Listeners.Add(MoveTemp(Addition));
+		}
+		PendingAdditions.Reset();
 	}
-	PendingRemovals.Reset();
 }
 
 bool UHeistMessageSubsystem::DoesChannelMatch(FGameplayTag ListenerChannel, FGameplayTag BroadcastChannel, EHeistMessageMatch MatchType) const
