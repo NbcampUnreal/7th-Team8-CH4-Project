@@ -35,6 +35,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
 	int32 GetCurrentCarrierCount() { return CurrentCarrierCount; }
 
+	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
+	int32 GetItemValue();
+
 protected:
 	virtual void BeginPlay() override;
 
