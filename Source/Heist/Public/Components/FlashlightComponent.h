@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
@@ -28,7 +28,6 @@ class HEIST_API UFlashlightComponent : public UActorComponent
 public:
 	UFlashlightComponent();
 
-	// HUD 및 사운드에서 구독
 	UPROPERTY(BlueprintAssignable, Category = "Heist|Vision")
 	FOnThiefSpotted OnThiefSpotted;
 
@@ -38,6 +37,11 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+private:
+	UFUNCTION()
+	void ProcessLocalVision();
+
+	bool IsThiefInFlashlight(AThiefCharacter* Thief, bool bWasPreviouslyVisible) const;
 
 private:
 	// TODO(하민): Data 에셋이나 테이블에서 관리하도록 추후 연결
@@ -47,13 +51,14 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Vision")
 	float FlashlightHalfAngle = 30.0f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|Vision")
+	float FlashlightHysteresisAngle = 2.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|Vision")
+	float VisionCheckInterval = 0.1f;
+
 	UPROPERTY()
 	TSet<AThiefCharacter*> PreviouslyVisibleThieves;
 
 	FTimerHandle VisionCheckTimerHandle;
-
-	UFUNCTION()
-	void ProcessLocalVision();
-
-	bool IsThiefInFlashlight(AThiefCharacter* Thief, bool bWasPreviouslyVisible) const;
 };
