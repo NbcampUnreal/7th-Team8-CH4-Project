@@ -77,7 +77,15 @@ public:
 				}
 			};
 
-		Listeners.Add(NewListener);
+		// 브로드캐스트 중 추가는 완료 후 반영 (iterator 보호)
+		if (BroadcastDepth > 0)
+		{
+			PendingAdditions.Add(MoveTemp(NewListener));
+		}
+		else
+		{
+			Listeners.Add(MoveTemp(NewListener));
+		}
 		return FHeistMessageListenerHandle(this, Channel, NewID);
 	}
 
@@ -105,8 +113,9 @@ private:
 	TArray<FListenerData> Listeners;
 	uint32 NextID = 0;
 
-	bool bIsBroadcasting = false;
+	int32 BroadcastDepth = 0;
 	TArray<uint32> PendingRemovals;
+	TArray<FListenerData> PendingAdditions;
 
 	FHeistMessageListenerHandle SoundDetectedBridgeHandle;
 	FHeistMessageListenerHandle FlashlightAlertBridgeHandle;
