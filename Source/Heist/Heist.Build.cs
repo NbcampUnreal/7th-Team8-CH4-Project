@@ -7,7 +7,7 @@ public class Heist : ModuleRules
 	public Heist(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-	
+
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",
 			"CoreUObject",
@@ -23,6 +23,9 @@ public class Heist : ModuleRules
 			"StructUtils",
 			"DebugUI",
 			"OnlineSubsystem",
+			"AudioMixer",
+			"SignalProcessing",
+			"OnlineSubsystemUtils",
 			"NavigationSystem",
 		});
 
