@@ -21,19 +21,25 @@ class HEIST_API AHeistBriefingDrawingBoard : public AActor
 
 public:
 	AHeistBriefingDrawingBoard();
-	
+
 	virtual bool IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const override;
-	
+
 	void BroadcastPreviewChunkAuthoritative(const FHeistBriefingStrokePreviewChunk& InChunk);
 	void CommitStrokeAuthoritative(const FHeistBriefingStroke& InStroke);
 
 	UFUNCTION(BlueprintPure)
 	UHeistBriefingDrawingSyncComponent* GetDrawingSyncComponent() const { return DrawingSyncComponent; }
-	
+	UClass* GetBriefingWidgetClass() const { return BriefingWidgetClass; }
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UHeistBriefingDrawingSyncComponent> DrawingSyncComponent;
-	
+
+	// UUserWidget 서브클래스를 할당한다.
+	// UMG 종속 제거 위해 UClass*로 보관. 실제 위젯 생성은 UHeistBriefingUISubsystem(HeistUI 모듈)이 담당한다.
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|Briefing", meta = (AllowedClasses = "UserWidget"))
+	TObjectPtr<UClass> BriefingWidgetClass;
+
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastReceivePreviewChunk(const FHeistBriefingStrokePreviewChunk& InChunk);
 };

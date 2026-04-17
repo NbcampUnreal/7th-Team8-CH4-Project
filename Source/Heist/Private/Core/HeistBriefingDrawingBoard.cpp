@@ -7,8 +7,11 @@ AHeistBriefingDrawingBoard::AHeistBriefingDrawingBoard()
 {
 	// 모든 클라이언트에 복제돼야 DrawingBoard 참조가 클라이언트에서 유효해진다.
 	// MulticastReceivePreviewChunk, StrokeHistory 복제도 이 플래그에 의존한다.
-	SetReplicates(true);
+
+	bReplicates = true;
 	bAlwaysRelevant = true;
+	//SetReplicates(true);
+	//bAlwaysRelevant = true;
 
 	DrawingSyncComponent = CreateDefaultSubobject<UHeistBriefingDrawingSyncComponent>(TEXT("DrawingSyncComponent"));
 }

@@ -87,6 +87,9 @@ private:
 	UPROPERTY(VisibleDefaultsOnly, Category = "Heist|Briefing", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHeistBriefingPlayerComponent> BriefingPlayerComponent;
 
-	UPROPERTY(Replicated, VisibleInstanceOnly, Category = "Heist|Briefing", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(ReplicatedUsing = OnRep_AssignedTeam, VisibleInstanceOnly, Category = "Heist|Briefing", meta = (AllowPrivateAccess = "true"))
 	EHeistTeam AssignedTeam = EHeistTeam::None;
+
+	UFUNCTION()
+	void OnRep_AssignedTeam();
 };

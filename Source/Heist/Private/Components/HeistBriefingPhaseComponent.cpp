@@ -12,6 +12,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/Pawn.h"
 #include "EngineUtils.h"
+#include "Core/HeistMatchGameMode.h"
 #include "Kismet/GameplayStatics.h"
 
 void UHeistBriefingPhaseComponent::EnterBriefingPhase()
@@ -19,12 +20,17 @@ void UHeistBriefingPhaseComponent::EnterBriefingPhase()
 	ThiefSpawnSelections.Reset();
 	PoliceObjectiveSelections.Reset();
 
+	// 서버는 "팀 배정 -> 브리핑용 폰 스폰/재시작 -> 브리핑 컨텍스트 바인딩" 순서를 보장한다.
+	// 클라이언트는 이 결과를 복제로 각기 다른 시점에 받으므로, 아래 순서를 기준으로 각 OnRep/훅에서 수렴한다.
+	UE_LOG(LogTemp, Log, TEXT("[BriefingPhase] EnterBriefingPhase: begin server sequence"));
 	AssignRandomRoles(); // 팀 부여
+	RequestPlayersSpawnAtBriefingStart(); // 팀 확정 후 브리핑 시작 위치로 스폰/재시작
 	ApplyBriefingStateToPlayers(); // Brief State 부여
 	GatherThiefSpawnPoints(); // 도둑 스폰 포인트 수집
 	GatherPoliceObjectivePoints(); // 경찰 물건 포인트 수집
 	SpawnBriefingActors(); // 브리핑 엑터 생성
 	BindPlayersToBriefingActors(); // 생성 이후 바인딩
+	UE_LOG(LogTemp, Log, TEXT("[BriefingPhase] EnterBriefingPhase: server sequence completed"));
 }
 
 void UHeistBriefingPhaseComponent::LockSelections()
@@ -157,9 +163,13 @@ void UHeistBriefingPhaseComponent::AssignRandomRoles()
 
 	// 첫 번째 플레이어 = 경찰(술래), 나머지 = 도둑
 	Players[0]->SetAssignedTeam(EHeistTeam::Police);
+	UE_LOG(LogTemp, Log, TEXT("[BriefingPhase] AssignRandomRoles: %s -> Police"),
+		*Players[0]->GetName());
 	for (int32 i = 1; i < Players.Num(); ++i)
 	{
 		Players[i]->SetAssignedTeam(EHeistTeam::Thief);
+		UE_LOG(LogTemp, Log, TEXT("[BriefingPhase] AssignRandomRoles: %s -> Thief"),
+			*Players[i]->GetName());
 	}
 
 	// 드로잉 테스트 코드
@@ -172,6 +182,19 @@ void UHeistBriefingPhaseComponent::AssignRandomRoles()
 	//
 	// 	Player->SetAssignedTeam(EHeistTeam::Thief);
 	// }
+}
+
+void UHeistBriefingPhaseComponent::RequestPlayersSpawnAtBriefingStart()
+{
+	AHeistMatchGameMode* HeistGM = GetOwner<AHeistMatchGameMode>();
+	if (!IsValid(HeistGM))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BriefingPhase] RequestPlayersSpawnAtBriefingStart: missing HeistMatchGameMode owner"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[BriefingPhase] RequestPlayersSpawnAtBriefingStart: delegating spawn to GameMode"));
+	HeistGM->SpawnAllPlayersAtBriefingStart();
 }
 
 void UHeistBriefingPhaseComponent::SpawnBriefingActors()
@@ -189,9 +212,12 @@ void UHeistBriefingPhaseComponent::SpawnBriefingActors()
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 		DrawingBoard = World->SpawnActor<AHeistBriefingDrawingBoard>(
-			AHeistBriefingDrawingBoard::StaticClass(),
+			DrawingBoardClass,
 			FTransform::Identity,
 			SpawnParams);
+
+		UE_LOG(LogTemp, Log, TEXT("[BriefingPhase] SpawnBriefingActors: DrawingBoard=%s"),
+			IsValid(DrawingBoard) ? *DrawingBoard->GetName() : TEXT("None"));
 	}
 }
 
@@ -200,9 +226,15 @@ void UHeistBriefingPhaseComponent::BindPlayersToBriefingActors()
 	AGameStateBase* GameState = GetWorld() ? GetWorld()->GetGameState() : nullptr;
 	if (!IsValid(GameState) || !IsValid(DrawingBoard))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[BriefingPhase] BindPlayersToBriefingActors: GameState=%d DrawingBoard=%d"),
+			IsValid(GameState) ? 1 : 0,
+			IsValid(DrawingBoard) ? 1 : 0);
 		return;
 	}
 
+	// 여기서 서버는 플레이어별 브리핑 컨텍스트를 발행한다.
+	// 클라이언트는 DrawBoard/AssignedTeam/Controller/Pawn 복제가 제각각 도착하므로,
+	// OnRep_DrawingBoard / OnRep_AssignedTeam / OnRep_PlayerState / AcknowledgePossession 훅에서 다시 수렴한다.
 	for (APlayerState* PlayerState : GameState->PlayerArray)
 	{
 		AHeistPlayerState* HeistPlayerState = Cast<AHeistPlayerState>(PlayerState);
@@ -222,6 +254,10 @@ void UHeistBriefingPhaseComponent::BindPlayersToBriefingActors()
 
 		BriefingPlayerComponent->InitializeBriefingContext(DrawingBoard, ViewMode);
 		BriefingPlayerComponent->SetBriefingPhase(this);
+		UE_LOG(LogTemp, Log, TEXT("[BriefingPhase] BindPlayersToBriefingActors: PS=%s Team=%d ViewMode=%d"),
+			*HeistPlayerState->GetName(),
+			static_cast<int32>(HeistPlayerState->GetAssignedTeam()),
+			static_cast<int32>(ViewMode));
 	}
 }
 
@@ -302,9 +338,10 @@ void UHeistBriefingPhaseComponent::ApplyBriefingStateToPlayers()
 
 void UHeistBriefingPhaseComponent::RemoveBriefingStateFromPlayers()
 {
-	for (TPair<TObjectPtr<APlayerState>, FActiveGameplayEffectHandle>& Pair : BriefingStateEffectHandles)
+	for (TPair<TWeakObjectPtr<APlayerState>, FActiveGameplayEffectHandle>& Pair : BriefingStateEffectHandles)
 	{
-		AHeistPlayerState* HeistPS = Cast<AHeistPlayerState>(Pair.Key);
+		APlayerState* PlayerState = Pair.Key.Get();
+		AHeistPlayerState* HeistPS = Cast<AHeistPlayerState>(PlayerState);
 		if (!IsValid(HeistPS))
 		{
 			continue;

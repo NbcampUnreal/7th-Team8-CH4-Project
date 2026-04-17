@@ -42,11 +42,11 @@ struct FChannelingData : public FTableRowBase
 	// 외부 중단 이벤트 Tag
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FGameplayTag InterruptEventTag;
-	
+
 	// 채널링 애님몽타주(미설정 시 애님 x)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TObjectPtr<UAnimMontage> ChannelingMontage;
-	
+
 	// 애님 몽타주 마무리 구간 섹션 명
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FName AnimOutroSectionName = FName("Outro");
@@ -67,12 +67,13 @@ class HEIST_API UHeistGameplayAbility : public UGameplayAbility
 
 public:
 	UHeistGameplayAbility();
-	
+
 	EHeistAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
-	
+
 	UFUNCTION(BlueprintPure, Category = "Heist|Ability")
 	bool IsToggleInteraction() const { return bToggleInteraction; }
-	
+	bool MatchesInteractionEventTag(FGameplayTag EventTag) const;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Ability")
 	EHeistAbilityActivationPolicy ActivationPolicy = EHeistAbilityActivationPolicy::OnInputTriggered;
@@ -84,12 +85,12 @@ protected:
 	// 채널링 Tag 관리용 GE 클래스, 모든 채널링 어빌리티가 공유한다.
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Channeling")
 	TSubclassOf<UGameplayEffect> ChannelingEffectClass;
-	
+
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Ability")
 	bool bToggleInteraction = false;
-	
+
 	FActiveGameplayEffectHandle ChannelingEffectHandle;
-	
+
 	// RowName으로 DataTable에서 채널링 데이터를 조회한다.
 	const FChannelingData* GetChannelingData(FName RowName) const;
 
@@ -114,7 +115,7 @@ protected:
 	// 몽타주 재생이 취소되거나 중단되었을 때 호출
 	UFUNCTION()
 	void OnMontageCancelled();
-	
+
 private:
 	UFUNCTION()
 	void OnChannelingTimerExpired();

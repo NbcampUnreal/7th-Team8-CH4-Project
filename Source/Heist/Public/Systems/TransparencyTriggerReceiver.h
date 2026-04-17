@@ -19,4 +19,12 @@ class HEIST_API ITransparencyTriggerReceiver
 public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Heist|Transparency")
 	void EvaluateTransparencyForActor(AActor* SourceActor);
+
+	// 알파 덧입히기 (투명화 시작)
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Heist|Transparency")
+	void ApplyTransparency(AActor* SourceActor);
+
+	// 알파 벗기기 (투명화 종료/원상복구)
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Heist|Transparency")
+	void RevertTransparency(AActor* SourceActor);
 };

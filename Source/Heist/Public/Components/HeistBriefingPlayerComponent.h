@@ -54,9 +54,6 @@ public:
 	/** DrawingBoard 복제 완료(클라이언트) 또는 서버 세팅 완료 시 발동. */
 	FOnHeistBriefingContextReady OnBriefingContextReady;
 
-	/** 도둑 스폰 카운트 수신 시 발동. 위젯이 바인딩. */
-	FOnThiefSelectionCountsReceived OnThiefSelectionCountsReceived;
-
 	/** BriefingPhaseComponent 직접 참조. BindPlayersToBriefingActors에서 주입. 서버 전용. */
 	void SetBriefingPhase(UHeistBriefingPhaseComponent* InPhase);
 
@@ -67,6 +64,11 @@ public:
 	/** 서버 → 이 클라이언트로 카운트 전달. */
 	UFUNCTION(Client, Reliable)
 	void ClientReceiveThiefCounts(const TArray<FHeistBriefingSelectionCount>& Counts);
+
+	/** 도둑 스폰 카운트 수신 시 발동. 위젯이 바인딩. */
+	FOnThiefSelectionCountsReceived OnThiefSelectionCountsReceived;
+
+	void BroadcastContextReady();
 
 private:
 	UFUNCTION()

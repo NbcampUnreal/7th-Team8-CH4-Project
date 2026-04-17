@@ -26,8 +26,14 @@ public:
 	 * 최소 인원(MinPlayersToStart) 미충족 시 무시.
 	 */
 	void RequestStartGame(APlayerController* Requester);
+	void NotifyPlayerReadyForMatchTravel(APlayerController* PlayerController);
 
 private:
+	void StartMatchTravel();
+	void HandleMatchTravelReadyTimeout();
+	int32 CountExpectedPlayersForMatchTravel() const;
+	int32 CountReadyPlayersForMatchTravel() const;
+
 	// 게임 맵 경로. Blueprint Class Defaults에서 설정한다.
 	UPROPERTY(EditDefaultsOnly, Category = "Lobby")
 	FString GameMapPath;
@@ -35,6 +41,18 @@ private:
 	// 게임 시작에 필요한 최소 플레이어 수.
 	UPROPERTY(EditDefaultsOnly, Category = "Lobby")
 	int32 MinPlayersToStart;
+
+	// 로비 시작 버튼 연타와 travel 중복 진입을 막는다.
+	bool bStartGameRequested = false;
+
+	// travel 준비 대상/완료 집계를 PlayerState 기준으로 고정해, 잔존 PlayerController에 흔들리지 않게 한다.
+	TSet<TWeakObjectPtr<APlayerState>> ExpectedPlayersForMatchTravel;
+	TSet<TWeakObjectPtr<APlayerState>> PlayersReadyForMatchTravel;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Lobby")
+	float MatchTravelReadyTimeoutSeconds = 5.0f;
+
+	FTimerHandle MatchTravelReadyTimeoutHandle;
 
 	bool IsHostController(APlayerController* PlayerController) const;
 };

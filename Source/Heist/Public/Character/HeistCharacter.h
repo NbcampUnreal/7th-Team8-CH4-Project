@@ -53,6 +53,8 @@ protected:
 
 private:
 	void InitializeGameplayAbilitySystem();
+	bool IsInMatchPhaseContext() const;
+	void RefreshClientPawnReadyState();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Heist|Pawn", meta = (AllowPrivateAccess = true))
 	TObjectPtr<UHeistPawnData> DefaultPawnData;
@@ -71,11 +73,11 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components", meta = (AllowPrivateAccess = true))
 	TObjectPtr<UHeistHitReactionComponent> HitReactionComponent;
-	
+
 	// 캐시 — 소유는 AHeistPlayerState
 	UPROPERTY()
 	TObjectPtr<UHeistAbilitySystemComponent> AbilitySystemComponent;
-	
+
 	// 인터렉트 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components", meta = (AllowPrivateAccess = true))
 	TObjectPtr<UHeistInteractionComponent> InteractionComponent;

@@ -1,27 +1,72 @@
 #include "Core/HeistPlayerController.h"
 
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
+#include "Core/HeistLobbyGameMode.h"
 #include "Character/HeistTags_State.h"
+#include "Core/HeistMatchGameMode.h"
 #include "Core/HeistPlayerState.h"
-#include "Core/HeistBriefingDrawingBoard.h"
-#include "Components/HeistBriefingPlayerComponent.h"
 #include "Voice/HeistVoipTalker.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
 #include "Systems/Messaging/HeistTags_Message.h"
 
 #include "GameFramework/Pawn.h"
+#include "Components/AudioComponent.h"
 #include "EnhancedInputComponent.h"
 #include "OnlineSubsystem.h"
 #include "Interfaces/VoiceInterface.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "DrawDebugHelpers.h"
+#include "VoipListenerSynthComponent.h"
+#include "Core/HeistMatchGameState.h"
 #include "GameFramework/GameStateBase.h"
 #include "Sound/SoundAttenuation.h"
+
+static void UnregisterTransientVoipComps()
+{
+	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
+	{
+		UVoipListenerSynthComponent* Comp = *It;
+		if (!Comp) continue;
+
+		// Outer가 UPackage(Transient)인 것만 — 액터 소유 컴포넌트는 건드리지 않음
+		if (Comp->GetOuter() && Comp->GetOuter()->IsA<UPackage>())
+		{
+			if (UAudioComponent* AudioComponent = Comp->GetAudioComponent())
+			{
+				AudioComponent->Stop();
+				if (AudioComponent->IsRegistered())
+				{
+					AudioComponent->UnregisterComponent();
+				}
+			}
+
+			if (Comp->IsRegistered())
+			{
+				Comp->UnregisterComponent();
+			}
+
+			Comp->DestroyComponent();
+		}
+	}
+}
 
 AHeistPlayerController::AHeistPlayerController()
 {
 	bShowMouseCursor = true;
+}
+
+void AHeistPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+
+	bSentReadyForBriefingStart = false;
+	bSentReadyForMatchTravel = false;
+
+	// 클라에서는 브리핑 컨텍스트 복제 순서를 신뢰할 수 없으므로, PlayerController 훅마다 readiness를 다시 두드린다.
+	UE_LOG(LogTemp, Log, TEXT("[BriefingRetry] BeginPlay: PC=%s Local=%d"), *GetNameSafe(this), IsLocalController() ? 1 : 0);
+	TryReportReadyForBriefingStart();
+	TryNotifyBriefingContextReady();
 }
 
 void AHeistPlayerController::SetupInputComponent()
@@ -46,11 +91,12 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 
 	if (!IsLocalController()) return;
 
+	UE_LOG(LogTemp, Log, TEXT("[BriefingRetry] AcknowledgePossession: PC=%s Pawn=%s"),
+		*GetNameSafe(this),
+		*GetNameSafe(NewPawn));
 	SetAudioListenerOverride(NewPawn->GetRootComponent(), FVector::ZeroVector, FRotator::ZeroRotator);
 
-	TryBindBriefingEventsFromPlayerState();
-
-	StartVoiceCapture();
+	TryNotifyBriefingContextReady();
 
 	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
 	if (OSS == nullptr) return;
@@ -71,17 +117,17 @@ void AHeistPlayerController::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 
-	if (!IsLocalController())
-	{
-		return;
-	}
-
-	TryBindBriefingEventsFromPlayerState();
+	APlayerState* CurrentPlayerState = GetPlayerState<APlayerState>();
+	UE_LOG(LogTemp, Log, TEXT("[BriefingRetry] OnRep_PlayerState: PC=%s PS=%s"),
+		*GetNameSafe(this),
+		*GetNameSafe(CurrentPlayerState));
+	TryReportReadyForBriefingStart();
+	TryNotifyBriefingContextReady();
 }
 
 void AHeistPlayerController::SeamlessTravelTo(APlayerController* NewPC)
 {
-	StopVoiceCapture();
+	PrepareForMatchTravelAudioShutdown();
 
 	if (UWorld* World = GetWorld())
 	{
@@ -100,9 +146,23 @@ void AHeistPlayerController::SeamlessTravelTo(APlayerController* NewPC)
 	Super::SeamlessTravelTo(NewPC);
 }
 
+void AHeistPlayerController::NotifyLoadedWorld(FName WorldPackageName, bool bFinalDest)
+{
+	PrepareForMatchTravelAudioShutdown();
+	UnregisterTransientVoipComps();
+	Super::NotifyLoadedWorld(WorldPackageName, bFinalDest);
+
+	if (bFinalDest)
+	{
+		bSentReadyForBriefingStart = false;
+		bSentReadyForMatchTravel = false;
+		TryReportReadyForBriefingStart();
+	}
+}
+
 void AHeistPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	StopVoiceCapture();
+	PrepareForMatchTravelAudioShutdown();
 
 	if (VoiceTalkingStateChangedHandle.IsValid())
 	{
@@ -123,12 +183,78 @@ void AHeistPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void AHeistPlayerController::StartVoiceCapture()
 {
+	if (bVoiceCaptureActive)
+	{
+		return;
+	}
+
 	StartTalking();
+	bVoiceCaptureActive = true;
 }
 
 void AHeistPlayerController::StopVoiceCapture()
 {
+	if (!bVoiceCaptureActive)
+	{
+		return;
+	}
+
 	StopTalking();
+	bVoiceCaptureActive = false;
+}
+
+void AHeistPlayerController::TryStartVoiceCaptureForMatch()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	if (!IsValid(GetPawn()))
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return;
+	}
+
+	const AHeistMatchGameState* MatchGameState = World->GetGameState<AHeistMatchGameState>();
+	if (!IsValid(MatchGameState))
+	{
+		return;
+	}
+
+	if (!MatchGameState->IsBriefingPhase() && !MatchGameState->IsExecutionPhase())
+	{
+		return;
+	}
+
+	StartVoiceCapture();
+}
+
+void AHeistPlayerController::PrepareForMatchTravelAudioShutdown()
+{
+	StopVoiceCapture();
+
+	if (VoiceTalkingStateChangedHandle.IsValid())
+	{
+		IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
+		if (OSS != nullptr)
+		{
+			IOnlineVoicePtr VoiceInterface = OSS->GetVoiceInterface();
+			if (VoiceInterface.IsValid())
+			{
+				VoiceInterface->ClearOnPlayerTalkingStateChangedDelegate_Handle(VoiceTalkingStateChangedHandle);
+			}
+		}
+
+		VoiceTalkingStateChangedHandle.Reset();
+	}
+
+	ClearAudioListenerOverride();
 }
 
 void AHeistPlayerController::HandleVoiceTalkingStateChanged(FUniqueNetIdRef PlayerId, bool bIsTalking)
@@ -170,6 +296,115 @@ void AHeistPlayerController::DrawVoiceRangeDebug()
 	DrawDebugCircle(GetWorld(), Center, OuterRadius, 64, FColor::Red,   false, -1.f, 0, 3.f, FVector::ForwardVector, FVector::RightVector);
 }
 
+bool AHeistPlayerController::IsInMatchBriefingPhase() const
+{
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return false;
+	}
+
+	const AHeistMatchGameState* MatchGameState = World->GetGameState<AHeistMatchGameState>();
+	if (!IsValid(MatchGameState))
+	{
+		return false;
+	}
+
+	return MatchGameState->IsBriefingPhase();
+}
+
+bool AHeistPlayerController::CanReportReadyForBriefingStart() const
+{
+	if (!IsLocalController())
+	{
+		return false;
+	}
+
+	if (bSentReadyForBriefingStart)
+	{
+		return false;
+	}
+
+	if (!IsValid(GetPlayerState<APlayerState>()))
+	{
+		return false;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return false;
+	}
+
+	const FString MapName = World->GetMapName();
+	if (MapName.Contains(TEXT("Transition"), ESearchCase::IgnoreCase))
+	{
+		return false;
+	}
+
+	const AHeistMatchGameState* MatchGameState = World->GetGameState<AHeistMatchGameState>();
+	if (!IsValid(MatchGameState))
+	{
+		return false;
+	}
+
+	if (MatchGameState->IsExecutionPhase() || MatchGameState->IsBriefingPhase())
+	{
+		return false;
+	}
+
+	return true;
+}
+
+void AHeistPlayerController::TryReportReadyForBriefingStart()
+{
+	if (!CanReportReadyForBriefingStart())
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[BriefingReady] ReportReadyForBriefingStart: PC=%s PS=%s"),
+		*GetNameSafe(this),
+		*GetNameSafe(GetPlayerState<APlayerState>()));
+	ServerNotifyReadyForBriefingStart();
+	bSentReadyForBriefingStart = true;
+}
+
+void AHeistPlayerController::TryNotifyBriefingContextReady()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+	if (!IsInMatchBriefingPhase())
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[BriefingRetry] Skip: not in briefing phase PC=%s"), *GetNameSafe(this));
+		return;
+	}
+
+	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPS))
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[BriefingRetry] Skip: PlayerState invalid PC=%s"), *GetNameSafe(this));
+		return;
+	}
+
+	UHeistBriefingPlayerComponent* BriefingComp = HeistPS->GetBriefingPlayerComponent();
+	if (!IsValid(BriefingComp))
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[BriefingRetry] Skip: BriefingComponent invalid PS=%s"), *HeistPS->GetName());
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[BriefingRetry] TryNotify: PC=%s PS=%s Team=%d Pawn=%s"),
+		*GetNameSafe(this),
+		*HeistPS->GetName(),
+		static_cast<int32>(HeistPS->GetAssignedTeam()),
+		*GetNameSafe(GetPawn()));
+	BriefingComp->BroadcastContextReady();
+	TryStartVoiceCaptureForMatch();
+}
+
 void AHeistPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
@@ -201,52 +436,47 @@ void AHeistPlayerController::ServerRequestSetReady_Implementation(bool bReady)
 	HeistPS->SetIsReady(bReady);
 }
 
+void AHeistPlayerController::ServerNotifyReadyForBriefingStart_Implementation()
+{
+	AHeistMatchGameMode* HeistGM = GetWorld() ? GetWorld()->GetAuthGameMode<AHeistMatchGameMode>() : nullptr;
+	if (!IsValid(HeistGM))
+	{
+		return;
+	}
+
+	HeistGM->NotifyPlayerReadyForBriefingStart(this);
+}
+
+void AHeistPlayerController::ServerNotifyReadyForMatchTravel_Implementation()
+{
+	AHeistLobbyGameMode* LobbyGM = GetWorld() ? GetWorld()->GetAuthGameMode<AHeistLobbyGameMode>() : nullptr;
+	if (!IsValid(LobbyGM))
+	{
+		return;
+	}
+
+	LobbyGM->NotifyPlayerReadyForMatchTravel(this);
+}
+
+void AHeistPlayerController::ClientPrepareForMatchTravel_Implementation()
+{
+	UE_LOG(LogTemp, Log, TEXT("[VoiceTravel] PrepareForMatchTravel: PC=%s Local=%d"),
+		*GetNameSafe(this),
+		IsLocalController() ? 1 : 0);
+	PrepareForMatchTravelAudioShutdown();
+	UnregisterTransientVoipComps();
+
+	if (IsLocalController() && !bSentReadyForMatchTravel)
+	{
+		ServerNotifyReadyForMatchTravel();
+		bSentReadyForMatchTravel = true;
+	}
+}
+
 void AHeistPlayerController::ClientEndBriefingPresentation_Implementation()
 {
 	UHeistMessageSubsystem::Get(this).BroadcastMessage(
 		HeistMessageTags::Message_Briefing_End, FHeistBriefingEndMessage{});
-}
-
-void AHeistPlayerController::TryBindBriefingEventsFromPlayerState()
-{
-	if (BriefingContextReadyHandle.IsValid()) return;
-
-	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
-	if (!IsValid(HeistPS)) return;
-
-	UHeistBriefingPlayerComponent* BriefingComp = HeistPS->GetBriefingPlayerComponent();
-	if (!IsValid(BriefingComp)) return;
-
-	BriefingContextReadyHandle = BriefingComp->OnBriefingContextReady.AddUObject(
-		this, &ThisClass::HandleBriefingContextReady);
-
-	// 늦게 바인딩된 경우(이미 컨텍스트가 준비된 상태) 즉시 처리
-	if (IsValid(BriefingComp->GetDrawingBoard()))
-	{
-		HandleBriefingContextReady();
-	}
-}
-
-void AHeistPlayerController::HandleBriefingContextReady()
-{
-	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
-	if (!IsValid(HeistPS)) return;
-
-	UHeistBriefingPlayerComponent* BriefingComp = HeistPS->GetBriefingPlayerComponent();
-	if (!IsValid(BriefingComp)) return;
-
-	AHeistBriefingDrawingBoard* Board = BriefingComp->GetDrawingBoard();
-	if (!IsValid(Board)) return;
-
-	// CreateWidget 대신 메시지 브로드캐스트
-	FHeistBriefingContextReadyMessage Msg;
-	Msg.BriefingPlayerComponent = BriefingComp;
-	Msg.DrawingSyncComponent = Board->GetDrawingSyncComponent();
-	Msg.ViewMode = BriefingComp->GetViewMode();
-	Msg.WidgetClass = BriefingWidgetClass;
-
-	UHeistMessageSubsystem::Get(this).BroadcastMessage(
-		HeistMessageTags::Message_Briefing_ContextReady, Msg);
 }
 
 void AHeistPlayerController::UpdateCursorRotation()
