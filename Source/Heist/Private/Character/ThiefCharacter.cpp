@@ -5,6 +5,7 @@
 #include "Character/HeistTags_State.h"
 #include "Components/HeistInteractSphereComponent.h"
 #include "Components/ThiefEscortComponent.h"
+#include "Components/HeistZoneComponent.h"
 #include "Components/HeistNoiseComponent.h"
 #include "Data/HeistSoundData.h"
 
@@ -19,6 +20,7 @@ AThiefCharacter::AThiefCharacter(const FObjectInitializer& ObjectInitializer)
 	EscortComponent = CreateDefaultSubobject<UThiefEscortComponent>(TEXT("EscortComponent"));
 	InteractSphereComp = CreateDefaultSubobject<UHeistInteractSphereComponent>(TEXT("InteractSphereComp"));
 	NoiseComponent = CreateDefaultSubobject<UHeistNoiseComponent>(TEXT("NoiseComponent"));
+	ZoneComponent = CreateDefaultSubobject<UHeistZoneComponent>(TEXT("ZoneComponent"));
 }
 
 void AThiefCharacter::BeginPlay()
@@ -28,7 +30,7 @@ void AThiefCharacter::BeginPlay()
 	InteractSphereComp->OnCanInteract.BindUObject(this, &AThiefCharacter::CheckCanInteract);
 	InteractSphereComp->OnGetAbilityTag.BindUObject(this, &AThiefCharacter::ResolveInteractAbilityTag);
 
-	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	APlayerController* PC = GEngine->GetFirstLocalPlayerController(GetWorld());
 	if (IsValid(PC))
 	{
 		APawn* LocalPawn = PC->GetPawn();

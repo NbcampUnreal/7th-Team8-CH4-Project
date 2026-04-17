@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Character/HeistCharacter.h"
@@ -7,6 +7,7 @@
 class UHeistInteractSphereComponent;
 class UThiefEscortComponent;
 class UHeistNoiseComponent;
+class UHeistZoneComponent;
 /**
  * 도둑 전용 캐릭터.
  * 게임플레이 로직은 GA와 컴포넌트에 위임한다.
@@ -43,6 +44,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHeistNoiseComponent> NoiseComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHeistZoneComponent> ZoneComponent;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Movement")
 	float MaxRotationRateYaw = 150.f;
