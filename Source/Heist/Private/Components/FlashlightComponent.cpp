@@ -40,7 +40,7 @@ void UFlashlightComponent::TryStartLocalVision()
 		return;
 	}
 
-	World->GetTimerManager().SetTimer(VisionCheckTimerHandle, this, &UFlashlightComponent::ProcessLocalVision, 0.1f, true);
+	World->GetTimerManager().SetTimer(VisionCheckTimerHandle, this, &UFlashlightComponent::ProcessLocalVision, VisionCheckInterval, true);
 }
 
 void UFlashlightComponent::StopLocalVision()
