@@ -6,6 +6,7 @@
 #include "Core/HeistMatchGameMode.h"
 #include "Core/HeistPlayerState.h"
 #include "Voice/HeistVoipTalker.h"
+#include "Voice/HeistVoiceSubsystem.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
 #include "Systems/Messaging/HeistTags_Message.h"
@@ -17,39 +18,10 @@
 #include "Interfaces/VoiceInterface.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "DrawDebugHelpers.h"
-#include "VoipListenerSynthComponent.h"
 #include "Core/HeistMatchGameState.h"
 #include "GameFramework/GameStateBase.h"
 #include "Sound/SoundAttenuation.h"
 
-static void UnregisterTransientVoipComps()
-{
-	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
-	{
-		UVoipListenerSynthComponent* Comp = *It;
-		if (!Comp) continue;
-
-		// Outer가 UPackage(Transient)인 것만 — 액터 소유 컴포넌트는 건드리지 않음
-		if (Comp->GetOuter() && Comp->GetOuter()->IsA<UPackage>())
-		{
-			if (UAudioComponent* AudioComponent = Comp->GetAudioComponent())
-			{
-				AudioComponent->Stop();
-				if (AudioComponent->IsRegistered())
-				{
-					AudioComponent->UnregisterComponent();
-				}
-			}
-
-			if (Comp->IsRegistered())
-			{
-				Comp->UnregisterComponent();
-			}
-
-			Comp->DestroyComponent();
-		}
-	}
-}
 
 AHeistPlayerController::AHeistPlayerController()
 {
@@ -67,6 +39,25 @@ void AHeistPlayerController::BeginPlay()
 	UE_LOG(LogTemp, Log, TEXT("[BriefingRetry] BeginPlay: PC=%s Local=%d"), *GetNameSafe(this), IsLocalController() ? 1 : 0);
 	TryReportReadyForBriefingStart();
 	TryNotifyBriefingContextReady();
+
+	if (IsLocalController())
+	{
+		// 정상 경로에서는 이미 보이스가 켜져 있으므로 no-op이다.
+		// 이 리스너는 브리핑 진입 레이스 등으로 시작을 놓친 경우를 복구하기 위한 안전장치다.
+		PhaseChangedListenerHandle = UHeistMessageSubsystem::Get(this).RegisterListener<FHeistPhaseChangedMessage>(
+			HeistMessageTags::Message_Phase_Changed,
+			[this](FGameplayTag, const FHeistPhaseChangedMessage& Msg)
+			{
+				if (Msg.CurrentPhase == EHeistMatchPhase::Briefing ||
+					Msg.CurrentPhase == EHeistMatchPhase::Execution)
+				{
+					if (UHeistVoiceSubsystem* VS = GetGameInstance()->GetSubsystem<UHeistVoiceSubsystem>())
+					{
+						VS->RequestVoiceRefresh(this);
+					}
+				}
+			});
+	}
 }
 
 void AHeistPlayerController::SetupInputComponent()
@@ -98,6 +89,11 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 
 	TryNotifyBriefingContextReady();
 
+	if (UHeistVoiceSubsystem* VS = GetGameInstance()->GetSubsystem<UHeistVoiceSubsystem>())
+	{
+		VS->OnPawnPossessed(this, NewPawn);
+	}
+
 	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
 	if (OSS == nullptr) return;
 
@@ -123,24 +119,23 @@ void AHeistPlayerController::OnRep_PlayerState()
 		*GetNameSafe(CurrentPlayerState));
 	TryReportReadyForBriefingStart();
 	TryNotifyBriefingContextReady();
+
+	if (IsLocalController())
+	{
+		if (UHeistVoiceSubsystem* VS = GetGameInstance()->GetSubsystem<UHeistVoiceSubsystem>())
+		{
+			VS->OnPlayerStateReady(this);
+		}
+	}
 }
 
 void AHeistPlayerController::SeamlessTravelTo(APlayerController* NewPC)
 {
 	PrepareForMatchTravelAudioShutdown();
 
-	if (UWorld* World = GetWorld())
+	if (UHeistVoiceSubsystem* VS = GetGameInstance()->GetSubsystem<UHeistVoiceSubsystem>())
 	{
-		if (AGameStateBase* GS = World->GetGameState())
-		{
-			for (APlayerState* PS : GS->PlayerArray)
-			{
-				if (IsValid(PS))
-				{
-					UVOIPStatics::ResetPlayerVoiceTalker(PS);
-				}
-			}
-		}
+		VS->BeginTravelShutdown(GetWorld());
 	}
 
 	Super::SeamlessTravelTo(NewPC);
@@ -149,7 +144,6 @@ void AHeistPlayerController::SeamlessTravelTo(APlayerController* NewPC)
 void AHeistPlayerController::NotifyLoadedWorld(FName WorldPackageName, bool bFinalDest)
 {
 	PrepareForMatchTravelAudioShutdown();
-	UnregisterTransientVoipComps();
 	Super::NotifyLoadedWorld(WorldPackageName, bFinalDest);
 
 	if (bFinalDest)
@@ -157,12 +151,22 @@ void AHeistPlayerController::NotifyLoadedWorld(FName WorldPackageName, bool bFin
 		bSentReadyForBriefingStart = false;
 		bSentReadyForMatchTravel = false;
 		TryReportReadyForBriefingStart();
+
+		if (UHeistVoiceSubsystem* VS = GetGameInstance()->GetSubsystem<UHeistVoiceSubsystem>())
+		{
+			VS->TryRecoverVoiceForPlayer(this);
+		}
 	}
 }
 
 void AHeistPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	PrepareForMatchTravelAudioShutdown();
+
+	if (PhaseChangedListenerHandle.IsValid())
+	{
+		PhaseChangedListenerHandle.Unregister();
+	}
 
 	if (VoiceTalkingStateChangedHandle.IsValid())
 	{
@@ -203,36 +207,12 @@ void AHeistPlayerController::StopVoiceCapture()
 	bVoiceCaptureActive = false;
 }
 
-void AHeistPlayerController::TryStartVoiceCaptureForMatch()
+void AHeistPlayerController::TryStartVoiceCapture()
 {
-	if (!IsLocalController())
+	if (UHeistVoiceSubsystem* VS = GetGameInstance()->GetSubsystem<UHeistVoiceSubsystem>())
 	{
-		return;
+		VS->RequestVoiceRefresh(this);
 	}
-
-	if (!IsValid(GetPawn()))
-	{
-		return;
-	}
-
-	const UWorld* World = GetWorld();
-	if (!IsValid(World))
-	{
-		return;
-	}
-
-	const AHeistMatchGameState* MatchGameState = World->GetGameState<AHeistMatchGameState>();
-	if (!IsValid(MatchGameState))
-	{
-		return;
-	}
-
-	if (!MatchGameState->IsBriefingPhase() && !MatchGameState->IsExecutionPhase())
-	{
-		return;
-	}
-
-	StartVoiceCapture();
 }
 
 void AHeistPlayerController::PrepareForMatchTravelAudioShutdown()
@@ -402,7 +382,6 @@ void AHeistPlayerController::TryNotifyBriefingContextReady()
 		static_cast<int32>(HeistPS->GetAssignedTeam()),
 		*GetNameSafe(GetPawn()));
 	BriefingComp->BroadcastContextReady();
-	TryStartVoiceCaptureForMatch();
 }
 
 void AHeistPlayerController::PlayerTick(float DeltaTime)
@@ -463,8 +442,13 @@ void AHeistPlayerController::ClientPrepareForMatchTravel_Implementation()
 	UE_LOG(LogTemp, Log, TEXT("[VoiceTravel] PrepareForMatchTravel: PC=%s Local=%d"),
 		*GetNameSafe(this),
 		IsLocalController() ? 1 : 0);
+
 	PrepareForMatchTravelAudioShutdown();
-	UnregisterTransientVoipComps();
+
+	if (UHeistVoiceSubsystem* VS = GetGameInstance()->GetSubsystem<UHeistVoiceSubsystem>())
+	{
+		VS->BeginTravelShutdown(GetWorld());
+	}
 
 	if (IsLocalController() && !bSentReadyForMatchTravel)
 	{

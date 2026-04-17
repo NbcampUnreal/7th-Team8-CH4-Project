@@ -4,8 +4,9 @@
 #include "Core/HeistPlayerController.h"
 #include "Core/HeistPlayerState.h"
 #include "MultiplayerSessionsSubsystem.h"
+#include "Voice/HeistVoiceSubsystem.h"
 
-#include "Net/VoiceConfig.h"
+#include "GameFramework/GameStateBase.h"
 
 AHeistLobbyGameMode::AHeistLobbyGameMode()
 {
@@ -129,14 +130,6 @@ void AHeistLobbyGameMode::RequestStartGame(APlayerController* Requester)
 		HeistPC->ClientPrepareForMatchTravel();
 	}
 
-	for (APlayerState* PS : GameState->PlayerArray)
-	{
-		if (IsValid(PS))
-		{
-			UVOIPStatics::ResetPlayerVoiceTalker(PS);
-		}
-	}
-
 	World->GetTimerManager().SetTimer(
 		MatchTravelReadyTimeoutHandle,
 		this,
@@ -181,6 +174,14 @@ void AHeistLobbyGameMode::StartMatchTravel()
 	World->GetTimerManager().ClearTimer(MatchTravelReadyTimeoutHandle);
 	ExpectedPlayersForMatchTravel.Reset();
 	PlayersReadyForMatchTravel.Reset();
+
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UHeistVoiceSubsystem* VS = GI->GetSubsystem<UHeistVoiceSubsystem>())
+		{
+			VS->BeginTravelShutdown(World);
+		}
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] Starting game. Traveling to: %s"), *TravelPath);
 	World->ServerTravel(TravelPath);

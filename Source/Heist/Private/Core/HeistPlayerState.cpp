@@ -30,18 +30,6 @@ static void SafeUnregisterVoipListenerComp(AActor* Owner)
 	}
 }
 
-// /Engine/Transient에 떠있는 미소속 컴포넌트 정리
-static void SafeUnregisterTransientVoipComps()
-{
-	for (TObjectIterator<UVoipListenerSynthComponent> It; It; ++It)
-	{
-		UVoipListenerSynthComponent* Comp = *It;
-		if (Comp && Comp->IsRegistered() && Comp->GetWorld() == nullptr)
-		{
-			Comp->UnregisterComponent();
-		}
-	}
-}
 
 AHeistPlayerState::AHeistPlayerState()
 {
@@ -76,7 +64,6 @@ void AHeistPlayerState::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AHeistPlayerState::SeamlessTravelTo(APlayerState* NewPlayerState)
 {
 	SafeUnregisterVoipListenerComp(this);
-	SafeUnregisterTransientVoipComps();
 
 	// carry-over 직전에 VoipListenerSynthComponent를 해제한다.
 	// EndPlay()는 SeamlessTravel에서 구 World 클린업 후에 호출되므로 타이밍이 늦다.

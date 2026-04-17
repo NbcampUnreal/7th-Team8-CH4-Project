@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "InputAction.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "HeistPlayerController.generated.h"
 
 class UHeistBriefingPlayerComponent;
@@ -33,6 +34,10 @@ public:
 
 	void TryNotifyBriefingContextReady();
 
+	// 서브시스템이 최종 판단 후 실행을 위임 — StartTalking()/StopTalking()은 PC만 호출 가능
+	void StartVoiceCapture();
+	void StopVoiceCapture();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
@@ -45,9 +50,7 @@ protected:
 	virtual void NotifyLoadedWorld(FName WorldPackageName, bool bFinalDest) override;
 
 private:
-	void StartVoiceCapture();
-	void StopVoiceCapture();
-	void TryStartVoiceCaptureForMatch();
+	void TryStartVoiceCapture();
 	void PrepareForMatchTravelAudioShutdown();
 	void TryReportReadyForBriefingStart();
 	bool CanReportReadyForBriefingStart() const;
@@ -66,6 +69,7 @@ private:
 	void DrawVoiceRangeDebug();
 
 	FDelegateHandle VoiceTalkingStateChangedHandle;
+	FHeistMessageListenerHandle PhaseChangedListenerHandle;
 
 	bool IsInMatchBriefingPhase() const;
 	bool bSentReadyForBriefingStart = false;
