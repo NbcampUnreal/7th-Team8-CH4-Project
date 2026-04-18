@@ -15,7 +15,10 @@
 		{
 			"Name": "HeistUI",
 			"Type": "ClientOnly",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"UMG"
+			]
 		},
 		{
 			"Name": "GitStatusBranch",
