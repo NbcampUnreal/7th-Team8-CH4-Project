@@ -10,6 +10,7 @@ class UHeistArrestVictoryComponent;
 class UHeistPhaseManagerComponent;
 class UHeistBriefingPhaseComponent;
 class UHeistExecutionPhaseComponent;
+class UHeistGameOverPhaseComponent;
 class APlayerStart;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMatchVictory, EHeistTeam /*Winner*/);
@@ -49,6 +50,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
 	TObjectPtr<UHeistExecutionPhaseComponent> ExecutionPhaseComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components")
+	TObjectPtr<UHeistGameOverPhaseComponent> GameOverPhaseComponent;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
 	TObjectPtr<UHeistArrestVictoryComponent> ArrestVictoryComponent;
 

@@ -19,6 +19,7 @@ AHeistMatchGameMode::AHeistMatchGameMode()
 	BriefingPhaseComponent = CreateDefaultSubobject<UHeistBriefingPhaseComponent>(TEXT("BriefingPhaseComponent"));
 	ExecutionPhaseComponent = CreateDefaultSubobject<UHeistExecutionPhaseComponent>(TEXT("ExecutionPhaseComponent"));
 	ArrestVictoryComponent = CreateDefaultSubobject<UHeistArrestVictoryComponent>(TEXT("ArrestVictoryComponent"));
+	GameOverPhaseComponent = CreateDefaultSubobject<UHeistGameOverPhaseComponent>(TEXT("GameOverPhaseComponent"));
 	LobbyMapPath = TEXT("/Game/Heist/Maps/L_Lobby");
 }
 

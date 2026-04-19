@@ -3,6 +3,7 @@
 
 #include "Components/HeistBriefingPhaseComponent.h"
 #include "Components/HeistExecutionPhaseComponent.h"
+#include "Components/HeistGameOverPhaseComponent.h"
 #include "Core/HeistMatchGameMode.h"
 #include "Core/HeistMatchGameState.h"
 
