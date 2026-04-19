@@ -19,6 +19,11 @@ public:
 	void UpdateZoneState(EHeistZoneType ZoneType, bool bIsEntering);
 
 private:
+	EHeistZoneType ResolveZoneFromCounts() const;
+	void ApplyResolvedZone(EHeistZoneType NewResolvedZone);
+
 	int32 IndoorVolumeCount = 0;
 	int32 OutdoorVolumeCount = 0;
+	EHeistZoneType ResolvedZone;
+	bool bZoneInitialized = false;
 };
