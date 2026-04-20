@@ -4,7 +4,6 @@
 #include "Components/HeistBriefingPhaseComponent.h"
 #include "Components/HeistExecutionPhaseComponent.h"
 #include "Components/HeistPhaseManagerComponent.h"
-#include "Core/HeistGameInstance.h"
 #include "Core/HeistMatchGameState.h"
 #include "Core/HeistPlayerController.h"
 #include "Core/HeistPlayerState.h"
@@ -20,6 +19,7 @@ AHeistMatchGameMode::AHeistMatchGameMode()
 	BriefingPhaseComponent = CreateDefaultSubobject<UHeistBriefingPhaseComponent>(TEXT("BriefingPhaseComponent"));
 	ExecutionPhaseComponent = CreateDefaultSubobject<UHeistExecutionPhaseComponent>(TEXT("ExecutionPhaseComponent"));
 	ArrestVictoryComponent = CreateDefaultSubobject<UHeistArrestVictoryComponent>(TEXT("ArrestVictoryComponent"));
+	LobbyMapPath = TEXT("/Game/Heist/Maps/L_Lobby");
 }
 
 void AHeistMatchGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -458,16 +458,15 @@ void AHeistMatchGameMode::StartLobbyTravel()
 	if (!bLobbyTravelRequested) return;
 
 	UWorld* World = GetWorld();
-	UHeistGameInstance* HeistGI = GetGameInstance<UHeistGameInstance>();
-	if (!IsValid(World) || !IsValid(HeistGI) || HeistGI->LobbyPath.IsEmpty())
+	if (!IsValid(World) || LobbyMapPath.IsEmpty())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[MatchGameMode] StartLobbyTravel: LobbyPath is not available."));
+		UE_LOG(LogTemp, Warning, TEXT("[MatchGameMode] StartLobbyTravel: LobbyMapPath is not available."));
 		bLobbyTravelRequested = false;
 		return;
 	}
 
-	const bool bHasQueryString = HeistGI->LobbyPath.Contains(TEXT("?"));
-	const FString TravelPath = HeistGI->LobbyPath + (bHasQueryString ? TEXT("&listen") : TEXT("?listen"));
+	const bool bHasQueryString = LobbyMapPath.Contains(TEXT("?"));
+	const FString TravelPath = LobbyMapPath + (bHasQueryString ? TEXT("&listen") : TEXT("?listen"));
 
 	bLobbyTravelRequested = false;
 	World->GetTimerManager().ClearTimer(LobbyTravelReadyTimeoutHandle);

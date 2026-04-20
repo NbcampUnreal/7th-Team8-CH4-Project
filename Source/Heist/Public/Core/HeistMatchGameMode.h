@@ -97,5 +97,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Heist|Travel")
 	float LobbyTravelReadyTimeoutSeconds = 5.0f;
 
+	UPROPERTY(EditDefaultsOnly, Category="Heist|Travel")
+	FString LobbyMapPath;
+
 	FTimerHandle LobbyTravelReadyTimeoutHandle;
 };
