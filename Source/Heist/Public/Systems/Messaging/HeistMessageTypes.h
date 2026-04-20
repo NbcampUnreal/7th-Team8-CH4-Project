@@ -115,3 +115,15 @@ struct FHeistBriefingEndMessage
 {
 	GENERATED_BODY()
 };
+
+USTRUCT()
+struct FHeistTravelSeamlessStartMessage
+{
+	GENERATED_BODY()
+};
+
+USTRUCT()
+struct FHeistTravelSeamlessEndMessage
+{
+	GENERATED_BODY()
+};

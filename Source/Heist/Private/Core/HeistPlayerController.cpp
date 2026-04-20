@@ -152,6 +152,12 @@ void AHeistPlayerController::NotifyLoadedWorld(FName WorldPackageName, bool bFin
 		bSentReadyForMatchTravel = false;
 		TryReportReadyForBriefingStart();
 
+		if (IsLocalController())
+		{
+			UHeistMessageSubsystem::Get(this).BroadcastMessage(
+				HeistMessageTags::Message_Travel_SeamlessEnd, FHeistTravelSeamlessEndMessage{});
+		}
+
 		if (UHeistVoiceSubsystem* VS = GetGameInstance()->GetSubsystem<UHeistVoiceSubsystem>())
 		{
 			VS->TryRecoverVoiceForPlayer(this);
@@ -450,10 +456,16 @@ void AHeistPlayerController::ClientPrepareForMatchTravel_Implementation()
 		VS->BeginTravelShutdown(GetWorld());
 	}
 
-	if (IsLocalController() && !bSentReadyForMatchTravel)
+	if (IsLocalController())
 	{
-		ServerNotifyReadyForMatchTravel();
-		bSentReadyForMatchTravel = true;
+		UHeistMessageSubsystem::Get(this).BroadcastMessage(
+			HeistMessageTags::Message_Travel_SeamlessStart, FHeistTravelSeamlessStartMessage{});
+
+		if (!bSentReadyForMatchTravel)
+		{
+			ServerNotifyReadyForMatchTravel();
+			bSentReadyForMatchTravel = true;
+		}
 	}
 }
 
