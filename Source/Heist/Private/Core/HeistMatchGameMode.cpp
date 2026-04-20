@@ -17,10 +17,26 @@ AHeistMatchGameMode::AHeistMatchGameMode()
 	ExecutionPhaseComponent = CreateDefaultSubobject<UHeistExecutionPhaseComponent>(TEXT("ExecutionPhaseComponent"));
 }
 
+void AHeistMatchGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
+
+	const FString RequiredPlayersOption = UGameplayStatics::ParseOption(Options, TEXT("RequiredPlayersToStartBriefing"));
+	PendingRequiredPlayersToStartBriefing = RequiredPlayersOption.IsEmpty()
+		? DefaultRequiredPlayersToStartBriefing
+		: FMath::Max(FCString::Atoi(*RequiredPlayersOption), 1);
+	PlayersReadyForBriefingStart.Reset();
+
+	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] InitGame: RequiredPlayersToStartBriefing=%d"), PendingRequiredPlayersToStartBriefing);
+}
+
 void AHeistMatchGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 브리핑 시작 위치는 서버가 먼저 확정해 둔다.
+	// 실제 브리핑 진입은 TryStartBriefingFlow -> PhaseManager -> BriefingPhase 순으로 이어지고,
+	// 클라는 그 결과를 replicated state/OnRep 훅으로 뒤늦게 수렴한다.
 	GatherBriefingStartPoints();
 	TryStartBriefingFlow();
 }
@@ -28,6 +44,35 @@ void AHeistMatchGameMode::BeginPlay()
 void AHeistMatchGameMode::GenericPlayerInitialization(AController* C)
 {
 	Super::GenericPlayerInitialization(C);
+
+	TryStartBriefingFlow();
+}
+
+void AHeistMatchGameMode::NotifyPlayerReadyForBriefingStart(APlayerController* PlayerController)
+{
+	if (!HasAuthority() || !IsValid(PlayerController) || bBriefingFlowStarted)
+	{
+		return;
+	}
+
+	const AHeistMatchGameState* MatchGameState = GetGameState<AHeistMatchGameState>();
+	if (!IsValid(MatchGameState) || MatchGameState->IsBriefingPhase() || MatchGameState->IsExecutionPhase())
+	{
+		return;
+	}
+
+	const AHeistPlayerState* HeistPS = PlayerController->GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPS))
+	{
+		return;
+	}
+
+	PlayersReadyForBriefingStart.Add(PlayerController);
+
+	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] NotifyPlayerReadyForBriefingStart: PC=%s Ready=%d/%d"),
+		*GetNameSafe(PlayerController),
+		CountPlayersReadyForBriefingStart(),
+		PendingRequiredPlayersToStartBriefing);
 
 	TryStartBriefingFlow();
 }
@@ -89,15 +134,34 @@ void AHeistMatchGameMode::TryStartBriefingFlow()
 		return;
 	}
 
-	if (!IsValid(PhaseManagerComponent) || CountSettledMatchPlayers() < RequiredPlayersToStartBriefing)
+	if (!IsValid(PhaseManagerComponent) || CountPlayersReadyForBriefingStart() < PendingRequiredPlayersToStartBriefing)
 	{
 		return;
 	}
 
 	bBriefingFlowStarted = true;
 	GatherBriefingStartPoints();
+	// MatchGameMode는 브리핑 "진입"만 연다.
+	// 실제 서버 시퀀스는 BriefingPhase 안에서
+	// 팀 배정 -> 폰 스폰/재시작 -> 브리핑 컨텍스트 바인딩
+	// 순으로 진행되며, 클라는 그 결과를 OnRep/possession 훅으로 따라잡는다.
+	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] TryStartBriefingFlow: phase flow started"));
 	PhaseManagerComponent->StartMatchFlow();
-	SpawnAllPlayersAtBriefingStart();
+}
+
+int32 AHeistMatchGameMode::CountPlayersReadyForBriefingStart() const
+{
+	int32 ReadyPlayerCount = 0;
+
+	for (const TWeakObjectPtr<APlayerController>& PlayerController : PlayersReadyForBriefingStart)
+	{
+		if (PlayerController.IsValid())
+		{
+			++ReadyPlayerCount;
+		}
+	}
+
+	return ReadyPlayerCount;
 }
 
 int32 AHeistMatchGameMode::CountSettledMatchPlayers() const
@@ -193,6 +257,13 @@ void AHeistMatchGameMode::SpawnPlayerAtBriefingStart(APlayerController* PlayerCo
 		ExistingPawn->Destroy();
 	}
 
+	// 브리핑 진입 시점의 Pawn 생성/재시작은 서버가 authoritative 하게 수행한다.
+	// 이후 클라는 PlayerState/Controller/Pawn 복제를 순서 없이 받으므로,
+	// AcknowledgePossession / OnRep_PlayerState / OnRep_Controller 같은 훅에서 최종 상태로 수렴한다.
+	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] SpawnPlayerAtBriefingStart: PC=%s Team=%d Start=%s"),
+		*PlayerController->GetName(),
+		static_cast<int32>(Team),
+		*StartPoint->GetName());
 	RestartPlayerAtTransform(PlayerController, StartPoint->GetActorTransform());
 }
 
@@ -201,9 +272,15 @@ void AHeistMatchGameMode::SpawnAllPlayersAtBriefingStart()
 	const AHeistMatchGameState* MatchGameState = GetGameState<AHeistMatchGameState>();
 	if (!IsValid(MatchGameState) || !MatchGameState->IsBriefingPhase())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[MatchGameMode] SpawnAllPlayersAtBriefingStart: skipped, briefing phase not ready"));
 		return;
 	}
 
+	// 이 호출은 BriefingPhase의 팀 배정 직후 실행된다.
+	// 즉 서버 기준 브리핑 시작 순서는
+	// 팀 배정 -> 브리핑용 Pawn 스폰/재시작 -> 브리핑 액터/컨텍스트 바인딩
+	// 이며, 이후 UI는 클라 훅 쪽에서 readiness를 재평가하며 열린다.
+	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] SpawnAllPlayersAtBriefingStart: begin"));
 	for (APlayerState* PlayerState : GameState->PlayerArray)
 	{
 		AHeistPlayerState* HeistPS = Cast<AHeistPlayerState>(PlayerState);
@@ -220,4 +297,5 @@ void AHeistMatchGameMode::SpawnAllPlayersAtBriefingStart()
 
 		SpawnPlayerAtBriefingStart(PlayerController, HeistPS->GetAssignedTeam());
 	}
+	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] SpawnAllPlayersAtBriefingStart: end"));
 }

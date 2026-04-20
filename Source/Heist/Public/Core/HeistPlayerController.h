@@ -3,9 +3,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "InputAction.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "HeistPlayerController.generated.h"
 
 class UHeistBriefingPlayerComponent;
+class AHeistBriefingDrawingBoard;
 
 UCLASS()
 class HEIST_API AHeistPlayerController : public APlayerController
@@ -18,20 +20,40 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerRequestSetReady(bool bReady);
 
+	UFUNCTION(Server, Reliable)
+	void ServerNotifyReadyForBriefingStart();
+
+	UFUNCTION(Server, Reliable)
+	void ServerNotifyReadyForMatchTravel();
+
+	UFUNCTION(Client, Reliable)
+	void ClientPrepareForMatchTravel();
+
 	UFUNCTION(Client, Reliable)
 	void ClientEndBriefingPresentation();
 
+	void TryNotifyBriefingContextReady();
+
+	// 서브시스템이 최종 판단 후 실행을 위임 — StartTalking()/StopTalking()은 PC만 호출 가능
+	void StartVoiceCapture();
+	void StopVoiceCapture();
+
 protected:
+	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
 	virtual void AcknowledgePossession(APawn* NewPawn) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void SeamlessTravelTo(APlayerController* NewPC) override;
+	// 이것은 클라이언트 측 Transient 컴포넌트를 정리합니다, HeistPlayerState::SeamlessTravelTo()는 서버만 정리됩니다.
+	virtual void NotifyLoadedWorld(FName WorldPackageName, bool bFinalDest) override;
 
 private:
-	void StartVoiceCapture();
-	void StopVoiceCapture();
+	void TryStartVoiceCapture();
+	void PrepareForMatchTravelAudioShutdown();
+	void TryReportReadyForBriefingStart();
+	bool CanReportReadyForBriefingStart() const;
 
 	void UpdateCursorRotation();
 	void HandleVoiceTalkingStateChanged(FUniqueNetIdRef PlayerId, bool bIsTalking);
@@ -47,17 +69,10 @@ private:
 	void DrawVoiceRangeDebug();
 
 	FDelegateHandle VoiceTalkingStateChangedHandle;
+	FHeistMessageListenerHandle PhaseChangedListenerHandle;
 
-	/**
-	 * BP_PlayerController에서 WBP_BriefingScreen 클래스를 할당한다.
-	 * UUserWidget 참조 없이 UClass*로 보관해 UMG 종속을 제거한다.
-	 * 실제 위젯 생성은 UHeistBriefingUISubsystem(HeistUI 모듈)이 담당한다.
-	 */
-	UPROPERTY(EditDefaultsOnly, Category = "Heist|Briefing", meta = (AllowedClasses = "UserWidget"))
-	TObjectPtr<UClass> BriefingWidgetClass;
-
-	void TryBindBriefingEventsFromPlayerState();
-	void HandleBriefingContextReady();
-
-	FDelegateHandle BriefingContextReadyHandle;
+	bool IsInMatchBriefingPhase() const;
+	bool bSentReadyForBriefingStart = false;
+	bool bSentReadyForMatchTravel = false;
+	bool bVoiceCaptureActive = false;
 };

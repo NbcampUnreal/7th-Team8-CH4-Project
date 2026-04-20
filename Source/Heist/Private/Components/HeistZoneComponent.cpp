@@ -8,6 +8,7 @@
 #include "GameFramework/Actor.h"
 
 UHeistZoneComponent::UHeistZoneComponent()
+	: ResolvedZone(EHeistZoneType::Outdoor)
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
@@ -29,24 +30,59 @@ void UHeistZoneComponent::UpdateZoneState(EHeistZoneType ZoneType, bool bIsEnter
 		OutdoorVolumeCount = FMath::Max(0, OutdoorVolumeCount);
 	}
 
-	// 2. 태그 갱신
+	const EHeistZoneType NewResolvedZone = ResolveZoneFromCounts();
+	if (bZoneInitialized && ResolvedZone == NewResolvedZone)
+	{
+		return;
+	}
+
+	ApplyResolvedZone(NewResolvedZone);
+}
+
+EHeistZoneType UHeistZoneComponent::ResolveZoneFromCounts() const
+{
+	if (OutdoorVolumeCount > 0)
+	{
+		return EHeistZoneType::Outdoor;
+	}
+
+	if (IndoorVolumeCount > 0)
+	{
+		return EHeistZoneType::Indoor;
+	}
+
+	return EHeistZoneType::Outdoor;
+}
+
+void UHeistZoneComponent::ApplyResolvedZone(EHeistZoneType NewResolvedZone)
+{
+	AActor* OwnerActor = GetOwner();
+	if (!IsValid(OwnerActor) || !OwnerActor->HasAuthority()) return;
+
 	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OwnerActor);
 	if (!IsValid(ASC)) return;
 
-	// 변경점: AddLooseGameplayTag -> AddReplicatedLooseGameplayTag 로 수정
-	if (OutdoorVolumeCount > 0)
+	if (bZoneInitialized)
 	{
-		ASC->AddReplicatedLooseGameplayTag(HeistStateTags::Zone_Outdoor);
-		ASC->RemoveReplicatedLooseGameplayTag(HeistStateTags::Zone_Indoor);
+		if (ResolvedZone == EHeistZoneType::Indoor)
+		{
+			ASC->RemoveReplicatedLooseGameplayTag(HeistStateTags::Zone_Indoor);
+		}
+		else
+		{
+			ASC->RemoveReplicatedLooseGameplayTag(HeistStateTags::Zone_Outdoor);
+		}
 	}
-	else if (IndoorVolumeCount > 0)
+
+	if (NewResolvedZone == EHeistZoneType::Indoor)
 	{
 		ASC->AddReplicatedLooseGameplayTag(HeistStateTags::Zone_Indoor);
-		ASC->RemoveReplicatedLooseGameplayTag(HeistStateTags::Zone_Outdoor);
 	}
 	else
 	{
 		ASC->AddReplicatedLooseGameplayTag(HeistStateTags::Zone_Outdoor);
-		ASC->RemoveReplicatedLooseGameplayTag(HeistStateTags::Zone_Indoor);
 	}
+
+	ResolvedZone = NewResolvedZone;
+	bZoneInitialized = true;
 }

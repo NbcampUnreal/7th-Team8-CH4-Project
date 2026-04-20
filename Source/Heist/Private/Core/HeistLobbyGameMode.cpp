@@ -1,10 +1,12 @@
 #include "Core/HeistLobbyGameMode.h"
 
 #include "Core/HeistLobbyGameState.h"
+#include "Core/HeistPlayerController.h"
 #include "Core/HeistPlayerState.h"
 #include "MultiplayerSessionsSubsystem.h"
+#include "Voice/HeistVoiceSubsystem.h"
 
-#include "Net/VoiceConfig.h"
+#include "GameFramework/GameStateBase.h"
 
 AHeistLobbyGameMode::AHeistLobbyGameMode()
 {
@@ -72,6 +74,12 @@ void AHeistLobbyGameMode::RequestStartGame(APlayerController* Requester)
 {
 	if (!IsValid(Requester)) return;
 
+	if (bStartGameRequested)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] RequestStartGame: already processing travel."));
+		return;
+	}
+
 	if (!IsHostController(Requester))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[HeistLobbyGameMode] RequestStartGame: Non-host request ignored."));
@@ -100,16 +108,34 @@ void AHeistLobbyGameMode::RequestStartGame(APlayerController* Requester)
 	UWorld* World = GetWorld();
 	if (!IsValid(World)) return;
 
-	for (APlayerState* PS : GameState->PlayerArray)
+	bStartGameRequested = true;
+	ExpectedPlayersForMatchTravel.Reset();
+	PlayersReadyForMatchTravel.Reset();
+
+	for (APlayerState* PlayerState : GameState->PlayerArray)
 	{
-		if (IsValid(PS))
+		AHeistPlayerState* HeistPlayerState = Cast<AHeistPlayerState>(PlayerState);
+		if (!IsValid(HeistPlayerState))
 		{
-			UVOIPStatics::ResetPlayerVoiceTalker(PS);
+			continue;
 		}
+
+		AHeistPlayerController* HeistPC = Cast<AHeistPlayerController>(HeistPlayerState->GetOwner());
+		if (!IsValid(HeistPC))
+		{
+			continue;
+		}
+
+		ExpectedPlayersForMatchTravel.Add(HeistPlayerState);
+		HeistPC->ClientPrepareForMatchTravel();
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] Starting game. Traveling to: %s"), *GameMapPath);
-	World->ServerTravel(GameMapPath);
+	World->GetTimerManager().SetTimer(
+		MatchTravelReadyTimeoutHandle,
+		this,
+		&AHeistLobbyGameMode::HandleMatchTravelReadyTimeout,
+		MatchTravelReadyTimeoutSeconds,
+		false);
 }
 
 bool AHeistLobbyGameMode::IsHostController(APlayerController* PlayerController) const
@@ -121,4 +147,136 @@ bool AHeistLobbyGameMode::IsHostController(APlayerController* PlayerController) 
 	if (!IsValid(HostPlayerState)) return false;
 
 	return HostPlayerState->GetOwner() == PlayerController;
+}
+
+void AHeistLobbyGameMode::StartMatchTravel()
+{
+	if (!bStartGameRequested)
+	{
+		return;
+	}
+
+	ensureAlwaysMsgf(!GameMapPath.IsEmpty(), TEXT("AHeistLobbyGameMode: GameMapPath is not set."));
+
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		bStartGameRequested = false;
+		return;
+	}
+
+	const FString TravelPath = FString::Printf(
+		TEXT("%s?RequiredPlayersToStartBriefing=%d"),
+		*GameMapPath,
+		MinPlayersToStart);
+
+	bStartGameRequested = false;
+	World->GetTimerManager().ClearTimer(MatchTravelReadyTimeoutHandle);
+	ExpectedPlayersForMatchTravel.Reset();
+	PlayersReadyForMatchTravel.Reset();
+
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UHeistVoiceSubsystem* VS = GI->GetSubsystem<UHeistVoiceSubsystem>())
+		{
+			VS->BeginTravelShutdown(World);
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] Starting game. Traveling to: %s"), *TravelPath);
+	World->ServerTravel(TravelPath);
+}
+
+void AHeistLobbyGameMode::NotifyPlayerReadyForMatchTravel(APlayerController* PlayerController)
+{
+	if (!IsValid(PlayerController) || !bStartGameRequested)
+	{
+		return;
+	}
+
+	AHeistPlayerState* HeistPlayerState = PlayerController->GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPlayerState))
+	{
+		return;
+	}
+
+	if (!ExpectedPlayersForMatchTravel.Contains(HeistPlayerState))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[HeistLobbyGameMode] NotifyPlayerReadyForMatchTravel: unexpected PS=%s"),
+			*GetNameSafe(HeistPlayerState));
+		return;
+	}
+
+	PlayersReadyForMatchTravel.Add(HeistPlayerState);
+
+	const int32 TotalPlayers = CountExpectedPlayersForMatchTravel();
+	const int32 ReadyPlayers = CountReadyPlayersForMatchTravel();
+
+	UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] NotifyPlayerReadyForMatchTravel: PC=%s Ready=%d/%d"),
+		*GetNameSafe(PlayerController),
+		ReadyPlayers,
+		TotalPlayers);
+
+	if (TotalPlayers > 0 && ReadyPlayers >= TotalPlayers)
+	{
+		StartMatchTravel();
+	}
+}
+
+void AHeistLobbyGameMode::HandleMatchTravelReadyTimeout()
+{
+	if (!bStartGameRequested)
+	{
+		return;
+	}
+
+	const int32 TotalPlayers = CountExpectedPlayersForMatchTravel();
+	const int32 ReadyPlayers = CountReadyPlayersForMatchTravel();
+
+	UE_LOG(LogTemp, Warning, TEXT("[HeistLobbyGameMode] Match travel ready timeout: Ready=%d/%d"),
+		ReadyPlayers,
+		TotalPlayers);
+
+	for (const TWeakObjectPtr<APlayerState>& ExpectedPlayer : ExpectedPlayersForMatchTravel)
+	{
+		if (!ExpectedPlayer.IsValid() || PlayersReadyForMatchTravel.Contains(ExpectedPlayer))
+		{
+			continue;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("[HeistLobbyGameMode] Match travel ready timeout: missing PS=%s"),
+			*GetNameSafe(ExpectedPlayer.Get()));
+	}
+
+	bStartGameRequested = false;
+	ExpectedPlayersForMatchTravel.Reset();
+	PlayersReadyForMatchTravel.Reset();
+}
+
+int32 AHeistLobbyGameMode::CountExpectedPlayersForMatchTravel() const
+{
+	int32 Count = 0;
+	for (const TWeakObjectPtr<APlayerState>& ExpectedPlayer : ExpectedPlayersForMatchTravel)
+	{
+		if (ExpectedPlayer.IsValid())
+		{
+			++Count;
+		}
+	}
+
+	return Count;
+}
+
+int32 AHeistLobbyGameMode::CountReadyPlayersForMatchTravel() const
+{
+	int32 Count = 0;
+	for (const TWeakObjectPtr<APlayerState>& ReadyPlayer : PlayersReadyForMatchTravel)
+	{
+		if (ReadyPlayer.IsValid())
+		{
+			++Count;
+		}
+	}
+
+	return Count;
 }

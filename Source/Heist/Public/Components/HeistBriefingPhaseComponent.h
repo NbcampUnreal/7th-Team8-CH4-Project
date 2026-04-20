@@ -49,6 +49,7 @@ public:
 
 private:
 	void AssignRandomRoles();
+	void RequestPlayersSpawnAtBriefingStart();
 	void SpawnBriefingActors();
 	void BindPlayersToBriefingActors();
 
@@ -85,6 +86,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Briefing")
 	TSubclassOf<UGameplayEffect> BriefingStateEffectClass;
 
-	/** 브리핑 잠금 GE 핸들. Execution 진입 전 제거한다. */
-	TMap<TObjectPtr<APlayerState>, FActiveGameplayEffectHandle> BriefingStateEffectHandles;
+	/** 브리핑 잠금 GE 핸들. Execution 진입 전 제거한다. PlayerState 생명주기와 분리하기 위해 weak로 보관한다. */
+	TMap<TWeakObjectPtr<APlayerState>, FActiveGameplayEffectHandle> BriefingStateEffectHandles;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|Briefing")
+	TSubclassOf<AHeistBriefingDrawingBoard> DrawingBoardClass;
 };

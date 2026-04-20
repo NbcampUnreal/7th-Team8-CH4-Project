@@ -52,6 +52,7 @@ private:
 	void OnInviteCodeChangedMessageReceived(FGameplayTag Channel, const struct FHeistLobbyInviteCodeChangedMessage& Message);
 
 	FString CurrentInviteCode;
+	bool bStartGameRequested = false;
 
 	void RefreshPlayerList();
 	void RefreshStartButtonState();

@@ -1,5 +1,6 @@
 #include "HeistLobbyWidget.h"
 
+#include "HeistUIInputModeLibrary.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
 #include "Systems/Messaging/HeistTags_Message.h"
 #include "Core/HeistLobbyGameMode.h"
@@ -96,6 +97,8 @@ void UHeistLobbyWidget::NativeConstruct()
 	{
 		RefreshInviteCode(LobbyGameState->GetInviteCode());
 	}
+
+	UHeistUIInputModeLibrary::ApplyInputMode(GetOwningPlayer(), EHeistUIInputMode::Lobby, this);
 }
 
 void UHeistLobbyWidget::OnPlayersChangedMessageReceived(FGameplayTag Channel, const FHeistLobbyPlayersChangedMessage& Message)
@@ -132,7 +135,7 @@ void UHeistLobbyWidget::RefreshStartButtonState()
 	AHeistLobbyGameState* LobbyGameState = GetWorld()->GetGameState<AHeistLobbyGameState>();
 	const bool bAllReady = IsValid(LobbyGameState) && LobbyGameState->AreAllPlayersReady();
 
-	ButtonStartGame->SetIsEnabled(bAllReady);
+	ButtonStartGame->SetIsEnabled(!bStartGameRequested && bAllReady);
 }
 
 void UHeistLobbyWidget::RefreshPlayerList()
@@ -163,6 +166,12 @@ void UHeistLobbyWidget::OnButtonStartGameClicked()
 {
 	APlayerController* PC = GetOwningPlayer();
 	if (!IsValid(PC)) return;
+
+	if (ButtonStartGame)
+	{
+		bStartGameRequested = true;
+		ButtonStartGame->SetIsEnabled(false);
+	}
 
 	if (AHeistLobbyGameMode* LobbyGameMode = GetWorld()->GetAuthGameMode<AHeistLobbyGameMode>())
 	{

@@ -171,7 +171,7 @@ void UHeistPlayerComponent::BindInput()
 		&UHeistPlayerComponent::HandleAbilityInputTagPressed,
 		&UHeistPlayerComponent::HandleAbilityInputTagReleased,
 		AbilityInputBindHandles);
-	
+
 	// 상호작용 - 이동과 마찬가지로 직접 핸들러 바인드합니다.
 	HeistInputComp->BindActionByTag(InputConfig, HeistInputTags::Input_Interact,
 		ETriggerEvent::Started, this, &UHeistPlayerComponent::HandleInteractPressed);
@@ -198,7 +198,7 @@ void UHeistPlayerComponent::OnMoveDisabledTagChanged(const FGameplayTag Tag, int
 
 	UCharacterMovementComponent* MoveComp = CharacterOwner->GetCharacterMovement();
 	if (!IsValid(MoveComp)) return;
-	
+
 	// MoveDisabled는 이동 입력 차단용 태그
 	// MovementMode 자체를 끄면 RootMotion/Knockback 같은 외부 이동까지 막히므로
 	// 현재 프레임에 누적된 입력만 비워서 즉시 멈추게 한다.
@@ -275,19 +275,19 @@ void UHeistPlayerComponent::HandleInteractPressed()
 
 	// 상자 운반 미리 대응 코드 - 이미 들고있음
 	if (ASC->HasMatchingGameplayTag(HeistFlagTags::Tag_Carrying)) return;
-	
+
 	// Line Trace
 	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
 	if (!IsValid(PC)) return;
-	
+
 	FVector WorldLocation, WorldDirection;
-	// 2D 마우스 방향에서 World Direction으로 반환해주는 함수로 보임 
+	// 2D 마우스 방향에서 World Direction으로 반환해주는 함수로 보임
 	if (!PC->DeprojectMousePositionToWorld(WorldLocation, WorldDirection)) return;
-	
+
 	FHitResult HitResult;
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(Pawn);
-	
+
 	// 클라이언트 측에서 라인트레이스 해줘도 충분하다, 상호작용 처리만 서버에서
 	const bool bHit = GetWorld()->LineTraceSingleByChannel(
 		HitResult,
@@ -306,7 +306,7 @@ void UHeistPlayerComponent::HandleInteractPressed()
 	// }
 
 	if (!bHit || !IsValid(HitResult.GetActor())) return;
-	
+
 	// 액터 본인이 구현했거나, 산하 ActorComponent 중 하나라도 인터랙터블을 구현했는지 범용적으로 체크합니다.
 	bool bIsInteractable = HitResult.GetActor()->Implements<UHeistInteractable>();
 	if (!bIsInteractable)
@@ -317,9 +317,9 @@ void UHeistPlayerComponent::HandleInteractPressed()
 			bIsInteractable = true;
 		}
 	}
-	
-	if (!bIsInteractable) return; 
-	
+
+	if (!bIsInteractable) return;
+
 	// 마우스를 클릭한 "내 캐릭터(Pawn)"가 상호작용 목록을 추적하는 기능(HeistInteractionComponent)을 가지고 있는지 확인합니다.
 	// (위의 Interactable 검사는 '맞은 액터'를 검사한 것이고, 이것은 '나'를 검사하는 것이므로 중복이 아닙니다)
 	UHeistInteractionComponent* InteractComp = Pawn->FindComponentByClass<UHeistInteractionComponent>();
@@ -329,27 +329,105 @@ void UHeistPlayerComponent::HandleInteractPressed()
 	FGameplayTag AbilityTag = InteractComp->ResolveInteractAbilityTag(HitResult.GetActor());
 	
 	if (!AbilityTag.IsValid()) return;
-	
-	// 현재 상호작용 중인 AbilityTag 추적 - 맥락을 받아온다
-	CurrentInteractAbilityTag = AbilityTag;
-	
-	// 어빌리티 스펙 조회해서 Toggle 여부 캐싱
+
+	// Press마다 이전 상태를 먼저 정리합니다.
+	bCurrentInteractIsToggle = false;
+	CurrentInteractAbilityTag = FGameplayTag::EmptyTag;
+
+	// 이벤트로 발동되는 인터랙션 GA가 실제로 등록되어 있는지 먼저 확인합니다.
+	bool bAbilityFound = false;
+
 	for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
 	{
-		if (Spec.Ability && Spec.Ability->AbilityTags.HasTag(AbilityTag))
+		if (UHeistGameplayAbility* HGA = Cast<UHeistGameplayAbility>(Spec.Ability))
 		{
-			if (UHeistGameplayAbility* HGA = Cast<UHeistGameplayAbility>(Spec.Ability))
+			if (HGA->MatchesInteractionEventTag(AbilityTag))
+			{
 				bCurrentInteractIsToggle = HGA->IsToggleInteraction();
-			break;
+				bAbilityFound = true;
+				break;
+			}
 		}
 	}
-	
+
+	if (!bAbilityFound)
+	{
+		return;
+	}
+
+	// 능력 확인 이후에만 현재 인터랙션 태그 기록
+	CurrentInteractAbilityTag = AbilityTag;
+
 	FGameplayEventData Payload;
 	Payload.Instigator = Pawn;
-	Payload.Target     = HitResult.GetActor();
-	// 상호작용 태그가 Ability Trigger 목록에 있는지 확인하고 그 Ability를 실행하도록 한다 - 즉 맥락대로 수행됨 
-	// Gameplay Event를 통해 Tag를 던져 맥락기반으로 상호작용을 수행할 수 있습니다!
+	Payload.Target = HitResult.GetActor();
+
 	ASC->HandleGameplayEvent(AbilityTag, &Payload);
+
+	// for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	// {
+	// 	if (!IsValid(Spec.Ability))
+	// 	{
+	// 		continue;
+	// 	}
+	//
+	// 	for (const FAbilityTriggerData& TriggerData : Spec.Ability->AbilityTriggers)
+	// 	{
+	// 		if (TriggerData.TriggerSource != EGameplayAbilityTriggerSource::GameplayEvent)
+	// 		{
+	// 			continue;
+	// 		}
+	//
+	// 		if (TriggerData.TriggerTag != AbilityTag)
+	// 		{
+	// 			continue;
+	// 		}
+	//
+	// 		bAbilityFound = true;
+	//
+	// 		if (const UHeistGameplayAbility* HGA = Cast<UHeistGameplayAbility>(Spec.Ability))
+	// 		{
+	// 			bResolvedToggle = HGA->IsToggleInteraction();
+	// 		}
+	//
+	// 		break;
+	// 	}
+	//
+	// 	if (bAbilityFound)
+	// 	{
+	// 		break;
+	// 	}
+	// }
+	//
+	// // 아직 능력 복제가 안 왔거나, 해당 태그를 받는 능력이 없으면 조용히 종료합니다.
+	// if (!bAbilityFound)
+	// {
+	// 	return;
+	// }
+	//
+	// FGameplayEventData Payload;
+	// Payload.Instigator = Pawn;
+	// Payload.Target = HitResult.GetActor();
+	// 현재 상호작용 중인 AbilityTag 추적 - 맥락을 받아온다
+	// CurrentInteractAbilityTag = AbilityTag;
+	//
+	// // 어빌리티 스펙 조회해서 Toggle 여부 캐싱
+	// for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	// {
+	// 	if (Spec.Ability && Spec.Ability->AbilityTags.HasTag(AbilityTag))
+	// 	{
+	// 		if (UHeistGameplayAbility* HGA = Cast<UHeistGameplayAbility>(Spec.Ability))
+	// 			bCurrentInteractIsToggle = HGA->IsToggleInteraction();
+	// 		break;
+	// 	}
+	// }
+
+	// FGameplayEventData Payload;
+	// Payload.Instigator = Pawn;
+	// Payload.Target     = HitResult.GetActor();
+	// // 상호작용 태그가 Ability Trigger 목록에 있는지 확인하고 그 Ability를 실행하도록 한다 - 즉 맥락대로 수행됨
+	// // Gameplay Event를 통해 Tag를 던져 맥락기반으로 상호작용을 수행할 수 있습니다!
+	// ASC->HandleGameplayEvent(AbilityTag, &Payload);
 }
 
 void UHeistPlayerComponent::HandleInteractReleased()
@@ -371,7 +449,7 @@ void UHeistPlayerComponent::HandleInteractReleased()
 		CurrentInteractAbilityTag = FGameplayTag::EmptyTag;
 		return;  // 토글 어빌리티는 Release 시 아무것도 안 함
 	}
-	
+
 	// TODO: Release 시 상자 드롭하는 로직 - 가구현 각도를 어떻게 처리를 해야할걸요?
 	if (ASC->HasMatchingGameplayTag(HeistFlagTags::Tag_Carrying))
 	{
@@ -382,13 +460,13 @@ void UHeistPlayerComponent::HandleInteractReleased()
 		CurrentInteractAbilityTag = FGameplayTag::EmptyTag;
 		return;
 	}
-	
+
 	// 나머지 WhileInputActive(채널링 중) GA 취소 (HelpCuffed, Heal 등)
 	if (CurrentInteractAbilityTag.IsValid())
 	{
 		FGameplayTagContainer Tags;
 		Tags.AddTag(CurrentInteractAbilityTag);
-		// 여기서, HeistGameplayAbility::EndAbility가 bWasCancelled=true일 때 OnChannelingCancelled()를 
+		// 여기서, HeistGameplayAbility::EndAbility가 bWasCancelled=true일 때 OnChannelingCancelled()를
 		// 호출하도록 이미 구현되어 있으므로, 별도 처리 없이 기존 명세대로 동작합니다.
 		ASC->CancelAbilities(&Tags, nullptr, nullptr);
 		CurrentInteractAbilityTag = FGameplayTag::EmptyTag;

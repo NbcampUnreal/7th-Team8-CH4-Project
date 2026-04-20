@@ -11,6 +11,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/HeistHitReactionComponent.h"
+#include "Core/HeistMatchGameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AHeistCharacter::AHeistCharacter(const FObjectInitializer& ObjectInitializer)
@@ -30,7 +31,7 @@ AHeistCharacter::AHeistCharacter(const FObjectInitializer& ObjectInitializer)
 	PawnExtensionComponent = CreateDefaultSubobject<UHeistPawnExtensionComponent>(TEXT("PawnExtensionComponent"));
 	PlayerComponent        = CreateDefaultSubobject<UHeistPlayerComponent>(TEXT("PlayerComponent"));
 	InteractionComponent   = CreateDefaultSubobject<UHeistInteractionComponent>(TEXT("InteractionComponent"));
-	
+
 	// 탑다운 카메라
 	CameraSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraSpringArm"));
 	CameraSpringArm->SetupAttachment(RootComponent);
@@ -43,7 +44,7 @@ AHeistCharacter::AHeistCharacter(const FObjectInitializer& ObjectInitializer)
 
 	TopDownCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
 	TopDownCamera->SetupAttachment(CameraSpringArm, USpringArmComponent::SocketName);
-	
+
 	HitReactionComponent = CreateDefaultSubobject<UHeistHitReactionComponent>(TEXT("HitReactionComponent"));
 }
 
@@ -70,12 +71,11 @@ void AHeistCharacter::BeginPlay()
 void AHeistCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
+	UE_LOG(LogTemp, Log, TEXT("[PawnReady] PossessedBy: Pawn=%s Controller=%s"),
+		*GetNameSafe(this),
+		*GetNameSafe(NewController));
 	InitializeGameplayAbilitySystem();
-
-	if (IsValid(PlayerComponent))
-	{
-		PlayerComponent->NotifyOverlappingTransparencyTriggers();
-	}
+	RefreshClientPawnReadyState();
 }
 
 void AHeistCharacter::UnPossessed()
@@ -87,17 +87,21 @@ void AHeistCharacter::UnPossessed()
 void AHeistCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
+	UE_LOG(LogTemp, Log, TEXT("[PawnReady] OnRep_PlayerState: Pawn=%s PS=%s"),
+		*GetNameSafe(this),
+		*GetNameSafe(GetPlayerState()));
 	InitializeGameplayAbilitySystem();
+	RefreshClientPawnReadyState();
 }
 
 void AHeistCharacter::OnRep_Controller()
 {
 	Super::OnRep_Controller();
-
-	if (IsValid(PlayerComponent))
-	{
-		PlayerComponent->NotifyOverlappingTransparencyTriggers();
-	}
+	UE_LOG(LogTemp, Log, TEXT("[PawnReady] OnRep_Controller: Pawn=%s Controller=%s"),
+		*GetNameSafe(this),
+		*GetNameSafe(GetController()));
+	InitializeGameplayAbilitySystem();
+	RefreshClientPawnReadyState();
 }
 
 void AHeistCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -126,4 +130,57 @@ void AHeistCharacter::InitializeGameplayAbilitySystem()
 
 	// Owner = PlayerState, Avatar = Character
 	PawnExtensionComponent->InitializeAbilitySystem(AbilitySystemComponent, HeistPS);
+}
+
+bool AHeistCharacter::IsInMatchPhaseContext() const
+{
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return false;
+	}
+
+	const AHeistMatchGameState* MatchGameState = World->GetGameState<AHeistMatchGameState>();
+	if (!IsValid(MatchGameState))
+	{
+		return false;
+	}
+
+	return MatchGameState->IsBriefingPhase() || MatchGameState->IsExecutionPhase();
+}
+
+void AHeistCharacter::RefreshClientPawnReadyState()
+{
+	if (!IsInMatchPhaseContext())
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[PawnReady] Skip: not in match phase Pawn=%s"), *GetNameSafe(this));
+		return;
+	}
+
+	AHeistPlayerState* HeistPS = GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(HeistPS))
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[PawnReady] Defer: PlayerState invalid Pawn=%s"), *GetNameSafe(this));
+		return;
+	}
+
+	AController* OwnerController = GetController();
+	if (!IsValid(OwnerController))
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[PawnReady] Defer: Controller invalid Pawn=%s"), *GetNameSafe(this));
+		return;
+	}
+
+	// ASC/입력 수렴은 PossessedBy / OnRep_PlayerState / OnRep_Controller 에서 phase와 무관하게 먼저 시도한다.
+	// 여기서는 그 이후의 매치 전용 후처리(예: transparency trigger 재평가)만 담당한다.
+	UE_LOG(LogTemp, Log, TEXT("[PawnReady] Ready: Pawn=%s PS=%s Controller=%s Team=%d"),
+		*GetNameSafe(this),
+		*HeistPS->GetName(),
+		*OwnerController->GetName(),
+		static_cast<int32>(HeistPS->GetAssignedTeam()));
+
+	if (IsValid(PlayerComponent))
+	{
+		PlayerComponent->NotifyOverlappingTransparencyTriggers();
+	}
 }

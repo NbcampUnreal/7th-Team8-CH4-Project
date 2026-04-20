@@ -14,6 +14,18 @@ UHeistGameplayAbility::UHeistGameplayAbility()
 	ActivationBlockedTags.AddTag(HeistStateTags::State_ActionDisabled);
 }
 
+bool UHeistGameplayAbility::MatchesInteractionEventTag(FGameplayTag EventTag) const
+{
+	for (const FAbilityTriggerData& TriggerData : AbilityTriggers)
+	{
+		if (TriggerData.TriggerTag == EventTag && TriggerData.TriggerSource == EGameplayAbilityTriggerSource::GameplayEvent)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 const FChannelingData* UHeistGameplayAbility::GetChannelingData(FName RowName) const
 {
 	if (!IsValid(ChannelingDataTable)) return nullptr;
@@ -44,14 +56,14 @@ void UHeistGameplayAbility::StartChanneling(FName RowName)
 
 		MontageTask->ReadyForActivation();
 	}
-	
+
 	// Before - 채널링 잠금 GE 적용
 	if (IsValid(ChannelingEffectClass))
 	{
 		FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(ChannelingEffectClass, 1.f);
 		ChannelingEffectHandle = ApplyGameplayEffectSpecToOwner(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, Spec);
 	}
-	
+
 	// 1. 기본 타이머 (Duration)
 	UAbilityTask_WaitDelay* WaitTask = UAbilityTask_WaitDelay::WaitDelay(this, Data->Duration);
 	WaitTask->OnFinish.AddDynamic(this, &UHeistGameplayAbility::OnChannelingTimerExpired);
@@ -108,7 +120,7 @@ void UHeistGameplayAbility::OnMontageCancelled()
 void UHeistGameplayAbility::OnChannelingTimerExpired()
 {
 	bIsChanneling = false;
-	
+
 	// 현재 재생 중인 몽타주가 있다면 Outro 섹션으로 강제 점프시킵니다.
 	if (GetCurrentMontage())
 	{
@@ -119,8 +131,8 @@ void UHeistGameplayAbility::OnChannelingTimerExpired()
 		// 몽타주가 아예 없는 스킬이라면 타이머 종료 시 여기서 어빌리티를 직접 종료시킵니다.
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	}
-	
-	// 어빌리티 종료는 나중에 OnMontageCompleted 에서 하더라도, 
+
+	// 어빌리티 종료는 나중에 OnMontageCompleted 에서 하더라도,
 	// 스킬 발동 효과(데미지 판정, 투사체 발사 등)는 이 시점에서 터지도록 합니다.
 	OnChannelingCompleted();
 }
@@ -136,7 +148,7 @@ void UHeistGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 		GetAbilitySystemComponentFromActorInfo()->RemoveActiveGameplayEffect(ChannelingEffectHandle);
 		ChannelingEffectHandle.Invalidate();
 	}
-	
+
 	if (bIsChanneling && bWasCancelled)
 	{
 		bIsChanneling = false;

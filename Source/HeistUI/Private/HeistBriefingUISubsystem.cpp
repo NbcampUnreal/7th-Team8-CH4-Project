@@ -1,6 +1,7 @@
 #include "HeistBriefingUISubsystem.h"
 
 #include "HeistBriefingWidgetInterface.h"
+#include "HeistUIInputModeLibrary.h"
 #include "Blueprint/UserWidget.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
@@ -51,6 +52,11 @@ void UHeistBriefingUISubsystem::HandleBriefingContextReady(
 		BriefingWidgetInstance = CreateWidget<UUserWidget>(PC, Msg.WidgetClass);
 		if (!IsValid(BriefingWidgetInstance)) return;
 		BriefingWidgetInstance->AddToViewport();
+
+		UHeistUIInputModeLibrary::ApplyInputMode(
+		  PC,
+		  EHeistUIInputMode::Briefing,
+		  BriefingWidgetInstance);
 	}
 
 	if (IHeistBriefingWidgetInterface* BriefingWidgetInterface = Cast<IHeistBriefingWidgetInterface>(BriefingWidgetInstance))
@@ -64,9 +70,16 @@ void UHeistBriefingUISubsystem::HandleBriefingContextReady(
 
 void UHeistBriefingUISubsystem::HandleBriefingEnd(FGameplayTag, const FHeistBriefingEndMessage&)
 {
+	APlayerController* PC = GetLocalPlayer()->GetPlayerController(GetWorld());
+
 	if (IsValid(BriefingWidgetInstance))
 	{
 		BriefingWidgetInstance->RemoveFromParent();
 		BriefingWidgetInstance = nullptr;
+
+		UHeistUIInputModeLibrary::ApplyInputMode(
+			   PC,
+			   EHeistUIInputMode::Match,
+			   nullptr);
 	}
 }
