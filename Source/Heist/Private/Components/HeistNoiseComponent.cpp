@@ -1,12 +1,14 @@
-﻿#include "Components/HeistNoiseComponent.h"
+#include "Components/HeistNoiseComponent.h"
 
 #include "Data/HeistSoundData.h"
 #include "Character/PoliceCharacter.h"
 #include "Character/HeistTags_State.h"
 #include "AbilitySystem/HeistTags_Event.h"
 #include "AbilitySystem/HeistTags_FlagTags.h"
+#include "Components/SoundDetectionComponent.h"
 
 #include "Components/AudioComponent.h"
+#include "Sound/SoundAttenuation.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "AbilitySystemComponent.h"
@@ -26,11 +28,7 @@ void UHeistNoiseComponent::StartChannelingNoise(EHeistSoundType SoundType)
 	APawn* OwnerPawn = Cast<APawn>(GetOwner());
 	if (!IsValid(OwnerPawn)) return;
 
-	if (OwnerPawn->HasAuthority())
-	{
-		Server_StartChannelingNoise_Implementation(SoundType);
-	}
-	else if (OwnerPawn->IsLocallyControlled())
+	if (OwnerPawn->HasAuthority() || OwnerPawn->IsLocallyControlled())
 	{
 		Server_StartChannelingNoise(SoundType);
 	}
@@ -41,11 +39,7 @@ void UHeistNoiseComponent::StopChannelingNoise()
 	APawn* OwnerPawn = Cast<APawn>(GetOwner());
 	if (!IsValid(OwnerPawn)) return;
 
-	if (OwnerPawn->HasAuthority())
-	{
-		Server_StopChannelingNoise_Implementation();
-	}
-	else if (OwnerPawn->IsLocallyControlled())
+	if (OwnerPawn->HasAuthority() || OwnerPawn->IsLocallyControlled())
 	{
 		Server_StopChannelingNoise();
 	}
@@ -186,9 +180,17 @@ const FHeistSoundData* UHeistNoiseComponent::GetSoundData(EHeistSoundType SoundT
 float UHeistNoiseComponent::CalculateFinalDetectionRadius(const FHeistSoundData* SoundData, UAbilitySystemComponent* OwnerASC) const
 {
 	if (SoundData == nullptr) return 0.0f;
-	if (!IsValid(OwnerASC)) return SoundData->BaseRadius;
 
-	float FinalRadius = SoundData->BaseRadius;
+	float BaseRadius = SoundData->BaseRadius;
+
+	if (IsValid(SoundData->AttenuationSettings))
+	{
+		BaseRadius = SoundData->AttenuationSettings->Attenuation.GetMaxDimension();
+	}
+
+	float FinalRadius = BaseRadius;
+
+	if (!IsValid(OwnerASC)) return FinalRadius;
 
 	// 부상 상태 체크
 	if (OwnerASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Injured))
@@ -229,22 +231,11 @@ void UHeistNoiseComponent::DetectPoliceAndSendEvent(const FHeistSoundData* Sound
 
 		if (bShouldAlert)
 		{
-			FGameplayEventData Payload;
-			Payload.Instigator = GetOwner();
-			Payload.Target = PoliceCharacter;
-			Payload.EventMagnitude = FinalRadius;
-
-			FGameplayAbilityTargetData_LocationInfo* LocationData = new FGameplayAbilityTargetData_LocationInfo();
-			LocationData->TargetLocation.LiteralTransform = FTransform(OriginLocation);
-			LocationData->TargetLocation.LocationType = EGameplayAbilityTargetingLocationType::LiteralTransform;
-
-			Payload.TargetData.Add(LocationData);
-
-			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-				PoliceCharacter,
-				HeistEventTags::Event_SoundDetected,
-				Payload
-			);
+			USoundDetectionComponent* DetectionComp = PoliceCharacter->GetComponentByClass<USoundDetectionComponent>();
+			if (IsValid(DetectionComp))
+			{
+				DetectionComp->ReceiveSoundDetection(OriginLocation, FinalRadius);
+			}
 		}
 	}
 }
