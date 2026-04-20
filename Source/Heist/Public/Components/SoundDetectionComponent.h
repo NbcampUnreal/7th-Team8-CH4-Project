@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
@@ -14,9 +14,11 @@ class HEIST_API USoundDetectionComponent : public UActorComponent
 public:
 	USoundDetectionComponent();
 
+	void ReceiveSoundDetection(const FVector& SoundLocation, float DetectionRadius);
 protected:
-	virtual void BeginPlay() override;
+	UFUNCTION(Client, Unreliable)
+	void Client_ReceiveSoundDetection(const FVector& SoundLocation, float DetectionRadius);
 
 private:
-	void OnSoundDetectedEvent(const FGameplayEventData* Payload);
+	void BroadcastToUI(const FVector& SoundLocation, float DetectionRadius);
 };
