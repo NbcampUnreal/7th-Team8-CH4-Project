@@ -19,6 +19,16 @@ void UHeistPhaseManagerComponent::StartMatchFlow()
 	EnterBriefingPhase();
 }
 
+void UHeistPhaseManagerComponent::StopActiveTimers()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(BriefingLockTimerHandle);
+		World->GetTimerManager().ClearTimer(BriefingTimerHandle);
+		World->GetTimerManager().ClearTimer(ExecutionTimerHandle);
+	}
+}
+
 void UHeistPhaseManagerComponent::EnterBriefingPhase()
 {
 	AHeistMatchGameMode* HeistGM = GetOwner<AHeistMatchGameMode>();
@@ -40,8 +50,7 @@ void UHeistPhaseManagerComponent::EnterBriefingPhase()
 
 	if (UWorld* World = GetWorld())
 	{
-		World->GetTimerManager().ClearTimer(BriefingLockTimerHandle);
-		World->GetTimerManager().ClearTimer(BriefingTimerHandle);
+		StopActiveTimers();
 
 		World->GetTimerManager().SetTimer(
 			BriefingLockTimerHandle,
@@ -82,20 +91,37 @@ void UHeistPhaseManagerComponent::EnterExecutionPhase()
 
 	if (UWorld* World = GetWorld())
 	{
-		World->GetTimerManager().ClearTimer(BriefingLockTimerHandle);
-		World->GetTimerManager().ClearTimer(BriefingTimerHandle);
+		StopActiveTimers();
 	}
 
 	if (AHeistMatchGameState* HeistGS = HeistGM->GetGameState<AHeistMatchGameState>())
 	{
 		HeistGS->SetCurrentPhase(EHeistMatchPhase::Execution);
 		HeistGS->SetBriefingSelectionLocked(true);
-		HeistGS->SetPhaseRemainingTime(0.f);
-		HeistGS->SetPhaseEndServerTime(0.f);
+		HeistGS->SetPhaseRemainingTime(ExecutionDuration);
+		HeistGS->SetPhaseEndServerTime(GetWorld()->GetGameState()->GetServerWorldTimeSeconds() + ExecutionDuration);
 	}
 
 	if (UHeistExecutionPhaseComponent* ExecutionPhase = HeistGM->FindComponentByClass<UHeistExecutionPhaseComponent>())
 	{
 		ExecutionPhase->EnterExecutionPhase();
 	}
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			ExecutionTimerHandle,
+			this,
+			&ThisClass::HandleExecutionTimeExpired,
+			ExecutionDuration,
+			false);
+	}
+}
+
+void UHeistPhaseManagerComponent::HandleExecutionTimeExpired()
+{
+	AHeistMatchGameMode* HeistGM = GetOwner<AHeistMatchGameMode>();
+	if (!IsValid(HeistGM)) return;
+
+	HeistGM->NotifyPoliceVictory();
 }

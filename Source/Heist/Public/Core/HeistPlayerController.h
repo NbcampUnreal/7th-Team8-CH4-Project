@@ -7,6 +7,7 @@
 #include "HeistPlayerController.generated.h"
 
 class UHeistBriefingPlayerComponent;
+class UHeistSpectatorControllerComponent;
 class AHeistBriefingDrawingBoard;
 
 UCLASS()
@@ -31,6 +32,9 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void ClientEndBriefingPresentation();
+
+	UFUNCTION(Client, Reliable)
+	void ClientNotifyArrested();
 
 	void TryNotifyBriefingContextReady();
 
@@ -60,6 +64,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> SystemMenuInputAction;
+
+	UPROPERTY(VisibleAnywhere, Category = "Heist|Components")
+	TObjectPtr<UHeistSpectatorControllerComponent> SpectatorControllerComponent;
 
 	void Input_SystemMenu();
 

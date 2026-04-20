@@ -1,7 +1,9 @@
 ﻿#include "Core/PoliceCar_Trigger.h"
 
 #include "Character/ThiefCharacter.h"
+#include "Components/HeistArrestVictoryComponent.h"
 #include "Components/ThiefEscortComponent.h"
+#include "Core/HeistMatchGameMode.h"
 #include "AbilitySystem/HeistTags_Event.h"
 #include "AbilitySystemComponent.h"
 
@@ -51,17 +53,26 @@ void APoliceCar_Trigger::OnOverlapBegin(
 	Payload.Instigator = this;
 	Payload.Target = Thief;
 
-	// 1. 도둑에게 경찰차 도착 이벤트 전달 (아웃 처리용)
+	// 1. 도둑 쪽은 네이티브 체포 처리와 분리된 연출/확장용 이벤트만 발송한다.
 	UAbilitySystemComponent* ThiefASC = Thief->GetAbilitySystemComponent();
 	if (IsValid(ThiefASC))
 	{
-		ThiefASC->HandleGameplayEvent(HeistEventTags::Event_ArrivedAtCar, &Payload);
+		ThiefASC->HandleGameplayEvent(HeistEventTags::Event_Arrested, &Payload);
 	}
 
-	// 2. 경찰에게 이벤트 전달하여 Escort 어빌리티 정상 종료
+	// 2. 경찰 Escort 어빌리티는 C++에서 Event_ArrivedAtCar를 기다리고 있으므로 유지한다.
 	UAbilitySystemComponent* PoliceASC = Police->GetAbilitySystemComponent();
 	if (IsValid(PoliceASC))
 	{
 		PoliceASC->HandleGameplayEvent(HeistEventTags::Event_ArrivedAtCar, &Payload);
+	}
+
+	// 체포 확정과 승리 집계는 별도의 서버 authoritative 로직에서 처리한다.
+	AHeistMatchGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<AHeistMatchGameMode>() : nullptr;
+	if (!IsValid(GM)) return;
+
+	if (UHeistArrestVictoryComponent* ArrestComp = GM->FindComponentByClass<UHeistArrestVictoryComponent>())
+	{
+		ArrestComp->NotifyThiefArrested(Thief);
 	}
 }

@@ -3,6 +3,7 @@
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "Core/HeistLobbyGameMode.h"
 #include "Character/HeistTags_State.h"
+#include "Components/HeistSpectatorControllerComponent.h"
 #include "Core/HeistMatchGameMode.h"
 #include "Core/HeistPlayerState.h"
 #include "Voice/HeistVoipTalker.h"
@@ -26,6 +27,7 @@
 AHeistPlayerController::AHeistPlayerController()
 {
 	bShowMouseCursor = true;
+	SpectatorControllerComponent = CreateDefaultSubobject<UHeistSpectatorControllerComponent>(TEXT("SpectatorControllerComponent"));
 }
 
 void AHeistPlayerController::BeginPlay()
@@ -63,6 +65,11 @@ void AHeistPlayerController::BeginPlay()
 void AHeistPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+
+	if (IsValid(SpectatorControllerComponent))
+	{
+		SpectatorControllerComponent->BindInput(InputComponent);
+	}
 
 	if (!IsValid(SystemMenuInputAction)) return;
 
@@ -434,13 +441,17 @@ void AHeistPlayerController::ServerNotifyReadyForBriefingStart_Implementation()
 
 void AHeistPlayerController::ServerNotifyReadyForMatchTravel_Implementation()
 {
-	AHeistLobbyGameMode* LobbyGM = GetWorld() ? GetWorld()->GetAuthGameMode<AHeistLobbyGameMode>() : nullptr;
-	if (!IsValid(LobbyGM))
+	if (AHeistLobbyGameMode* LobbyGM = GetWorld() ? GetWorld()->GetAuthGameMode<AHeistLobbyGameMode>() : nullptr; IsValid(LobbyGM))
 	{
+		LobbyGM->NotifyPlayerReadyForMatchTravel(this);
 		return;
 	}
 
-	LobbyGM->NotifyPlayerReadyForMatchTravel(this);
+	if (AHeistMatchGameMode* MatchGM = GetWorld() ? GetWorld()->GetAuthGameMode<AHeistMatchGameMode>() : nullptr; IsValid(MatchGM))
+	{
+		MatchGM->NotifyPlayerReadyForMatchTravel(this);
+		return;
+	}
 }
 
 void AHeistPlayerController::ClientPrepareForMatchTravel_Implementation()
@@ -473,6 +484,13 @@ void AHeistPlayerController::ClientEndBriefingPresentation_Implementation()
 {
 	UHeistMessageSubsystem::Get(this).BroadcastMessage(
 		HeistMessageTags::Message_Briefing_End, FHeistBriefingEndMessage{});
+}
+
+void AHeistPlayerController::ClientNotifyArrested_Implementation()
+{
+	if (!IsValid(SpectatorControllerComponent)) return;
+
+	SpectatorControllerComponent->EnterArrestSpectating();
 }
 
 void AHeistPlayerController::UpdateCursorRotation()

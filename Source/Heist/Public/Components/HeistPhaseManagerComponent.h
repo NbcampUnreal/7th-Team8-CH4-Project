@@ -26,18 +26,24 @@ class HEIST_API UHeistPhaseManagerComponent : public UActorComponent
 
 public:
 	void StartMatchFlow();
+	void StopActiveTimers();
 
 private:
 	void EnterBriefingPhase();
 	void LockBriefingSelections();
 	void EnterExecutionPhase();
+	void HandleExecutionTimeExpired();
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Phase")
 	float BriefingDuration = 80.f; // 기본 - 1분 20초
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Phase")
 	float LockLeadTime = 10.f; // 10초 전 잠금
+
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|Phase", meta=(ClampMin="1"))
+	float ExecutionDuration = 300.f;
 	
 	FTimerHandle BriefingLockTimerHandle;
 	FTimerHandle BriefingTimerHandle;
+	FTimerHandle ExecutionTimerHandle;
 };
