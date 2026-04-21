@@ -22,6 +22,9 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerRequestSetReady(bool bReady);
 
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void ServerRequestTogglePreviewCharacter();
+
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyReadyForBriefingStart();
 

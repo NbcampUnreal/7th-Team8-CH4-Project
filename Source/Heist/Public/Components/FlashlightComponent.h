@@ -31,6 +31,8 @@ public:
 
 	void TryStartLocalVision();
 	void StopLocalVision();
+	// [로비 전용] 경찰 프리뷰 → 도둑 전환 시 숨겨진 모든 ThiefCharacter의 visibility를 복구한다.
+	void RestoreAllThiefVisibility();
 
 	float GetFlashlightRadius() const { return FlashlightRadius; }
 	float GetFlashlightHalfAngle() const { return FlashlightHalfAngle; }

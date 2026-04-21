@@ -1,6 +1,9 @@
 #include "Core/HeistPlayerController.h"
 
 #include "Camera/HeistWallAvoidanceCameraModifier.h"
+#include "Character/ThiefCharacter.h"
+#include "Character/PoliceCharacter.h"
+#include "Components/HeistTransparencyComponent.h"
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "Core/HeistLobbyGameMode.h"
 #include "Character/HeistTags_State.h"
@@ -20,6 +23,7 @@
 #include "Interfaces/VoiceInterface.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "DrawDebugHelpers.h"
+#include "EngineUtils.h"
 #include "Core/HeistMatchGameState.h"
 #include "GameFramework/GameStateBase.h"
 #include "Sound/SoundAttenuation.h"
@@ -99,6 +103,17 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 		*GetNameSafe(this),
 		*GetNameSafe(NewPawn));
 	SetAudioListenerOverride(NewPawn->GetRootComponent(), FVector::ZeroVector, FRotator::ZeroRotator);
+
+	if (!NewPawn->IsA<APoliceCharacter>())
+	{
+		for (TActorIterator<AThiefCharacter> It(GetWorld()); It; ++It)
+		{
+			if (UHeistTransparencyComponent* TC = (*It)->GetComponentByClass<UHeistTransparencyComponent>())
+			{
+				TC->ForceRestoreVisibility();
+			}
+		}
+	}
 
 	TryNotifyBriefingContextReady();
 
@@ -432,6 +447,14 @@ void AHeistPlayerController::ServerRequestSetReady_Implementation(bool bReady)
 	if (!IsValid(HeistPS)) return;
 
 	HeistPS->SetIsReady(bReady);
+}
+
+void AHeistPlayerController::ServerRequestTogglePreviewCharacter_Implementation()
+{
+	AHeistLobbyGameMode* LobbyGM = GetWorld() ? GetWorld()->GetAuthGameMode<AHeistLobbyGameMode>() : nullptr;
+	if (!IsValid(LobbyGM)) return;
+
+	LobbyGM->RequestTogglePreviewCharacter(this);
 }
 
 void AHeistPlayerController::ServerNotifyReadyForBriefingStart_Implementation()

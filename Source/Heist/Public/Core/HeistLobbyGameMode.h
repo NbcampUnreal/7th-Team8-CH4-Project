@@ -26,6 +26,7 @@ public:
 	 * 최소 인원(MinPlayersToStart) 미충족 시 무시.
 	 */
 	void RequestStartGame(APlayerController* Requester);
+	void RequestTogglePreviewCharacter(APlayerController* Requester);
 	void NotifyPlayerReadyForMatchTravel(APlayerController* PlayerController);
 
 private:
@@ -33,6 +34,13 @@ private:
 	void HandleMatchTravelReadyTimeout();
 	int32 CountExpectedPlayersForMatchTravel() const;
 	int32 CountReadyPlayersForMatchTravel() const;
+
+	// 로비 프리뷰용 캐릭터 클래스. Blueprint Class Defaults에서 설정한다.
+	UPROPERTY(EditDefaultsOnly, Category = "Lobby|Preview")
+	TSubclassOf<APawn> LobbyThiefCharacterClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Lobby|Preview")
+	TSubclassOf<APawn> LobbyPoliceCharacterClass;
 
 	// 게임 맵 경로. Blueprint Class Defaults에서 설정한다.
 	UPROPERTY(EditDefaultsOnly, Category = "Lobby")

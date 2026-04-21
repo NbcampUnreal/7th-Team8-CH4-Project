@@ -3,6 +3,7 @@
 #include "Core/HeistLobbyGameState.h"
 #include "Core/HeistPlayerController.h"
 #include "Core/HeistPlayerState.h"
+#include "Components/FlashlightComponent.h"
 #include "MultiplayerSessionsSubsystem.h"
 #include "Voice/HeistVoiceSubsystem.h"
 
@@ -136,6 +137,51 @@ void AHeistLobbyGameMode::RequestStartGame(APlayerController* Requester)
 		&AHeistLobbyGameMode::HandleMatchTravelReadyTimeout,
 		MatchTravelReadyTimeoutSeconds,
 		false);
+}
+
+void AHeistLobbyGameMode::RequestTogglePreviewCharacter(APlayerController* Requester)
+{
+	if (!IsValid(Requester)) return;
+	if (bStartGameRequested) return;
+
+	APawn* CurrentPawn = Requester->GetPawn();
+	if (!IsValid(CurrentPawn)) return;
+
+	TSubclassOf<APawn> TargetClass = nullptr;
+	if (IsValid(LobbyThiefCharacterClass) && CurrentPawn->IsA(LobbyThiefCharacterClass))
+	{
+		TargetClass = LobbyPoliceCharacterClass;
+	}
+	else if (IsValid(LobbyPoliceCharacterClass) && CurrentPawn->IsA(LobbyPoliceCharacterClass))
+	{
+		TargetClass = LobbyThiefCharacterClass;
+	}
+
+	if (!IsValid(TargetClass)) return;
+
+	UWorld* World = GetWorld();
+	if (!IsValid(World)) return;
+
+	const FVector SpawnLocation = CurrentPawn->GetActorLocation();
+	const FRotator SpawnRotation = CurrentPawn->GetActorRotation();
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	APawn* NewPawn = World->SpawnActor<APawn>(TargetClass, SpawnLocation, SpawnRotation, SpawnParams);
+	if (!IsValid(NewPawn)) return;
+
+	APawn* OldPawn = Requester->GetPawn();
+	Requester->Possess(NewPawn);
+	if (IsValid(OldPawn))
+	{
+		if (UFlashlightComponent* Flashlight = OldPawn->GetComponentByClass<UFlashlightComponent>())
+		{
+			Flashlight->StopLocalVision();
+			Flashlight->RestoreAllThiefVisibility();
+		}
+		OldPawn->Destroy();
+	}
 }
 
 bool AHeistLobbyGameMode::IsHostController(APlayerController* PlayerController) const
