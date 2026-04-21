@@ -9,6 +9,7 @@ class UBoxComponent;
 class UStaticMeshComponent;
 class AHeistCharacter;
 class UHeistInteractSphereComponent;
+struct FGameplayTag;
 
 UCLASS()
 class HEIST_API AEscapeActor : public AActor
@@ -20,6 +21,9 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+	bool CheckCanInteract(ACharacter* Interactor) const;
+	FGameplayTag ResolveInteractAbilityTag(ACharacter* Interactor) const;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess))
