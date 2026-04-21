@@ -1,21 +1,24 @@
 #include "Actors/ItemActor.h"
 
-#include "Components/BoxComponent.h"
 #include "AbilitySystem/HeistTags_FlagTags.h"
 #include "AbilitySystem/HeistTags_Event.h"
+#include "Components/HeistInteractSphereComponent.h"
+#include "Components/HeistTransparencyComponent.h"
+#include "Character/HeistCharacter.h"
 #include "Data/ItemData.h"
+
+#include "Components/BoxComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
-#include "Character/HeistCharacter.h"
 #include "GameplayTagContainer.h"
-#include "Components/HeistInteractSphereComponent.h"
+#include "GameFramework/PlayerController.h"
 
 AItemActor::AItemActor() : CurrentCarrierCount(0)
 {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = false;
-	bReplicates = true; 
+	bReplicates = true;
 	SetReplicateMovement(true);
 
 	//SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
@@ -36,11 +39,14 @@ AItemActor::AItemActor() : CurrentCarrierCount(0)
 	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	InteractSphereComponent = CreateDefaultSubobject<UHeistInteractSphereComponent>(TEXT("InteractSphereComponent"));
+
+	TransparencyComponent = CreateDefaultSubobject<UHeistTransparencyComponent>(TEXT("TransparencyComponent"));
+	TransparencyComponent->bStartInvisibleToPolice = false;
 }
 
 int32 AItemActor::GetItemValue()
 {
-	if(GetItemData()) return GetItemData()->Value;
+	if (GetItemData()) return GetItemData()->Value;
 	return 0;
 }
 
@@ -80,7 +86,10 @@ void AItemActor::Tick(float DeltaTime)
 					CombineQuat = SumRotation.Quaternion();
 					bFirst = false;
 				}
-				else CombineQuat += SumRotation.Quaternion();
+				else
+				{
+					CombineQuat += SumRotation.Quaternion();
+				}
 			}
 		}
 		FVector TargetLocation = SumLocation / CurrentCarriers.Num();
@@ -107,7 +116,7 @@ void AItemActor::Tick(float DeltaTime)
 
 void AItemActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps); 
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AItemActor, CurrentCarrierCount);
 }
@@ -186,27 +195,31 @@ void AItemActor::CheckDrop()
 
 void AItemActor::OnPickedUp(AHeistCharacter* InCarrier)
 {
-	if (!InCarrier || !HasAuthority()) return;
+	if (!IsValid(InCarrier) || !HasAuthority()) return;
+
 	if (CurrentCarrierCount <= 0)
 	{
-		BoxCollision->SetSimulatePhysics(false); 
+		BoxCollision->SetSimulatePhysics(false);
 		SetActorTickEnabled(true);
 	}
 	if (!CurrentCarriers.Contains(InCarrier))
 	{
 		CurrentCarriers.Add(InCarrier, GetActorRotation() - InCarrier->GetActorRotation());
 		CurrentCarrierCount++;
+		OnRep_CurrentCarrierCount();
 	}
 	NotifyCarriersUpdate();
 }
 
 void AItemActor::OnDropOff(AHeistCharacter* InCarrier)
 {
-	if (!InCarrier || !HasAuthority()) return;
+	if (!IsValid(InCarrier) || !HasAuthority()) return;
+
 	if (CurrentCarriers.Contains(InCarrier))
 	{
 		CurrentCarriers.Remove(InCarrier);
 		CurrentCarrierCount--;
+		OnRep_CurrentCarrierCount();
 	}
 	if (CurrentCarrierCount <= 0)
 	{
@@ -216,6 +229,14 @@ void AItemActor::OnDropOff(AHeistCharacter* InCarrier)
 	NotifyCarriersUpdate();
 }
 
+void AItemActor::OnRep_CurrentCarrierCount()
+{
+	if (!IsValid(TransparencyComponent)) return;
+
+	const bool bShouldBeVisibleToPolice = (CurrentCarrierCount <= 0);
+	TransparencyComponent->SetTargetVisibility(bShouldBeVisibleToPolice);
+}
+
 int32 AItemActor::GetRequiredCarriers_Implementation() const
 {
 	return GetItemData()->RequiredCarriers;
@@ -223,9 +244,9 @@ int32 AItemActor::GetRequiredCarriers_Implementation() const
 
 float AItemActor::GetCarrySpeedMultiplier_Implementation(int32 CarrierCount) const
 {
-	if(CurrentCarrierCount == 1) return GetItemData()->SoloCarrySpeedMultiplier;
-	else if(CurrentCarrierCount >= 2) return GetItemData()->CarrySpeedMultiplier;
-	
+	if (CurrentCarrierCount == 1) return GetItemData()->SoloCarrySpeedMultiplier;
+	else if (CurrentCarrierCount >= 2) return GetItemData()->CarrySpeedMultiplier;
+
 	return 1.f;
 }
 
