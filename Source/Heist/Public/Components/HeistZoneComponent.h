@@ -22,6 +22,9 @@ private:
 
 	int32 IndoorVolumeCount = 0;
 	int32 OutdoorVolumeCount = 0;
+
 	EHeistZoneType ResolvedZone;
+	FTimerHandle ASCInitRetryTimerHandle;
+
 	bool bZoneInitialized = false;
 };
