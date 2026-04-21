@@ -31,7 +31,9 @@ public:
 	void TryStartLocalVision();
 	void StopLocalVision();
 
-	// HUD 및 사운드에서 구독
+	float GetFlashlightRadius() const { return FlashlightRadius; }
+	float GetFlashlightHalfAngle() const { return FlashlightHalfAngle; }
+
 	UPROPERTY(BlueprintAssignable, Category = "Heist|Vision")
 	FOnThiefSpotted OnThiefSpotted;
 
@@ -41,11 +43,12 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-
 private:
-	// TODO(하민): Data 에셋이나 테이블에서 관리하도록 추후 연결
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Vision")
 	float FlashlightRadius = 900.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|Vision")
+	float CloseVisionRadius = 200.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Vision")
 	float FlashlightHalfAngle = 30.0f;
@@ -57,12 +60,15 @@ private:
 	float VisionCheckInterval = 0.1f;
 
 	UPROPERTY()
-	TSet<AThiefCharacter*> PreviouslyVisibleThieves;
+	TArray<TObjectPtr<AThiefCharacter>> PreviouslyVisibleThieves;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AThiefCharacter>> PreviouslyThievesInCone;
 
 	FTimerHandle VisionCheckTimerHandle;
 
+	bool IsThiefInFlashlight(AThiefCharacter* Thief, bool bWasPreviouslyVisible) const;
+
 	UFUNCTION()
 	void ProcessLocalVision();
-
-	bool IsThiefInFlashlight(AThiefCharacter* Thief, bool bWasPreviouslyVisible) const;
 };
