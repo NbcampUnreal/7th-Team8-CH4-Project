@@ -6,6 +6,10 @@
 
 class UImage;
 class UBorder;
+struct FGameplayEffectSpec;
+struct FActiveGameplayEffectHandle;
+class UAbilitySystemComponent;
+class UHeistAbilitySystemComponent;
 
 UCLASS()
 class HEISTUI_API UHeistThiefSlotWidget : public UUserWidget
@@ -13,6 +17,7 @@ class HEISTUI_API UHeistThiefSlotWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	void BindToASC(UHeistAbilitySystemComponent* InASC);
 
 protected:
 	UPROPERTY(meta = (BindWidget))
@@ -27,6 +32,12 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UBorder* Border_StateText;
 
-private:
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnStatusChanged(const FString& StateName);
 
+	void OnGameplayEffectAdded(UAbilitySystemComponent* ASC, const FGameplayEffectSpec& Spec, FActiveGameplayEffectHandle AGEHandle);
+
+private:
+	UPROPERTY()
+	TObjectPtr<UHeistAbilitySystemComponent> CachedASC;
 };
