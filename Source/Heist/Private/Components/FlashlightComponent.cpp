@@ -2,6 +2,7 @@
 
 #include "Character/ThiefCharacter.h"
 #include "Character/HeistTags_State.h"
+#include "Components/HeistTransparencyComponent.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "Systems/Messaging/HeistTags_Message.h"
@@ -10,11 +11,6 @@
 #include "GameFramework/Pawn.h"
 #include "EngineUtils.h"
 #include "TimerManager.h"
-
-// TODO(하민): Material 적용할 때 디버깅 라인 제거
-#if !UE_BUILD_SHIPPING
-#include "DrawDebugHelpers.h"
-#endif
 
 UFlashlightComponent::UFlashlightComponent()
 {
@@ -29,23 +25,18 @@ void UFlashlightComponent::BeginPlay()
 void UFlashlightComponent::TryStartLocalVision()
 {
 	APawn* OwnerPawn = Cast<APawn>(GetOwner());
-	if (!IsValid(OwnerPawn) || !OwnerPawn->IsLocallyControlled())
-	{
-		return;
-	}
+	if (!IsValid(OwnerPawn) || !OwnerPawn->IsLocallyControlled()) return;
 
 	UWorld* World = GetWorld();
-	if (!IsValid(World) || World->GetTimerManager().IsTimerActive(VisionCheckTimerHandle))
-	{
-		return;
-	}
+	if (!IsValid(World) || World->GetTimerManager().IsTimerActive(VisionCheckTimerHandle)) return;
 
 	World->GetTimerManager().SetTimer(VisionCheckTimerHandle, this, &UFlashlightComponent::ProcessLocalVision, VisionCheckInterval, true);
 }
 
 void UFlashlightComponent::StopLocalVision()
 {
-	if (UWorld* World = GetWorld())
+	UWorld* World = GetWorld();
+	if (IsValid(World))
 	{
 		World->GetTimerManager().ClearTimer(VisionCheckTimerHandle);
 	}
@@ -114,28 +105,8 @@ void UFlashlightComponent::ProcessLocalVision()
 	AActor* OwnerActor = GetOwner();
 	if (!IsValid(OwnerActor)) return;
 
-	// TODO(하민): Material 적용할 때 디버깅 라인 제거
-#if !UE_BUILD_SHIPPING
-	constexpr int32 DebugConeSegments = 16;
-	constexpr float DebugConeLifeTime = 0.15f;
-
-	DrawDebugCone(
-		GetWorld(),
-		OwnerActor->GetActorLocation(),
-		OwnerActor->GetActorForwardVector(),
-		FlashlightRadius,
-		FMath::DegreesToRadians(FlashlightHalfAngle),
-		FMath::DegreesToRadians(FlashlightHalfAngle),
-		DebugConeSegments,
-		FColor::Yellow,
-		false,
-		DebugConeLifeTime,
-		0,
-		1.0f
-	);
-#endif
-
-	TSet<AThiefCharacter*> CurrentlyVisibleThieves;
+	TArray<TObjectPtr<AThiefCharacter>> CurrentlyVisibleThieves;
+	TArray<TObjectPtr<AThiefCharacter>> CurrentlyThievesInCone;
 
 	for (TActorIterator<AThiefCharacter> It(GetWorld()); It; ++It)
 	{
@@ -145,18 +116,33 @@ void UFlashlightComponent::ProcessLocalVision()
 		UAbilitySystemComponent* ThiefASC = Thief->GetAbilitySystemComponent();
 		if (!IsValid(ThiefASC)) continue;
 
-		const bool bWasPreviouslyVisible = PreviouslyVisibleThieves.Contains(Thief);
-		const bool bIsNowVisible = IsThiefInFlashlight(Thief, bWasPreviouslyVisible);
+		// 1. 손전등 (Cone) 검사
+		const bool bWasInCone = PreviouslyThievesInCone.Contains(Thief);
+		const bool bIsInCone = IsThiefInFlashlight(Thief, bWasInCone);
 
-		if (bIsNowVisible != bWasPreviouslyVisible)
+		// 2. 근접 (원형) 검사: 이송 중이거나 뒤통수를 치러오는 도둑 판단용
+		const float DistanceSq = FVector::DistSquaredXY(OwnerActor->GetActorLocation(), Thief->GetActorLocation());
+		const bool bInCloseVision = (DistanceSq <= (CloseVisionRadius * CloseVisionRadius));
+
+		const bool bWasVisible = PreviouslyVisibleThieves.Contains(Thief);
+		const bool bIsNowVisible = bIsInCone || bInCloseVision;
+
+		if (bIsNowVisible != bWasVisible)
 		{
-			USkeletalMeshComponent* ThiefMesh = Thief->GetMesh();
-			if (IsValid(ThiefMesh))
+			UHeistTransparencyComponent* TransComp = Thief->GetComponentByClass<UHeistTransparencyComponent>();
+			if (IsValid(TransComp))
+			{
+				TransComp->SetTargetVisibility(bIsNowVisible);
+			}
+			else if (USkeletalMeshComponent* ThiefMesh = Thief->GetMesh())
 			{
 				ThiefMesh->SetVisibility(bIsNowVisible, true);
 			}
+		}
 
-			if (bIsNowVisible)
+		if (bIsInCone != bWasInCone)
+		{
+			if (bIsInCone)
 			{
 				OnThiefSpotted.Broadcast(Thief);
 				ThiefASC->AddLooseGameplayTag(HeistStateTags::State_Thief_InFlashlight);
@@ -168,23 +154,10 @@ void UFlashlightComponent::ProcessLocalVision()
 			}
 		}
 
-		if (bIsNowVisible)
-		{
-			CurrentlyVisibleThieves.Add(Thief);
-		}
-	}
-
-	const bool bWasAnyVisible = (PreviouslyVisibleThieves.Num() > 0);
-	const bool bIsAnyVisible = (CurrentlyVisibleThieves.Num() > 0);
-
-	if (bWasAnyVisible != bIsAnyVisible)
-	{
-		FHeistFlashlightAlertMessage Message;
-		Message.bIsDetected = bIsAnyVisible;
-
-		UHeistMessageSubsystem& MessageSubsystem = UHeistMessageSubsystem::Get(GetWorld());
-		MessageSubsystem.BroadcastMessage(HeistMessageTags::Message_UI_FlashlightAlert, Message);
+		if (bIsNowVisible) CurrentlyVisibleThieves.Add(Thief);
+		if (bIsInCone) CurrentlyThievesInCone.Add(Thief);
 	}
 
 	PreviouslyVisibleThieves = CurrentlyVisibleThieves;
+	PreviouslyThievesInCone = CurrentlyThievesInCone;
 }
