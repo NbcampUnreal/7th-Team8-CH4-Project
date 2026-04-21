@@ -9,6 +9,7 @@
 class UHeistBriefingPlayerComponent;
 class UHeistSpectatorControllerComponent;
 class AHeistBriefingDrawingBoard;
+class UHeistWallAvoidanceCameraModifier;
 
 UCLASS()
 class HEIST_API AHeistPlayerController : public APlayerController
@@ -20,6 +21,9 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRequestSetReady(bool bReady);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void ServerRequestTogglePreviewCharacter();
 
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyReadyForBriefingStart();
@@ -69,6 +73,9 @@ private:
 	TObjectPtr<UHeistSpectatorControllerComponent> SpectatorControllerComponent;
 
 	void Input_SystemMenu();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Camera")
+	TSubclassOf<UHeistWallAvoidanceCameraModifier> WallAvoidanceCameraModifierClass;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Voice|Debug")
 	bool bShowVoiceRange = false;

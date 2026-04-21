@@ -6,6 +6,10 @@
 #include "Components/HeistInteractionComponent.h"
 #include "HeistCharacter.generated.h"
 
+class AHeistPlayerState;
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnHeistPlayerStateInitialized, AHeistPlayerState*);
+
 class UHeistHitReactionComponent;
 class UHeistPawnExtensionComponent;
 class UHeistPlayerComponent;
@@ -37,6 +41,9 @@ public:
 	// IAbilitySystemInterface
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UHeistAbilitySystemComponent* GetHeistAbilitySystemComponent() const;
+
+	// PlayerState가 처음 유효해지는 시점에 발행. PossessedBy(서버) 또는 OnRep_PlayerState(클라이언트) 경로.
+	FOnHeistPlayerStateInitialized OnPlayerStateInitialized;
 
 protected:
 	virtual void BeginPlay() override;

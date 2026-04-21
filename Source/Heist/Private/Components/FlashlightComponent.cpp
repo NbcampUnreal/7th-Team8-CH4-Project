@@ -43,6 +43,31 @@ void UFlashlightComponent::StopLocalVision()
 	}
 }
 
+void UFlashlightComponent::RestoreAllThiefVisibility()
+{
+	UWorld* World = GetWorld();
+	if (!IsValid(World)) return;
+
+	for (TActorIterator<AThiefCharacter> It(World); It; ++It)
+	{
+		AThiefCharacter* Thief = *It;
+		if (!IsValid(Thief)) continue;
+
+		UHeistTransparencyComponent* TransparencyComponent = Thief->GetComponentByClass<UHeistTransparencyComponent>();
+		if (IsValid(TransparencyComponent))
+		{
+			TransparencyComponent->SetTargetVisibility(true);
+		}
+		else if (USkeletalMeshComponent* ThiefMesh = Thief->GetMesh())
+		{
+			ThiefMesh->SetVisibility(true, true);
+		}
+	}
+
+	PreviouslyVisibleThieves.Reset();
+	PreviouslyThievesInCone.Reset();
+}
+
 bool UFlashlightComponent::IsThiefInFlashlight(AThiefCharacter* Thief, bool bWasPreviouslyVisible) const
 {
 	UAbilitySystemComponent* ThiefAbilitySystemComponent = Thief->GetAbilitySystemComponent();

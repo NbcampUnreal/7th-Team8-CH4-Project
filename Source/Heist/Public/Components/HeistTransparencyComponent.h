@@ -18,6 +18,8 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	void SetTargetVisibility(bool bVisible);
+	// [로비 전용] 경찰 프리뷰 → 도둑 전환 시 투명도 상태를 완전 초기화한다.
+	void ForceRestoreVisibility();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Heist|Transparency")
 	bool bStartInvisibleToPolice = true;

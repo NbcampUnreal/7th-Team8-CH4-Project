@@ -9,7 +9,6 @@
 #include "Core/HeistPlayerState.h"
 
 #include "Components/Button.h"
-#include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/PlatformApplicationMisc.h"
@@ -75,7 +74,6 @@ void UHeistLobbyWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	RefreshPlayerList();
 	RefreshStartButtonState();
 
 	const bool bIsHost = IsValid(GetWorld()->GetAuthGameMode());
@@ -103,13 +101,11 @@ void UHeistLobbyWidget::NativeConstruct()
 
 void UHeistLobbyWidget::OnPlayersChangedMessageReceived(FGameplayTag Channel, const FHeistLobbyPlayersChangedMessage& Message)
 {
-	RefreshPlayerList();
 	RefreshStartButtonState();
 }
 
 void UHeistLobbyWidget::OnReadyStateChangedMessageReceived(FGameplayTag Channel, const FHeistLobbyReadyStateChangedMessage& Message)
 {
-	RefreshPlayerList();
 	RefreshStartButtonState();
 }
 
@@ -136,30 +132,6 @@ void UHeistLobbyWidget::RefreshStartButtonState()
 	const bool bAllReady = IsValid(LobbyGameState) && LobbyGameState->AreAllPlayersReady();
 
 	ButtonStartGame->SetIsEnabled(!bStartGameRequested && bAllReady);
-}
-
-void UHeistLobbyWidget::RefreshPlayerList()
-{
-	if (!ScrollBoxPlayers) return;
-
-	ScrollBoxPlayers->ClearChildren();
-
-	AGameStateBase* CurrentGameState = GetWorld()->GetGameState();
-	if (!IsValid(CurrentGameState)) return;
-
-	for (APlayerState* PlayerState : CurrentGameState->PlayerArray)
-	{
-		const AHeistPlayerState* HeistPS = Cast<AHeistPlayerState>(PlayerState);
-		if (!IsValid(HeistPS)) continue;
-
-		const FString HostPrefix = HeistPS->GetIsHost() ? TEXT("[방장] ") : TEXT("");
-		const FString ReadySuffix = HeistPS->GetIsReady() ? TEXT(" [준비완료]") : TEXT(" [대기중]");
-		const FString EntryText = HostPrefix + HeistPS->GetPlayerName() + ReadySuffix;
-
-		UTextBlock* PlayerEntry = NewObject<UTextBlock>(this);
-		PlayerEntry->SetText(FText::FromString(EntryText));
-		ScrollBoxPlayers->AddChild(PlayerEntry);
-	}
 }
 
 void UHeistLobbyWidget::OnButtonStartGameClicked()

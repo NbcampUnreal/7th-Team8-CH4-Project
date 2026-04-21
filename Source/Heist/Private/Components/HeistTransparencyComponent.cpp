@@ -112,6 +112,25 @@ void UHeistTransparencyComponent::SetTargetVisibility(bool bVisible)
 	SetComponentTickEnabled(true);
 }
 
+void UHeistTransparencyComponent::ForceRestoreVisibility()
+{
+	bHasCachedViewer = false;
+	bCachedIsLocalViewerPolice = false;
+	bIsTargetVisible = true;
+	CurrentOpacity = 1.0f;
+	SetAllMeshVisibility(true);
+
+	for (UMaterialInstanceDynamic* DynamicMaterial : DynamicMaterials)
+	{
+		if (IsValid(DynamicMaterial))
+		{
+			DynamicMaterial->SetScalarParameterValue(OpacityParamName, 1.0f);
+		}
+	}
+
+	SetComponentTickEnabled(false);
+}
+
 bool UHeistTransparencyComponent::IsLocalViewerPolice()
 {
 	// 이미 성공적으로 캐싱했다면 캐시값 반환
