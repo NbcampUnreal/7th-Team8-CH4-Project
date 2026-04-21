@@ -468,9 +468,11 @@ void AHeistPlayerController::ClientPrepareForMatchTravel_Implementation()
 	}
 
 	if (IsLocalController())
-	{
-		UHeistMessageSubsystem::Get(this).BroadcastMessage(
-			HeistMessageTags::Message_Travel_SeamlessStart, FHeistTravelSeamlessStartMessage{});
+	{	if (UHeistMessageSubsystem* MS = UHeistMessageSubsystem::TryGet(this))
+		{
+			MS->BroadcastMessage(
+						  HeistMessageTags::Message_Travel_SeamlessStart, FHeistTravelSeamlessStartMessage{});
+		}
 
 		if (!bSentReadyForMatchTravel)
 		{
