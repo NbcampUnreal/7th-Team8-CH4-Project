@@ -46,24 +46,26 @@ void AHeistMatchGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 void AHeistMatchGameState::OnRep_MatchPhase()
 {
+	UHeistMessageSubsystem* Subsystem = UHeistMessageSubsystem::TryGet(this);
+	if (!IsValid(Subsystem)) return;
+
 	FHeistPhaseChangedMessage Message;
 	Message.CurrentPhase = CurrentPhase;
 	Message.bBriefingSelectionLocked = bBriefingSelectionLocked;
 
-	UHeistMessageSubsystem::Get(this).BroadcastMessage(
-		HeistMessageTags::Message_Phase_Changed,
-		Message); // UI
+	Subsystem->BroadcastMessage(HeistMessageTags::Message_Phase_Changed, Message);
 }
 
 void AHeistMatchGameState::OnRep_BriefingSelectionLocked()
 {
+	UHeistMessageSubsystem* Subsystem = UHeistMessageSubsystem::TryGet(this);
+	if (!IsValid(Subsystem)) return;
+
 	FHeistPhaseChangedMessage Message;
 	Message.CurrentPhase = CurrentPhase;
 	Message.bBriefingSelectionLocked = bBriefingSelectionLocked;
 
-	UHeistMessageSubsystem::Get(this).BroadcastMessage(
-		HeistMessageTags::Message_Phase_Changed,
-		Message); // UI
+	Subsystem->BroadcastMessage(HeistMessageTags::Message_Phase_Changed, Message);
 }
 
 void AHeistMatchGameState::OnRep_PhaseEndServerTime()
@@ -107,14 +109,15 @@ void AHeistMatchGameState::StopPhaseUiTimer()
 
 void AHeistMatchGameState::BroadcastPhaseTimeUpdated()
 {
+	UHeistMessageSubsystem* Subsystem = UHeistMessageSubsystem::TryGet(this);
+	if (!IsValid(Subsystem)) return;
+
 	const float RemainingTime = FMath::Max(PhaseEndServerTime - GetServerWorldTimeSeconds(), 0.f);
 
 	FHeistPhaseTimeUpdatedMessage Message;
 	Message.RemainingTime = RemainingTime;
 
-	UHeistMessageSubsystem::Get(this).BroadcastMessage(
-		HeistMessageTags::Message_Phase_TimeUpdated,
-		Message); // UI
+	Subsystem->BroadcastMessage(HeistMessageTags::Message_Phase_TimeUpdated, Message);
 
 	if (RemainingTime <= 0.f)
 	{
