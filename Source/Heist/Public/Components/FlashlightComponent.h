@@ -68,8 +68,8 @@ private:
 
 	FTimerHandle VisionCheckTimerHandle;
 
+	bool IsTargetInFlashlightCone(AActor* TargetActor, const FVector& PoliceLocation, float EffectiveHalfAngle) const;
 	bool IsThiefInFlashlight(AThiefCharacter* Thief, bool bWasPreviouslyVisible) const;
-
 	bool IsItemInFlashlight(AItemActor* Item, const FVector& PoliceLocation) const;
 
 	UFUNCTION()
