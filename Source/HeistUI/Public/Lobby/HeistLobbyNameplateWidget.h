@@ -14,6 +14,7 @@ class HEISTUI_API UHeistLobbyNameplateWidget : public UUserWidget
 
 public:
 	void UpdateNameplate(const FString& PlayerName, bool bIsReady, bool bIsHost);
+	void SetTalkingState(bool bTalking);
 
 private:
 	UPROPERTY(meta = (BindWidget))

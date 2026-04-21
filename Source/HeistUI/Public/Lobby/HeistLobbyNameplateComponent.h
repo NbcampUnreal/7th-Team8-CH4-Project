@@ -30,6 +30,7 @@ private:
 	FDelegateHandle PlayerStateInitializedHandle;
 	FHeistMessageListenerHandle ReadyStateHandle;
 	FHeistMessageListenerHandle PlayersChangedHandle;
+	FHeistMessageListenerHandle TalkingStateHandle;
 
 	void InitializeWithPlayerState(AHeistPlayerState* PlayerState);
 	void RefreshNameplate();

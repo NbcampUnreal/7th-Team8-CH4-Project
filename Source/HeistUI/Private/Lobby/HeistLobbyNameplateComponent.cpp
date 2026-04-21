@@ -46,6 +46,7 @@ void UHeistLobbyNameplateComponent::EndPlay(const EEndPlayReason::Type EndPlayRe
 
 	ReadyStateHandle.Unregister();
 	PlayersChangedHandle.Unregister();
+	TalkingStateHandle.Unregister();
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -77,6 +78,18 @@ void UHeistLobbyNameplateComponent::InitializeWithPlayerState(AHeistPlayerState*
 			[this](FGameplayTag Channel, const FHeistLobbyPlayersChangedMessage& Message)
 			{
 				RefreshNameplate();
+			});
+
+		TalkingStateHandle = MessageSubsystem->RegisterListener<FHeistVoiceTalkingStateMessage>(
+			HeistMessageTags::Message_Voice_TalkingStateChanged,
+			[this](FGameplayTag Channel, const FHeistVoiceTalkingStateMessage& Message)
+			{
+				if (Message.PlayerState != BoundPlayerState.Get()) return;
+
+				UHeistLobbyNameplateWidget* NameplateWidget = Cast<UHeistLobbyNameplateWidget>(GetWidget());
+				if (!IsValid(NameplateWidget)) return;
+
+				NameplateWidget->SetTalkingState(Message.bIsTalking);
 			});
 	}
 
