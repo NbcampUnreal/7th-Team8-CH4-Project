@@ -10,14 +10,15 @@ class UBoxComponent;
 class UStaticMeshComponent;
 class AHeistCharacter;
 class UHeistInteractSphereComponent;
+class UHeistTransparencyComponent;
 struct FGameplayTag;
 
 UCLASS()
 class HEIST_API AItemActor : public AActor, public IHeistCarryable
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	AItemActor();
 
 	UFUNCTION(BlueprintCallable, Category = "Heist|Item")
@@ -51,6 +52,9 @@ protected:
 	UFUNCTION(BlueprintNativeEvent, Category = "Heist|Item")
 	void OnExplode();
 
+	UFUNCTION()
+	void OnRep_CurrentCarrierCount();
+
 	const struct FItemData* GetItemData() const;
 
 	void CheckDrop();
@@ -82,7 +86,10 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess))
 	TMap<AHeistCharacter*, FRotator> CurrentCarriers;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Vision", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHeistTransparencyComponent> TransparencyComponent;
+
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentCarrierCount)
 	int32 CurrentCarrierCount;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
@@ -96,6 +103,4 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
 	float CarryDistanceMax = 200.f;
-
-	FTimerHandle PhysicsTimeoutHandle;
 };
