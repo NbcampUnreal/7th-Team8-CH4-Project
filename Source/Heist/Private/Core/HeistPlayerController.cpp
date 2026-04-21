@@ -1,5 +1,6 @@
 #include "Core/HeistPlayerController.h"
 
+#include "Camera/HeistWallAvoidanceCameraModifier.h"
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "Core/HeistLobbyGameMode.h"
 #include "Character/HeistTags_State.h"
@@ -36,6 +37,11 @@ void AHeistPlayerController::BeginPlay()
 
 	bSentReadyForBriefingStart = false;
 	bSentReadyForMatchTravel = false;
+
+	if (IsLocalController() && IsValid(PlayerCameraManager) && IsValid(WallAvoidanceCameraModifierClass))
+	{
+		PlayerCameraManager->AddNewCameraModifier(WallAvoidanceCameraModifierClass);
+	}
 
 	// 클라에서는 브리핑 컨텍스트 복제 순서를 신뢰할 수 없으므로, PlayerController 훅마다 readiness를 다시 두드린다.
 	UE_LOG(LogTemp, Log, TEXT("[BriefingRetry] BeginPlay: PC=%s Local=%d"), *GetNameSafe(this), IsLocalController() ? 1 : 0);
