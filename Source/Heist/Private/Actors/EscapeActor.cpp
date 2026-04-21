@@ -2,6 +2,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/HeistInteractSphereComponent.h"
 #include "Core/HeistMatchGameState.h"
+#include "Net/UnrealNetwork.h"
 
 #include "AbilitySystem/HeistTags_Ability.h"
 #include "AbilitySystemComponent.h"
@@ -33,6 +34,13 @@ void AEscapeActor::BeginPlay()
 
 	InteractSphereComponent->OnCanInteract.BindUObject(this, &AEscapeActor::CheckCanInteract);
 	InteractSphereComponent->OnGetAbilityTag.BindUObject(this, &AEscapeActor::ResolveInteractAbilityTag);
+}
+
+void AEscapeActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AEscapeActor, bCanEscape);
 }
 
 bool AEscapeActor::CheckCanInteract(ACharacter* Interactor) const

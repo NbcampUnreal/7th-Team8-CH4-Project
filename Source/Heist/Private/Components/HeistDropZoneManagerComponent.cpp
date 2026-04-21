@@ -90,3 +90,15 @@ void UHeistDropZoneManagerComponent::UpdateZoneScore(int32 ZoneIndex, int32 Curr
 		}
 	}
 }
+
+int32 UHeistDropZoneManagerComponent::GetZoneIndexByGroup(int32 GroupIndex)
+{
+	for (auto& Elem : EscapeGroupMap)
+	{
+		if (Elem.Value.EscapeActor->EscapeGroupIndex == GroupIndex)
+		{
+			return Elem.Key;
+		}
+	}
+	return 0;
+}

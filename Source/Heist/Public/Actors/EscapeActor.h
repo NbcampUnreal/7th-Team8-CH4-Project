@@ -24,6 +24,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	bool CheckCanInteract(ACharacter* Interactor) const;
 	FGameplayTag ResolveInteractAbilityTag(ACharacter* Interactor) const;
 
@@ -41,6 +43,7 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHeistInteractSphereComponent> InteractSphereComponent;
 
+	UPROPERTY(Replicated)
 	bool bCanEscape = false;
 
 public:

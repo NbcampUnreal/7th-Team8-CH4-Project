@@ -245,6 +245,31 @@ void AHeistMatchGameMode::NotifyPoliceVictory()
 	StartReturnToLobbyFlow();
 }
 
+void AHeistMatchGameMode::NotifyThiefVictory()
+{
+	if (!HasAuthority() || bMatchVictoryDeclared) return;
+
+	bMatchVictoryDeclared = true;
+
+	if (IsValid(PhaseManagerComponent))
+	{
+		PhaseManagerComponent->StopActiveTimers();
+	}
+
+	if (AHeistMatchGameState* MatchGameState = GetGameState<AHeistMatchGameState>())
+	{
+		MatchGameState->SetCurrentPhase(EHeistMatchPhase::Result);
+		MatchGameState->SetBriefingSelectionLocked(true);
+		MatchGameState->SetPhaseRemainingTime(0.f);
+		MatchGameState->SetPhaseEndServerTime(0.f);
+	}
+
+	OnMatchVictory.Broadcast(EHeistTeam::Thief);
+	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] Thief Victory!"));
+
+	StartReturnToLobbyFlow();
+}
+
 int32 AHeistMatchGameMode::CountPlayersReadyForBriefingStart() const
 {
 	int32 ReadyPlayerCount = 0;
@@ -433,6 +458,22 @@ void AHeistMatchGameMode::TryEngineChannelingStart()
 
 	AHeistMatchGameState* MatchGameState = GetGameState<AHeistMatchGameState>();
 	MatchGameState->SetEngineChannelingStart(true);
+}
+
+void AHeistMatchGameMode::JudgeScore(int32 GroupIndex)
+{
+	if (!IsValid(DropZoneManagerComponent)) return;
+	int32 ZoneIndex = DropZoneManagerComponent->GetZoneIndexByGroup(GroupIndex);
+
+	AHeistMatchGameState* HeistGS = GetGameState<AHeistMatchGameState>();
+	if (HeistGS->GetZoneScore(ZoneIndex).CurrentScore >= HeistGS->GetZoneScore(ZoneIndex).TargetScore)
+	{
+		NotifyThiefVictory();
+	}
+	else
+	{
+		NotifyPoliceVictory();
+	}
 }
 
 void AHeistMatchGameMode::StartReturnToLobbyFlow()

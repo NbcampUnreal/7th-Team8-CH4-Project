@@ -33,6 +33,8 @@ public:
 	UFUNCTION()
 	void UpdateZoneScore(int32 ZoneIndex, int32 CurrentScore);
 
+	int32 GetZoneIndexByGroup(int32 GroupIndex);
+
 public:
 	UPROPERTY(VisibleAnywhere, Category = "Heist|Volume")
 	int32 TargetScore = 20;

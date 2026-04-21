@@ -32,8 +32,10 @@ public:
 	void NotifyPlayerReadyForBriefingStart(APlayerController* PlayerController);
 	void NotifyPlayerReadyForMatchTravel(APlayerController* PlayerController);
 	void NotifyPoliceVictory();
+	void NotifyThiefVictory();
 	void SpawnAllPlayersAtBriefingStart();
 	void TryEngineChannelingStart();
+	void JudgeScore(int32 GroupIndex);
 
 protected:
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
