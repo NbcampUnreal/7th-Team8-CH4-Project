@@ -117,9 +117,14 @@ void AHeistMatchGameMode::PostLogin(APlayerController* NewPlayer)
 
 void AHeistMatchGameMode::Logout(AController* Exiting)
 {
+	const UWorld* World = GetWorld();
+
 	AHeistPlayerState* HeistPS = Exiting ? Exiting->GetPlayerState<AHeistPlayerState>() : nullptr;
 	const AHeistMatchGameState* MatchGameState = GetGameState<AHeistMatchGameState>();
-	const bool bShouldNotifyDisconnect = IsValid(ArrestVictoryComponent)
+	const bool bShouldNotifyDisconnect =
+		IsValid(World)
+		&& !World->bIsTearingDown
+		&& IsValid(ArrestVictoryComponent)
 		&& IsValid(HeistPS)
 		&& HeistPS->IsThief()
 		&& IsValid(MatchGameState)
