@@ -3,8 +3,7 @@
 #include "Components/InputComponent.h"
 #include "Core/HeistPlayerController.h"
 #include "Core/HeistPlayerState.h"
-#include "GameFramework/GameStateBase.h"
-#include "GameFramework/PlayerController.h"
+#include "EngineUtils.h"
 #include "GameFramework/Pawn.h"
 #include "InputCoreTypes.h"
 
@@ -33,11 +32,7 @@ void UHeistSpectatorControllerComponent::EnterArrestSpectating()
 
 	bArrestSpectatingActive = true;
 	SetComponentTickEnabled(true);
-
-	AActor* InitialTarget = FindFirstSpectateTarget();
-	if (!IsValid(InitialTarget)) return;
-
-	ApplyViewTarget(InitialTarget);
+	CurrentViewTarget.Reset();
 }
 
 void UHeistSpectatorControllerComponent::TickComponent(
@@ -54,13 +49,7 @@ void UHeistSpectatorControllerComponent::TickComponent(
 	if (IsValid(Target))
 	{
 		ApplyViewTarget(Target);
-		return;
 	}
-
-	AHeistPlayerController* HeistPC = GetHeistPlayerController();
-	if (!IsValid(HeistPC) || !IsValid(HeistPC->GetPawn())) return;
-
-	ApplyViewTarget(HeistPC->GetPawn());
 }
 
 void UHeistSpectatorControllerComponent::SpectateNextTarget()
@@ -100,44 +89,41 @@ AHeistPlayerController* UHeistSpectatorControllerComponent::GetHeistPlayerContro
 
 AActor* UHeistSpectatorControllerComponent::FindFirstSpectateTarget() const
 {
+	TArray<AActor*> Candidates;
+	GatherSpectateCandidates(Candidates);
+	return Candidates.IsEmpty() ? nullptr : Candidates[0];
+}
+
+void UHeistSpectatorControllerComponent::GatherSpectateCandidates(TArray<AActor*>& OutCandidates) const
+{
+	OutCandidates.Reset();
+
 	AHeistPlayerController* HeistPC = GetHeistPlayerController();
 	UWorld* World = GetWorld();
-	AGameStateBase* GameState = World ? World->GetGameState() : nullptr;
-	if (!IsValid(HeistPC) || !IsValid(GameState)) return nullptr;
+	if (!IsValid(HeistPC) || !IsValid(World)) return;
 
-	for (APlayerState* PlayerState : GameState->PlayerArray)
+	const APawn* LocalPawn = HeistPC->GetPawn();
+	const AHeistPlayerState* LocalPlayerState = HeistPC->GetPlayerState<AHeistPlayerState>();
+
+	for (TActorIterator<APawn> It(World); It; ++It)
 	{
-		const AHeistPlayerState* HeistPS = Cast<AHeistPlayerState>(PlayerState);
-		if (!IsSpectateCandidate(HeistPS)) continue;
+		APawn* CandidatePawn = *It;
+		if (!IsValid(CandidatePawn) || CandidatePawn == LocalPawn) continue;
 
-		const APlayerController* TargetPC = Cast<APlayerController>(HeistPS->GetOwner());
-		if (!IsValid(TargetPC) || !IsValid(TargetPC->GetPawn())) continue;
+		AHeistPlayerState* CandidatePlayerState = CandidatePawn ? CandidatePawn->GetPlayerState<AHeistPlayerState>() : nullptr;
+		if (!IsValid(CandidatePlayerState) || CandidatePlayerState == LocalPlayerState) continue;
 
-		return TargetPC->GetPawn();
+		const EHeistTeam CandidateTeam = CandidatePlayerState->GetAssignedTeam();
+		if (CandidateTeam == EHeistTeam::None || CandidateTeam == EHeistTeam::Spector) continue;
+
+		OutCandidates.Add(CandidatePawn);
 	}
-
-	return nullptr;
 }
 
 AActor* UHeistSpectatorControllerComponent::FindSpectateTargetFromCurrent(int32 Direction) const
 {
-	AHeistPlayerController* HeistPC = GetHeistPlayerController();
-	UWorld* World = GetWorld();
-	AGameStateBase* GameState = World ? World->GetGameState() : nullptr;
-	if (!IsValid(HeistPC) || !IsValid(GameState)) return nullptr;
-
 	TArray<AActor*> Candidates;
-	for (APlayerState* PlayerState : GameState->PlayerArray)
-	{
-		const AHeistPlayerState* HeistPS = Cast<AHeistPlayerState>(PlayerState);
-		if (!IsSpectateCandidate(HeistPS)) continue;
-
-		const APlayerController* TargetPC = Cast<APlayerController>(HeistPS->GetOwner());
-		if (!IsValid(TargetPC) || !IsValid(TargetPC->GetPawn())) continue;
-
-		Candidates.Add(TargetPC->GetPawn());
-	}
-
+	GatherSpectateCandidates(Candidates);
 	if (Candidates.IsEmpty()) return nullptr;
 
 	const int32 CurrentIndex = Candidates.IndexOfByKey(CurrentViewTarget.Get());
@@ -147,37 +133,11 @@ AActor* UHeistSpectatorControllerComponent::FindSpectateTargetFromCurrent(int32 
 	return Candidates[NextIndex];
 }
 
-bool UHeistSpectatorControllerComponent::IsSpectateCandidate(const AHeistPlayerState* HeistPS) const
-{
-	AHeistPlayerController* HeistPC = GetHeistPlayerController();
-	if (!IsValid(HeistPC) || !IsValid(HeistPS)) return false;
-	if (HeistPS == HeistPC->GetPlayerState<AHeistPlayerState>()) return false;
-	if (HeistPS->GetAssignedTeam() == EHeistTeam::None || HeistPS->GetAssignedTeam() == EHeistTeam::Spector) return false;
-
-	const APlayerController* TargetPC = Cast<APlayerController>(HeistPS->GetOwner());
-	return IsValid(TargetPC) && IsValid(TargetPC->GetPawn());
-}
-
 bool UHeistSpectatorControllerComponent::IsCurrentViewTargetValid() const
 {
 	if (!CurrentViewTarget.IsValid()) return false;
 
-	AHeistPlayerController* HeistPC = GetHeistPlayerController();
-	UWorld* World = GetWorld();
-	AGameStateBase* GameState = World ? World->GetGameState() : nullptr;
-	if (!IsValid(HeistPC) || !IsValid(GameState)) return false;
-
-	for (APlayerState* PlayerState : GameState->PlayerArray)
-	{
-		const AHeistPlayerState* HeistPS = Cast<AHeistPlayerState>(PlayerState);
-		if (!IsSpectateCandidate(HeistPS)) continue;
-
-		const APlayerController* TargetPC = Cast<APlayerController>(HeistPS->GetOwner());
-		if (!IsValid(TargetPC) || !IsValid(TargetPC->GetPawn())) continue;
-		if (TargetPC->GetPawn() != CurrentViewTarget.Get()) continue;
-
-		return true;
-	}
-
-	return false;
+	TArray<AActor*> Candidates;
+	GatherSpectateCandidates(Candidates);
+	return Candidates.Contains(CurrentViewTarget.Get());
 }

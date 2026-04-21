@@ -31,9 +31,9 @@ private:
 	void ApplyViewTarget(AActor* Target);
 
 	AHeistPlayerController* GetHeistPlayerController() const;
+	void GatherSpectateCandidates(TArray<AActor*>& OutCandidates) const;
 	AActor* FindFirstSpectateTarget() const;
 	AActor* FindSpectateTargetFromCurrent(int32 Direction) const;
-	bool IsSpectateCandidate(const AHeistPlayerState* HeistPS) const;
 	bool IsCurrentViewTargetValid() const;
 
 	// 일정상 raw key bind를 유지하되, 추후 EnhancedInput으로 전환할 수 있게 키만 노출한다.
