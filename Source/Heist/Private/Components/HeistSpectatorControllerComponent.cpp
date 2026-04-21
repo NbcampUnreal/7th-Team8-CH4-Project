@@ -122,11 +122,14 @@ void UHeistSpectatorControllerComponent::GatherSpectateCandidates(TArray<AActor*
 
 AActor* UHeistSpectatorControllerComponent::FindSpectateTargetFromCurrent(int32 Direction) const
 {
+	AHeistPlayerController* HeistPC = GetHeistPlayerController();
+	if (!IsValid(HeistPC)) return nullptr;
+
 	TArray<AActor*> Candidates;
 	GatherSpectateCandidates(Candidates);
 	if (Candidates.IsEmpty()) return nullptr;
 
-	const int32 CurrentIndex = Candidates.IndexOfByKey(CurrentViewTarget.Get());
+	const int32 CurrentIndex = Candidates.IndexOfByKey(HeistPC->GetViewTarget());
 	if (CurrentIndex == INDEX_NONE) return Candidates[0];
 
 	const int32 NextIndex = (CurrentIndex + Direction + Candidates.Num()) % Candidates.Num();
@@ -135,9 +138,13 @@ AActor* UHeistSpectatorControllerComponent::FindSpectateTargetFromCurrent(int32 
 
 bool UHeistSpectatorControllerComponent::IsCurrentViewTargetValid() const
 {
-	if (!CurrentViewTarget.IsValid()) return false;
+	AHeistPlayerController* HeistPC = GetHeistPlayerController();
+	if (!IsValid(HeistPC)) return false;
+
+	AActor* ActualViewTarget = HeistPC->GetViewTarget();
+	if (!IsValid(ActualViewTarget)) return false;
 
 	TArray<AActor*> Candidates;
 	GatherSpectateCandidates(Candidates);
-	return Candidates.Contains(CurrentViewTarget.Get());
+	return Candidates.Contains(ActualViewTarget);
 }
