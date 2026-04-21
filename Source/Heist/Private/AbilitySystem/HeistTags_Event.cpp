@@ -16,4 +16,5 @@ namespace HeistEventTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_CarryStarted, "Event.CarryStarted");
 	UE_DEFINE_GAMEPLAY_TAG(Event_CarryUpdate, "Event.CarryUpdate");
 	UE_DEFINE_GAMEPLAY_TAG(Event_CarryDrop, "Event.CarryDrop");
+	UE_DEFINE_GAMEPLAY_TAG(Event_EngineStarted, "Event.EngineStarted");
 }

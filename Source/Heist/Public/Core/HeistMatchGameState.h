@@ -15,10 +15,15 @@ class HEIST_API AHeistMatchGameState : public AGameStateBase
 	GENERATED_BODY()
 
 public:
+	void InitZoneScores(int32 ZoneVolumeCount, int32 TargetScore);
+
 	void SetCurrentPhase(EHeistMatchPhase InPhase);
 	void SetPhaseRemainingTime(float InRemainingTime);
 	void SetBriefingSelectionLocked(bool bLocked);
 	void SetPhaseEndServerTime(float InPhaseEndServerTime);
+	void SetZoneScore(int32 ZoneIndex, int32 NewScore);
+	void SetEngineChannelingStart(bool bStart);
+	void SetEngineChannelingEnd(bool bEnd);
 
 	UFUNCTION(BlueprintPure)
 	bool IsBriefingPhase() const { return CurrentPhase == EHeistMatchPhase::Briefing; }
@@ -34,6 +39,15 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	float GetPhaseEndServerTime() const { return PhaseEndServerTime; }
+
+	UFUNCTION(BlueprintPure)
+	FZoneScoreData GetZoneScore(int32 Index) const { return ZoneScores.IsValidIndex(Index) ? ZoneScores[Index] : FZoneScoreData(); }
+
+	UFUNCTION(BlueprintPure)
+	bool IsEngineChannelingStarted() const { return bEngineChannelingStarted; }
+
+	UFUNCTION(BlueprintPure)
+	bool IsEngineChannelingEnded() const { return bEngineChannelingEnded; }
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
@@ -53,7 +67,16 @@ protected:
 
 	UPROPERTY(ReplicatedUsing = OnRep_PhaseEndServerTime, BlueprintReadOnly)
 	float PhaseEndServerTime = 0.f;
-	
+
+	UPROPERTY(ReplicatedUsing = OnRep_ZoneScores, BlueprintReadOnly)
+	TArray<FZoneScoreData> ZoneScores;
+
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	bool bEngineChannelingStarted = false;
+
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	bool bEngineChannelingEnded = false;
+
 	UFUNCTION()
 	void OnRep_MatchPhase();
 
@@ -62,6 +85,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_PhaseEndServerTime();
+
+	UFUNCTION()
+	void OnRep_ZoneScores();
 
 	FTimerHandle PhaseUiUpdateTimerHandle;
 };

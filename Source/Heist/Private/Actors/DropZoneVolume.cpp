@@ -2,20 +2,16 @@
 
 #include "Actors/ItemActor.h"
 #include "Components/BoxComponent.h"
+#include "Net/UnrealNetwork.h"
 
-ADropZoneVolume::ADropZoneVolume()
+ADropZoneVolume::ADropZoneVolume() : CurrentValue(0), ZoneIndex(0)
 {
 	PrimaryActorTick.bCanEverTick = false;
+	bReplicates = true;
 
 	CollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBox"));
 	RootComponent = CollisionBox;
 
-}
-
-float ADropZoneVolume::GetValuePercent() const
-{
-	if (TotalValue <= 0) return 0.f;
-	return FMath::GetRangePct(0.0f, (float)TargetValue, (float)TotalValue);
 }
 
 void ADropZoneVolume::BeginPlay()
@@ -29,6 +25,13 @@ void ADropZoneVolume::BeginPlay()
 	}
 }
 
+void ADropZoneVolume::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ADropZoneVolume, CurrentValue);
+	DOREPLIFETIME(ADropZoneVolume, ZoneIndex);
+}
+
 void ADropZoneVolume::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (!HasAuthority()) return;
@@ -38,7 +41,9 @@ void ADropZoneVolume::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, A
 	if (!OtherComp->ComponentHasTag(FName("MainBody"))) return;
 
 	int32 ItemValue = Item->GetItemValue();
-	TotalValue += ItemValue;
+	CurrentValue += ItemValue;
+
+	OnZoneValueChanged.Broadcast(ZoneIndex, CurrentValue);
 }
 
 void ADropZoneVolume::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
@@ -50,5 +55,7 @@ void ADropZoneVolume::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* 
 	if (!OtherComp->ComponentHasTag(FName("MainBody"))) return;
 
 	int32 ItemValue = Item->GetItemValue();
-	TotalValue -= ItemValue;
+	CurrentValue -= ItemValue;
+
+	OnZoneValueChanged.Broadcast(ZoneIndex, CurrentValue);
 }

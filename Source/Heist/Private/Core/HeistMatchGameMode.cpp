@@ -4,6 +4,8 @@
 #include "Components/HeistBriefingPhaseComponent.h"
 #include "Components/HeistExecutionPhaseComponent.h"
 #include "Components/HeistPhaseManagerComponent.h"
+#include "Components/HeistGameOverPhaseComponent.h"
+#include "Components/HeistDropZoneManagerComponent.h"
 #include "Core/HeistMatchGameState.h"
 #include "Core/HeistPlayerController.h"
 #include "Core/HeistPlayerState.h"
@@ -19,6 +21,8 @@ AHeistMatchGameMode::AHeistMatchGameMode()
 	BriefingPhaseComponent = CreateDefaultSubobject<UHeistBriefingPhaseComponent>(TEXT("BriefingPhaseComponent"));
 	ExecutionPhaseComponent = CreateDefaultSubobject<UHeistExecutionPhaseComponent>(TEXT("ExecutionPhaseComponent"));
 	ArrestVictoryComponent = CreateDefaultSubobject<UHeistArrestVictoryComponent>(TEXT("ArrestVictoryComponent"));
+	GameOverPhaseComponent = CreateDefaultSubobject<UHeistGameOverPhaseComponent>(TEXT("GameOverPhaseComponent"));
+	DropZoneManagerComponent = CreateDefaultSubobject<UHeistDropZoneManagerComponent>(TEXT("DropZoneManagerComponent"));
 	LobbyMapPath = TEXT("/Game/Heist/Maps/L_Lobby");
 }
 
@@ -53,6 +57,7 @@ void AHeistMatchGameMode::BeginPlay()
 	// 클라는 그 결과를 replicated state/OnRep 훅으로 뒤늦게 수렴한다.
 	GatherBriefingStartPoints();
 	TryStartBriefingFlow();
+	TryInitDropZone();
 }
 
 void AHeistMatchGameMode::GenericPlayerInitialization(AController* C)
@@ -240,6 +245,31 @@ void AHeistMatchGameMode::NotifyPoliceVictory()
 	StartReturnToLobbyFlow();
 }
 
+void AHeistMatchGameMode::NotifyThiefVictory()
+{
+	if (!HasAuthority() || bMatchVictoryDeclared) return;
+
+	bMatchVictoryDeclared = true;
+
+	if (IsValid(PhaseManagerComponent))
+	{
+		PhaseManagerComponent->StopActiveTimers();
+	}
+
+	if (AHeistMatchGameState* MatchGameState = GetGameState<AHeistMatchGameState>())
+	{
+		MatchGameState->SetCurrentPhase(EHeistMatchPhase::Result);
+		MatchGameState->SetBriefingSelectionLocked(true);
+		MatchGameState->SetPhaseRemainingTime(0.f);
+		MatchGameState->SetPhaseEndServerTime(0.f);
+	}
+
+	OnMatchVictory.Broadcast(EHeistTeam::Thief);
+	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] Thief Victory!"));
+
+	StartReturnToLobbyFlow();
+}
+
 int32 AHeistMatchGameMode::CountPlayersReadyForBriefingStart() const
 {
 	int32 ReadyPlayerCount = 0;
@@ -421,6 +451,31 @@ void AHeistMatchGameMode::SpawnAllPlayersAtBriefingStart()
 	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] SpawnAllPlayersAtBriefingStart: end"));
 }
 
+void AHeistMatchGameMode::TryEngineChannelingStart()
+{
+	if (!IsValid(GameOverPhaseComponent)) return;
+	GameOverPhaseComponent->StartEngineChanneling();
+
+	AHeistMatchGameState* MatchGameState = GetGameState<AHeistMatchGameState>();
+	MatchGameState->SetEngineChannelingStart(true);
+}
+
+void AHeistMatchGameMode::JudgeScore(int32 GroupIndex)
+{
+	if (!IsValid(DropZoneManagerComponent)) return;
+	int32 ZoneIndex = DropZoneManagerComponent->GetZoneIndexByGroup(GroupIndex);
+
+	AHeistMatchGameState* HeistGS = GetGameState<AHeistMatchGameState>();
+	if (HeistGS->GetZoneScore(ZoneIndex).CurrentScore >= HeistGS->GetZoneScore(ZoneIndex).TargetScore)
+	{
+		NotifyThiefVictory();
+	}
+	else
+	{
+		NotifyPoliceVictory();
+	}
+}
+
 void AHeistMatchGameMode::StartReturnToLobbyFlow()
 {
 	if (!HasAuthority() || bLobbyTravelRequested) return;
@@ -499,4 +554,10 @@ void AHeistMatchGameMode::HandleLobbyTravelReadyTimeout()
 	}
 
 	StartLobbyTravel();
+}
+
+void AHeistMatchGameMode::TryInitDropZone()
+{
+	if (!IsValid(DropZoneManagerComponent)) return;
+	DropZoneManagerComponent->InitDropZone();
 }

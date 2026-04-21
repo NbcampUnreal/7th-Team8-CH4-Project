@@ -10,6 +10,8 @@ class UHeistArrestVictoryComponent;
 class UHeistPhaseManagerComponent;
 class UHeistBriefingPhaseComponent;
 class UHeistExecutionPhaseComponent;
+class UHeistGameOverPhaseComponent;
+class UHeistDropZoneManagerComponent;
 class APlayerStart;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMatchVictory, EHeistTeam /*Winner*/);
@@ -30,7 +32,10 @@ public:
 	void NotifyPlayerReadyForBriefingStart(APlayerController* PlayerController);
 	void NotifyPlayerReadyForMatchTravel(APlayerController* PlayerController);
 	void NotifyPoliceVictory();
+	void NotifyThiefVictory();
 	void SpawnAllPlayersAtBriefingStart();
+	void TryEngineChannelingStart();
+	void JudgeScore(int32 GroupIndex);
 
 protected:
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
@@ -49,8 +54,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
 	TObjectPtr<UHeistExecutionPhaseComponent> ExecutionPhaseComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components")
+	TObjectPtr<UHeistGameOverPhaseComponent> GameOverPhaseComponent;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
 	TObjectPtr<UHeistArrestVictoryComponent> ArrestVictoryComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components")
+	TObjectPtr<UHeistDropZoneManagerComponent> DropZoneManagerComponent;
 
 	void GatherBriefingStartPoints();
 	void TryStartBriefingFlow();
@@ -63,6 +74,8 @@ protected:
 	void HandleLobbyTravelReadyTimeout();
 	int32 CountExpectedPlayersForMatchTravel() const;
 	int32 CountReadyPlayersForMatchTravel() const;
+
+	void TryInitDropZone();
 
 	UPROPERTY(EditDefaultsOnly, Category="Heist|Briefing")
 	FName ThiefBriefingStartTag = TEXT("StartPoint_Briefing_Thief");
