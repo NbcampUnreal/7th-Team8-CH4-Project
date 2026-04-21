@@ -1,26 +1,45 @@
 #include "Character/ThiefCharacter.h"
 
 #include "AbilitySystem/HeistTags_Ability.h"
-#include "Character/PoliceCharacter.h"
 #include "Character/HeistTags_State.h"
 #include "Components/HeistInteractSphereComponent.h"
+#include "Components/HeistTransparencyComponent.h"
 #include "Components/ThiefEscortComponent.h"
 #include "Components/HeistZoneComponent.h"
 #include "Components/HeistNoiseComponent.h"
+#include "Components/FlashlightDetectionComponent.h"
 #include "Data/HeistSoundData.h"
+#include "Systems/Messaging/HeistMessageTypes.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
+#include "Systems/Messaging/HeistTags_Message.h"
 
 #include "AbilitySystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/PointLightComponent.h"
+#include "TimerManager.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
 
 AThiefCharacter::AThiefCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 	GetCharacterMovement()->RotationRate = FRotator(0.f, MaxRotationRateYaw, 0.f);
 
-	EscortComponent = CreateDefaultSubobject<UThiefEscortComponent>(TEXT("EscortComponent"));
 	InteractSphereComp = CreateDefaultSubobject<UHeistInteractSphereComponent>(TEXT("InteractSphereComp"));
+	TransparencyComponent = CreateDefaultSubobject<UHeistTransparencyComponent>(TEXT("TransparencyComponent"));
+	EscortComponent = CreateDefaultSubobject<UThiefEscortComponent>(TEXT("EscortComponent"));
 	NoiseComponent = CreateDefaultSubobject<UHeistNoiseComponent>(TEXT("NoiseComponent"));
 	ZoneComponent = CreateDefaultSubobject<UHeistZoneComponent>(TEXT("ZoneComponent"));
+	FlashlightDetectionComponent = CreateDefaultSubobject<UFlashlightDetectionComponent>(TEXT("FlashlightDetectionComponent"));
+
+	CloseVisionPointLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("CloseVisionPointLight"));
+	CloseVisionPointLight->SetupAttachment(RootComponent);
+	CloseVisionPointLight->SetLightColor(FLinearColor(0.5f, 0.5f, 0.5f));
+	CloseVisionPointLight->Intensity = CloseVisionIntensity;
+	CloseVisionPointLight->AttenuationRadius = CloseVisionRadius;
+	CloseVisionPointLight->CastShadows = false;
+
+	CloseVisionPointLight->SetVisibility(false);
 }
 
 void AThiefCharacter::BeginPlay()
@@ -29,16 +48,72 @@ void AThiefCharacter::BeginPlay()
 
 	InteractSphereComp->OnCanInteract.BindUObject(this, &AThiefCharacter::CheckCanInteract);
 	InteractSphereComp->OnGetAbilityTag.BindUObject(this, &AThiefCharacter::ResolveInteractAbilityTag);
+}
 
-	APlayerController* PC = GEngine->GetFirstLocalPlayerController(GetWorld());
-	if (IsValid(PC))
+void AThiefCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	if (IsLocallyControlled())
 	{
-		APawn* LocalPawn = PC->GetPawn();
-		if (IsValid(LocalPawn) && LocalPawn->IsA<APoliceCharacter>())
+		if (IsValid(FlashlightDetectionComponent))
 		{
-			GetMesh()->SetVisibility(false, true);
+			FlashlightDetectionComponent->StartDetection();
+		}
+
+		UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+		if (IsValid(ASC))
+		{
+			ZoneTagListenerHandle = ASC->RegisterGameplayTagEvent(
+				HeistStateTags::Zone_Indoor,
+				EGameplayTagEventType::NewOrRemoved
+			).AddUObject(this, &AThiefCharacter::OnZoneTagChanged);
 		}
 	}
+}
+
+void AThiefCharacter::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+
+	if (IsLocallyControlled())
+	{
+		if (IsValid(FlashlightDetectionComponent))
+		{
+			FlashlightDetectionComponent->StartDetection();
+		}
+
+		UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+		if (IsValid(ASC))
+		{
+			if (ZoneTagListenerHandle.IsValid())
+			{
+				ASC->RegisterGameplayTagEvent(HeistStateTags::Zone_Indoor, EGameplayTagEventType::NewOrRemoved).Remove(ZoneTagListenerHandle);
+			}
+
+			ZoneTagListenerHandle = ASC->RegisterGameplayTagEvent(
+				HeistStateTags::Zone_Indoor,
+				EGameplayTagEventType::NewOrRemoved
+			).AddUObject(this, &AThiefCharacter::OnZoneTagChanged);
+		}
+	}
+}
+
+void AThiefCharacter::UnPossessed()
+{
+	if (IsValid(FlashlightDetectionComponent))
+	{
+		FlashlightDetectionComponent->StopDetection();
+	}
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (IsValid(ASC) && ZoneTagListenerHandle.IsValid())
+	{
+		ASC->RegisterGameplayTagEvent(HeistStateTags::Zone_Indoor, EGameplayTagEventType::NewOrRemoved).Remove(ZoneTagListenerHandle);
+		ZoneTagListenerHandle.Reset();
+	}
+
+	Super::UnPossessed();
 }
 
 void AThiefCharacter::ReportFootstep()
@@ -74,4 +149,12 @@ FGameplayTag AThiefCharacter::ResolveInteractAbilityTag(ACharacter* Interactor) 
 	if (bInjured && !bIsThief) return HeistAbilityTags::Ability_Police_Cuffing;
 
 	return FGameplayTag::EmptyTag;
+}
+
+void AThiefCharacter::OnZoneTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+	if (!IsValid(CloseVisionPointLight)) return;
+
+	const bool bIsIndoor = (NewCount > 0);
+	CloseVisionPointLight->SetVisibility(bIsIndoor);
 }
