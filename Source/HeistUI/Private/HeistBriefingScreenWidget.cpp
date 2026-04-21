@@ -49,6 +49,7 @@ void UHeistBriefingScreenWidget::NativeDestruct()
 	if (IsValid(CachedBriefingPlayerComponent))
 	{
 		CachedBriefingPlayerComponent->OnThiefSelectionCountsReceived.Remove(SelectionCountsHandle);
+		CachedBriefingPlayerComponent->OnPoliceObjectiveSelectionReceived.RemoveAll(this);
 	}
 
 	PhaseChangedHandle.Unregister();
@@ -92,6 +93,11 @@ void UHeistBriefingScreenWidget::InitializeForBriefing(
 	UHeistBriefingDrawingSyncComponent* InDrawingSyncComponent,
 	EHeistBriefingViewMode InViewMode)
 {
+	if (IsValid(CachedBriefingPlayerComponent))
+	{
+		CachedBriefingPlayerComponent->OnPoliceObjectiveSelectionReceived.RemoveAll(this);
+	}
+
 	CachedBriefingPlayerComponent = InBriefingPlayerComponent;
 	CurrentViewMode = InViewMode;
 	bMapInitialized = false;
@@ -119,6 +125,12 @@ void UHeistBriefingScreenWidget::InitializeForBriefing(
 		InBriefingPlayerComponent,
 		InDrawingSyncComponent,
 		InViewMode);
+
+	if (CurrentViewMode == EHeistBriefingViewMode::Police && IsValid(InBriefingPlayerComponent))
+	{
+		InBriefingPlayerComponent->OnPoliceObjectiveSelectionReceived.AddUObject(
+			this, &ThisClass::HandlePoliceObjectiveSelectionReceived);
+	}
 
 	if (CurrentViewMode == EHeistBriefingViewMode::Thief && IsValid(InBriefingPlayerComponent))
 	{
@@ -311,6 +323,11 @@ void UHeistBriefingScreenWidget::RebuildSelectionList()
 		SelectionListBox->AddChild(Row);
 		SelectionRowMap.Add(Point.Key, Row);
 	}
+
+	if (CurrentViewMode == EHeistBriefingViewMode::Police && CachedPoliceSelectedKey != NAME_None)
+	{
+		HandlePoliceLocalSelection(CachedPoliceSelectedKey);
+	}
 }
 
 void UHeistBriefingScreenWidget::HandlePoliceLocalSelection(FName SelectedKey)
@@ -324,10 +341,16 @@ void UHeistBriefingScreenWidget::HandlePoliceLocalSelection(FName SelectedKey)
 		{
 			const bool bSelected = Pair.Key == SelectedKey;
 			Name->SetColorAndOpacity(bSelected
-				? FSlateColor(FLinearColor(1.f, 0.85f, 0.f))  // 노랑
-				: FSlateColor(FLinearColor::Black));
+				? FSlateColor(FLinearColor::Yellow)  // 노랑
+				: FSlateColor(FLinearColor::White));
 		}
 	}
+}
+
+void UHeistBriefingScreenWidget::HandlePoliceObjectiveSelectionReceived(FName SelectedKey)
+{
+	CachedPoliceSelectedKey = SelectedKey;
+	HandlePoliceLocalSelection(SelectedKey);
 }
 
 void UHeistBriefingScreenWidget::HandleThiefSelectionCounts(

@@ -95,10 +95,10 @@ USTRUCT(BlueprintType)
 struct FHeistBriefingStrokePoint
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector2D NormalizedPosition = FVector2D::ZeroVector;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float RelativeTime = 0.f;
 };
@@ -107,13 +107,13 @@ USTRUCT(BlueprintType)
 struct FHeistBriefingStrokeStyle
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FLinearColor Color = FLinearColor::Black;
-	
+	FLinearColor Color = FLinearColor::White;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Thickness = 2.f;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EHeistBriefingDrawingTool Tool = EHeistBriefingDrawingTool::Pen;
 };
@@ -122,22 +122,22 @@ USTRUCT(BlueprintType)
 struct FHeistBriefingStroke
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGuid StrokeID;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString AuthorPlayerName;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName LayerId = TEXT("Outside");
-	
+
 	UPROPERTY(EditAnywhere, BlueprintREadWrite)
 	FHeistBriefingStrokeStyle Style;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FHeistBriefingStrokePoint> Points;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float ServerTimestamp = 0.f;
 
@@ -152,7 +152,7 @@ USTRUCT(BlueprintType)
 struct FHeistBriefingStrokePreviewChunk
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGuid StrokeId;
 
@@ -184,7 +184,10 @@ struct FHeistBriefingPlanLayerDefinition
 	FText DisplayName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TObjectPtr<UTexture2D> PlanTexture = nullptr;
+	TObjectPtr<UTexture2D> ThiefPlanTexture = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UTexture2D> PolicePlanTexture = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 SortOrder = 0;

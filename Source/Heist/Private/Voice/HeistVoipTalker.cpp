@@ -5,11 +5,14 @@
 #include "Systems/Messaging/HeistTags_Message.h"
 
 #include "GameFramework/PlayerState.h"
+#include "GameFramework/SpectatorPawn.h"
 #include "Components/AudioComponent.h"
 
 void UHeistVoipTalker::OnTalkingBegin(UAudioComponent* AudioComponent)
 {
 	APlayerState* OwnerPS = GetOwner<APlayerState>();
+
+	if (IsValid(OwnerPS) && IsValid(OwnerPS->GetPawn()) && OwnerPS->GetPawn()->IsA<ASpectatorPawn>()) return;
 
 	if (IsValid(OwnerPS) && IsValid(OwnerPS->GetPawn()))
 	{

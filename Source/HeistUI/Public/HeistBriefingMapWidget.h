@@ -72,6 +72,8 @@ private:
 	void HandlePreviewChunkReceived(const FHeistBriefingStrokePreviewChunk& InChunk);
 	void HandleStrokeCommitted(const FHeistBriefingStroke& InStroke);
 	void RebuildCommittedStrokeCache();
+	UTexture2D* ResolvePlanTextureForViewMode(const FHeistBriefingPlanLayerDefinition& Layer) const;
+	void ApplyPlanTextureForLayer(const FHeistBriefingPlanLayerDefinition& Layer);
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> PlanImage;
