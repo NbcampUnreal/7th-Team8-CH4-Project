@@ -10,6 +10,7 @@ class UHeistMessageSubsystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHeistOnSoundDetected, FVector, OriginLocation, float, DetectionRadius);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHeistOnFlashlightAlert, bool, bIsDetected);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHeistOnChannelingState, bool, bStarted, float, Duration);
 
 UENUM(BlueprintType)
 enum class EHeistMessageMatch : uint8
@@ -98,6 +99,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Heist|Messaging|UI")
 	FHeistOnFlashlightAlert OnFlashlightAlertEvent;
 
+	UPROPERTY(BlueprintAssignable, Category = "Heist|Messaging|UI")
+	FHeistOnChannelingState OnChannelingStateEvent;
+
 private:
 	struct FListenerData
 	{
@@ -120,4 +124,5 @@ private:
 
 	FHeistMessageListenerHandle SoundDetectedBridgeHandle;
 	FHeistMessageListenerHandle FlashlightAlertBridgeHandle;
+	FHeistMessageListenerHandle ChannelingStateBridgeHandle;
 };
