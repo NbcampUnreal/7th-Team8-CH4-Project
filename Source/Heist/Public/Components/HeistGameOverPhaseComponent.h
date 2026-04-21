@@ -13,5 +13,13 @@ class HEIST_API UHeistGameOverPhaseComponent : public UActorComponent
 public:	
 	UHeistGameOverPhaseComponent();
 
-		
+	void StartEngineChanneling();
+
+private:
+	void EngineChannelingEnd();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|GameOver")
+	float EngineChannelingDuration = 20.f; // 기본 - 20초
+
+	FTimerHandle EngineTimerHandle;
 };

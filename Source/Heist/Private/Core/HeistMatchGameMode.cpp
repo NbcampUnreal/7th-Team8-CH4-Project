@@ -426,6 +426,15 @@ void AHeistMatchGameMode::SpawnAllPlayersAtBriefingStart()
 	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] SpawnAllPlayersAtBriefingStart: end"));
 }
 
+void AHeistMatchGameMode::TryEngineChannelingStart()
+{
+	if (!IsValid(GameOverPhaseComponent)) return;
+	GameOverPhaseComponent->StartEngineChanneling();
+
+	AHeistMatchGameState* MatchGameState = GetGameState<AHeistMatchGameState>();
+	MatchGameState->SetEngineChannelingStart(true);
+}
+
 void AHeistMatchGameMode::StartReturnToLobbyFlow()
 {
 	if (!HasAuthority() || bLobbyTravelRequested) return;

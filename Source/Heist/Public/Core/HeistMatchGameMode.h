@@ -33,6 +33,7 @@ public:
 	void NotifyPlayerReadyForMatchTravel(APlayerController* PlayerController);
 	void NotifyPoliceVictory();
 	void SpawnAllPlayersAtBriefingStart();
+	void TryEngineChannelingStart();
 
 protected:
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;

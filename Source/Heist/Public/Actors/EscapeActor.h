@@ -19,11 +19,14 @@ class HEIST_API AEscapeActor : public AActor
 public:	
 	AEscapeActor();
 
+	void SetActivation(bool bIsActive);
+
 protected:
 	virtual void BeginPlay() override;
 
 	bool CheckCanInteract(ACharacter* Interactor) const;
 	FGameplayTag ResolveInteractAbilityTag(ACharacter* Interactor) const;
+
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess))
@@ -37,4 +40,10 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHeistInteractSphereComponent> InteractSphereComponent;
+
+	bool bCanEscape = false;
+
+public:
+	UPROPERTY(EditAnywhere, Category = "Heist|Escape")
+	int32 EscapeGroupIndex = 0;
 };

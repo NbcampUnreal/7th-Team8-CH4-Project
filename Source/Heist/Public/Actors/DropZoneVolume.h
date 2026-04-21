@@ -6,6 +6,8 @@
 
 class UBoxComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnZoneValueChanged, int32, ZoneIndex, int32, CurrentValue);
+
 UCLASS()
 class HEIST_API ADropZoneVolume : public AActor
 {
@@ -19,6 +21,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	UFUNCTION()
 	void OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
@@ -29,6 +33,15 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Heist|Volume")
 	TObjectPtr<UBoxComponent> CollisionBox;
 
-	UPROPERTY(VisibleAnywhere, Category = "Heist|Volume")
+	UPROPERTY(Replicated, VisibleAnywhere, Category = "Heist|Volume")
 	int32 CurrentValue;
+
+	UPROPERTY(Replicated, VisibleAnywhere, Category = "Heist|Volume")
+	int32 ZoneIndex;
+
+	UPROPERTY(EditAnywhere, Category = "Heist|Escape")
+	int32 EscapeGroupIndex = 0;
+
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnZoneValueChanged OnZoneValueChanged;
 };

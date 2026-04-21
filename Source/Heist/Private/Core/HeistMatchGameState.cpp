@@ -9,7 +9,10 @@
 
 void AHeistMatchGameState::InitZoneScores(int32 ZoneVolumeCount, int32 TargetScore)
 {
+	if (!HasAuthority()) return;
+
 	ZoneScores.Empty();
+	ZoneScores.Reserve(ZoneVolumeCount);
 
 	for (int32 i = 0; i < ZoneVolumeCount; ++i)
 	{
@@ -57,6 +60,16 @@ void AHeistMatchGameState::SetZoneScore(int32 ZoneIndex, int32 NewScore)
 
 		UE_LOG(LogTemp, Log, TEXT("Zone %d Score Updated: %d"), ZoneIndex, NewScore);
 	}
+}
+
+void AHeistMatchGameState::SetEngineChannelingStart(bool bStart)
+{
+	bEngineChannelingStarted = bStart;
+}
+
+void AHeistMatchGameState::SetEngineChannelingEnd(bool bEnd)
+{
+	bEngineChannelingEnded = bEnd;
 }
 
 void AHeistMatchGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
