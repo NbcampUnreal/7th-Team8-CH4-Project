@@ -170,6 +170,11 @@ void UHeistBriefingPlayerComponent::ClientReceiveThiefCounts_Implementation(
 	OnThiefSelectionCountsReceived.Broadcast(Counts);
 }
 
+void UHeistBriefingPlayerComponent::ClientReceivePoliceObjectiveSelection_Implementation(FName SelectedKey)
+{
+	OnPoliceObjectiveSelectionReceived.Broadcast(SelectedKey);
+}
+
 void UHeistBriefingPlayerComponent::ServerSetThiefSpawnPoint_Implementation(FName InKey)
 {
 	AHeistPlayerState* HeistPS = Cast<AHeistPlayerState>(GetOwner());

@@ -139,6 +139,7 @@ private:
 
 	void RebuildSelectionList();
 	void HandlePoliceLocalSelection(FName SelectedKey);
+	void HandlePoliceObjectiveSelectionReceived(FName SelectedKey);
 
 	void HandlePhaseChanged(const FHeistPhaseChangedMessage& Message);
 	void SetBriefingPointButtonsEnabled(bool bEnabled);

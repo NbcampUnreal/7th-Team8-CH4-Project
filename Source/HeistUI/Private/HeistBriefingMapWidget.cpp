@@ -70,11 +70,7 @@ void UHeistBriefingMapWidget::InitializeForBriefing(
 	if (!PlanLayers.IsEmpty())
 	{
 		ActiveLayerId = PlanLayers[0].LayerId;
-
-		if (IsValid(PlanLayers[0].PlanTexture) && IsValid(PlanImage))
-		{
-			PlanImage->SetBrushFromTexture(PlanLayers[0].PlanTexture);
-		}
+		ApplyPlanTextureForLayer(PlanLayers[0]);
 	}
 
 	if (IsValid(DrawingSyncComponent))
@@ -103,9 +99,9 @@ void UHeistBriefingMapWidget::SetActiveLayer(FName InLayerId)
 	const FHeistBriefingPlanLayerDefinition* ActiveLayer = PlanLayers.FindByPredicate(
 		[this](const FHeistBriefingPlanLayerDefinition& L){ return L.LayerId == ActiveLayerId; });
 
-	if (ActiveLayer && IsValid(ActiveLayer->PlanTexture) && IsValid(PlanImage))
+	if (ActiveLayer)
 	{
-		PlanImage->SetBrushFromTexture(ActiveLayer->PlanTexture);
+		ApplyPlanTextureForLayer(*ActiveLayer);
 	}
 
 	Invalidate(EInvalidateWidgetReason::Paint);
@@ -330,4 +326,45 @@ void UHeistBriefingMapWidget::RebuildCommittedStrokeCache()
 			}
 		}
 	}
+}
+
+UTexture2D* UHeistBriefingMapWidget::ResolvePlanTextureForViewMode(const FHeistBriefingPlanLayerDefinition& Layer) const
+{
+	switch (ViewMode)
+	{
+	case EHeistBriefingViewMode::Police:
+		if (IsValid(Layer.PolicePlanTexture)) return Layer.PolicePlanTexture;
+		if (IsValid(Layer.ThiefPlanTexture)) return Layer.ThiefPlanTexture; // fallback
+		break;
+
+	case EHeistBriefingViewMode::Thief:
+	default:
+		if (IsValid(Layer.ThiefPlanTexture)) return Layer.ThiefPlanTexture;
+		if (IsValid(Layer.PolicePlanTexture)) return Layer.PolicePlanTexture; // fallback
+		break;
+	}
+
+	return nullptr;
+}
+
+void UHeistBriefingMapWidget::ApplyPlanTextureForLayer(const FHeistBriefingPlanLayerDefinition& Layer)
+{
+	if (!IsValid(PlanImage))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BriefingMap] PlanImage is null."));
+		return;
+	}
+
+	if (UTexture2D* Texture = ResolvePlanTextureForViewMode(Layer))
+	{
+		PlanImage->SetBrushFromTexture(Texture);
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("[BriefingMap] Missing plan texture. LayerId=%s ViewMode=%d"),
+		*Layer.LayerId.ToString(),
+		static_cast<int32>(ViewMode));
+
+	PlanImage->SetBrush(FSlateBrush());
 }

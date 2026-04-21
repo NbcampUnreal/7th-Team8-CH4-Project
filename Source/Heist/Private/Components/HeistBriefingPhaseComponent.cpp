@@ -116,6 +116,14 @@ void UHeistBriefingPhaseComponent::SetPoliceObjectiveSelection(APlayerState* Pla
 	}
 
 	PoliceObjectiveSelections.FindOrAdd(PlayerState) = InKey;
+
+	if (AHeistPlayerState* HeistPlayerState = Cast<AHeistPlayerState>(PlayerState))
+	{
+		if (UHeistBriefingPlayerComponent* BriefingPlayerComponent = HeistPlayerState->GetBriefingPlayerComponent())
+		{
+			BriefingPlayerComponent->ClientReceivePoliceObjectiveSelection(InKey);
+		}
+	}
 }
 
 FName UHeistBriefingPhaseComponent::GetThiefSpawnSelection(const APlayerState* PlayerState) const

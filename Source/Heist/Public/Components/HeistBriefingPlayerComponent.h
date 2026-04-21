@@ -12,6 +12,7 @@ class UHeistBriefingPhaseComponent;
 DECLARE_MULTICAST_DELEGATE(FOnHeistBriefingContextReady);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnThiefSelectionCountsReceived,
 	const TArray<FHeistBriefingSelectionCount>&);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPoliceObjectiveSelectionReceived, FName);
 
 /**
  * 플레이어별 브리핑 입력 진입점.
@@ -65,8 +66,13 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientReceiveThiefCounts(const TArray<FHeistBriefingSelectionCount>& Counts);
 
+	UFUNCTION(Client, Reliable)
+	void ClientReceivePoliceObjectiveSelection(FName SelectedKey);
+
 	/** 도둑 스폰 카운트 수신 시 발동. 위젯이 바인딩. */
 	FOnThiefSelectionCountsReceived OnThiefSelectionCountsReceived;
+
+	FOnPoliceObjectiveSelectionReceived OnPoliceObjectiveSelectionReceived;
 
 	void BroadcastContextReady();
 
