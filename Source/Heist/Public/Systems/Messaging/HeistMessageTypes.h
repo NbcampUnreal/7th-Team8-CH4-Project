@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Core/HeistMatchTypes.h"
 #include "GameFramework/PlayerState.h"
@@ -108,6 +108,15 @@ struct FHeistBriefingContextReadyMessage
 	/** CreateWidget에 사용할 위젯 클래스. Board BP에서 할당한 값을 그대로 전달한다. */
 	UPROPERTY()
 	TObjectPtr<UClass> WidgetClass;
+};
+
+USTRUCT()
+struct FHeistPlayHUDReadyMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TSubclassOf<UObject> PlayHUDClass;
 };
 
 USTRUCT()

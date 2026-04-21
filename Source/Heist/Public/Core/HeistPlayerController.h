@@ -62,6 +62,9 @@ private:
 	void UpdateCursorRotation();
 	void HandleVoiceTalkingStateChanged(FUniqueNetIdRef PlayerId, bool bIsTalking);
 
+	UPROPERTY(EditDefaultsOnly, Category = "UI", meta = (MetaClass = "/Script/UMG.UserWidget"))
+	TObjectPtr<UClass> PlayHUDClass;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> SystemMenuInputAction;
 

@@ -17,9 +17,12 @@ void UHeistPlayHUD::NativeConstruct()
 
 void UHeistPlayHUD::NativeDestruct()
 {
-	if (GetWorld() || GetWorld()->GetTimerManager().IsTimerActive(CheckTimerHandle))
+	UWorld* World = GetWorld();
+	if (!IsValid(World)) return;
+
+	if (World->GetTimerManager().IsTimerActive(CheckTimerHandle))
 	{
-		GetWorld()->GetTimerManager().ClearTimer(CheckTimerHandle);
+		World->GetTimerManager().ClearTimer(CheckTimerHandle);
 	}
 
 	Super::NativeDestruct();

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "NativeGameplayTags.h"
 
@@ -26,6 +26,8 @@ namespace HeistMessageTags
 
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Briefing_ContextReady);
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Briefing_End);
+
+	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_PlayHUD_Ready);
 	
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UI_SoundDetected);
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UI_FlashlightAlert);

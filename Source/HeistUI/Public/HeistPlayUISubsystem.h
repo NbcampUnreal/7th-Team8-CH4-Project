@@ -20,8 +20,7 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	// Execution Phase 진입 시 호출
-	void ShowPlayHUD();
+	void ShowPlayHUD(TSubclassOf<UObject> InWidgetClass);
 	void HidePlayHUD();
 
 private:

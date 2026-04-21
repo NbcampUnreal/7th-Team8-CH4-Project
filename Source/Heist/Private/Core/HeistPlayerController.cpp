@@ -395,6 +395,14 @@ void AHeistPlayerController::TryNotifyBriefingContextReady()
 		static_cast<int32>(HeistPS->GetAssignedTeam()),
 		*GetNameSafe(GetPawn()));
 	BriefingComp->BroadcastContextReady();
+
+	if (IsValid(PlayHUDClass))
+	{
+		FHeistPlayHUDReadyMessage HUDMsg;
+		HUDMsg.PlayHUDClass = PlayHUDClass;
+		UHeistMessageSubsystem::Get(this).BroadcastMessage(
+			HeistMessageTags::Message_PlayHUD_Ready, HUDMsg);
+	}
 }
 
 void AHeistPlayerController::PlayerTick(float DeltaTime)

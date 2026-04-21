@@ -11,11 +11,11 @@ void UHeistPlayUISubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	UHeistMessageSubsystem& MS = UHeistMessageSubsystem::Get(this);
 
-	ReadyPhaseHandle = MS.RegisterListener<FHeistBriefingContextReadyMessage>(
-		HeistMessageTags::Message_Briefing_ContextReady,
-		[this](FGameplayTag Channel, const FHeistBriefingContextReadyMessage& Msg)
+	ReadyPhaseHandle = MS.RegisterListener<FHeistPlayHUDReadyMessage>(
+		HeistMessageTags::Message_PlayHUD_Ready,
+		[this](FGameplayTag, const FHeistPlayHUDReadyMessage& Msg)
 		{
-			ShowPlayHUD();
+			ShowPlayHUD(Msg.PlayHUDClass);
 		});
 	//TODO_CSH 게임 종류 태그 생성시 변경 필요할 수 있음
 	EndHandle = MS.RegisterListener<FHeistBriefingEndMessage>(
@@ -30,12 +30,14 @@ void UHeistPlayUISubsystem::Deinitialize()
 {
 	HidePlayHUD();
 	ReadyPhaseHandle.Unregister();
-	EndHandle.Unregister();	
+	EndHandle.Unregister();
 	Super::Deinitialize();
 }
 
-void UHeistPlayUISubsystem::ShowPlayHUD()
+void UHeistPlayUISubsystem::ShowPlayHUD(TSubclassOf<UObject> InWidgetClass)
 {
+	if (!IsValid(InWidgetClass)) return;
+
 	if (IsValid(PlayHUDInstance))
 	{
 		PlayHUDInstance->SetVisibility(ESlateVisibility::Visible);
@@ -45,10 +47,11 @@ void UHeistPlayUISubsystem::ShowPlayHUD()
 	UWorld* World = GetWorld();
 	if (!IsValid(World)) return;
 
-	PlayHUDInstance = CreateWidget<UHeistPlayHUD>(World, UHeistPlayHUD::StaticClass());
+	APlayerController* PC = GetLocalPlayer()->GetPlayerController(World);
+
+	PlayHUDInstance = CreateWidget<UHeistPlayHUD>(PC, TSubclassOf<UHeistPlayHUD>(InWidgetClass));
 	if (!IsValid(PlayHUDInstance)) return;
 
-	PlayHUDInstance->NativeConstruct(); // 커스텀 초기화 필요 시
 	PlayHUDInstance->AddToViewport();
 }
 

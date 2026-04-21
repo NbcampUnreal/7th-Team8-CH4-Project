@@ -1,4 +1,4 @@
-﻿#include "Systems/Messaging/HeistTags_Message.h"
+#include "Systems/Messaging/HeistTags_Message.h"
 
 namespace HeistMessageTags
 {
@@ -23,6 +23,8 @@ namespace HeistMessageTags
 	
 	UE_DEFINE_GAMEPLAY_TAG(Message_Briefing_ContextReady, "Message.Briefing.ContextReady");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Briefing_End, "Message.Briefing.End");
+
+	UE_DEFINE_GAMEPLAY_TAG(Message_PlayHUD_Ready, "Message.PlayHUD.Ready");
 	
 	UE_DEFINE_GAMEPLAY_TAG(Message_UI_SoundDetected, "Message.UI.SoundDetected");
 	UE_DEFINE_GAMEPLAY_TAG(Message_UI_FlashlightAlert, "Message.UI.FlashlightAlert");
