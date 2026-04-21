@@ -192,3 +192,18 @@ struct FHeistBriefingPlanLayerDefinition
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 SortOrder = 0;
 };
+
+USTRUCT(BlueprintType)
+struct FZoneScoreData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	float CurrentScore = 0.f;
+
+	UPROPERTY(BlueprintReadOnly)
+	float TargetScore = 25.f;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 ZoneIndex;
+};

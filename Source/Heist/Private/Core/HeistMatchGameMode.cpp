@@ -4,6 +4,8 @@
 #include "Components/HeistBriefingPhaseComponent.h"
 #include "Components/HeistExecutionPhaseComponent.h"
 #include "Components/HeistPhaseManagerComponent.h"
+#include "Components/HeistGameOverPhaseComponent.h"
+#include "Components/HeistDropZoneManagerComponent.h"
 #include "Core/HeistMatchGameState.h"
 #include "Core/HeistPlayerController.h"
 #include "Core/HeistPlayerState.h"
@@ -20,6 +22,7 @@ AHeistMatchGameMode::AHeistMatchGameMode()
 	ExecutionPhaseComponent = CreateDefaultSubobject<UHeistExecutionPhaseComponent>(TEXT("ExecutionPhaseComponent"));
 	ArrestVictoryComponent = CreateDefaultSubobject<UHeistArrestVictoryComponent>(TEXT("ArrestVictoryComponent"));
 	GameOverPhaseComponent = CreateDefaultSubobject<UHeistGameOverPhaseComponent>(TEXT("GameOverPhaseComponent"));
+	DropZoneManagerComponent = CreateDefaultSubobject<UHeistDropZoneManagerComponent>(TEXT("DropZoneManagerComponent"));
 	LobbyMapPath = TEXT("/Game/Heist/Maps/L_Lobby");
 }
 
@@ -54,6 +57,7 @@ void AHeistMatchGameMode::BeginPlay()
 	// 클라는 그 결과를 replicated state/OnRep 훅으로 뒤늦게 수렴한다.
 	GatherBriefingStartPoints();
 	TryStartBriefingFlow();
+	TryInitDropZone();
 }
 
 void AHeistMatchGameMode::GenericPlayerInitialization(AController* C)
@@ -500,4 +504,10 @@ void AHeistMatchGameMode::HandleLobbyTravelReadyTimeout()
 	}
 
 	StartLobbyTravel();
+}
+
+void AHeistMatchGameMode::TryInitDropZone()
+{
+	if (!IsValid(DropZoneManagerComponent)) return;
+	DropZoneManagerComponent->InitDropZone();
 }

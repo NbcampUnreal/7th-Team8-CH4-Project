@@ -11,6 +11,7 @@ class UHeistPhaseManagerComponent;
 class UHeistBriefingPhaseComponent;
 class UHeistExecutionPhaseComponent;
 class UHeistGameOverPhaseComponent;
+class UHeistDropZoneManagerComponent;
 class APlayerStart;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMatchVictory, EHeistTeam /*Winner*/);
@@ -56,6 +57,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
 	TObjectPtr<UHeistArrestVictoryComponent> ArrestVictoryComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Heist|Components")
+	TObjectPtr<UHeistDropZoneManagerComponent> DropZoneManagerComponent;
+
 	void GatherBriefingStartPoints();
 	void TryStartBriefingFlow();
 	int32 CountPlayersReadyForBriefingStart() const;
@@ -67,6 +71,8 @@ protected:
 	void HandleLobbyTravelReadyTimeout();
 	int32 CountExpectedPlayersForMatchTravel() const;
 	int32 CountReadyPlayersForMatchTravel() const;
+
+	void TryInitDropZone();
 
 	UPROPERTY(EditDefaultsOnly, Category="Heist|Briefing")
 	FName ThiefBriefingStartTag = TEXT("StartPoint_Briefing_Thief");

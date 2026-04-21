@@ -3,19 +3,13 @@
 #include "Actors/ItemActor.h"
 #include "Components/BoxComponent.h"
 
-ADropZoneVolume::ADropZoneVolume()
+ADropZoneVolume::ADropZoneVolume() : CurrentValue(0)
 {
 	PrimaryActorTick.bCanEverTick = false;
 
 	CollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBox"));
 	RootComponent = CollisionBox;
 
-}
-
-float ADropZoneVolume::GetValuePercent() const
-{
-	if (TotalValue <= 0) return 0.f;
-	return FMath::GetRangePct(0.0f, (float)TargetValue, (float)TotalValue);
 }
 
 void ADropZoneVolume::BeginPlay()
@@ -38,7 +32,7 @@ void ADropZoneVolume::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, A
 	if (!OtherComp->ComponentHasTag(FName("MainBody"))) return;
 
 	int32 ItemValue = Item->GetItemValue();
-	TotalValue += ItemValue;
+	CurrentValue += ItemValue;
 }
 
 void ADropZoneVolume::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
@@ -50,5 +44,5 @@ void ADropZoneVolume::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* 
 	if (!OtherComp->ComponentHasTag(FName("MainBody"))) return;
 
 	int32 ItemValue = Item->GetItemValue();
-	TotalValue -= ItemValue;
+	CurrentValue -= ItemValue;
 }

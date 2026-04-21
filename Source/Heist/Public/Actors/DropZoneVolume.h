@@ -14,7 +14,7 @@ class HEIST_API ADropZoneVolume : public AActor
 public:	
 	ADropZoneVolume();
 
-	float GetValuePercent() const;
+	float GetCurrentValue() const { return CurrentValue; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -24,13 +24,11 @@ protected:
 
 	UFUNCTION()
 	void OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
 public:	
 	UPROPERTY(VisibleAnywhere, Category = "Heist|Volume")
 	TObjectPtr<UBoxComponent> CollisionBox;
 
 	UPROPERTY(VisibleAnywhere, Category = "Heist|Volume")
-	int32 TotalValue = 0;
-
-	UPROPERTY(EditAnywhere, Category = "Heist|Volume")
-	int32 TargetValue = 10;
+	int32 CurrentValue;
 };

@@ -7,6 +7,21 @@
 #include "Systems/Messaging/HeistTags_Message.h"
 #include "TimerManager.h"
 
+void AHeistMatchGameState::InitZoneScores(int32 ZoneVolumeCount, int32 TargetScore)
+{
+	ZoneScores.Empty();
+
+	for (int32 i = 0; i < ZoneVolumeCount; ++i)
+	{
+		FZoneScoreData NewData;
+		NewData.CurrentScore = 0.f;
+		NewData.TargetScore = TargetScore;
+		NewData.ZoneIndex = i;
+
+		ZoneScores.Add(NewData);
+	}
+}
+
 void AHeistMatchGameState::SetCurrentPhase(EHeistMatchPhase InPhase)
 {
 	if (CurrentPhase == InPhase)
@@ -34,6 +49,16 @@ void AHeistMatchGameState::SetPhaseEndServerTime(float InPhaseEndServerTime)
 	PhaseEndServerTime = InPhaseEndServerTime;
 }
 
+void AHeistMatchGameState::SetZoneScore(int32 ZoneIndex, int32 NewScore)
+{
+	if (ZoneScores.IsValidIndex(ZoneIndex))
+	{
+		ZoneScores[ZoneIndex].CurrentScore = NewScore;
+
+		UE_LOG(LogTemp, Log, TEXT("Zone %d Score Updated: %d"), ZoneIndex, NewScore);
+	}
+}
+
 void AHeistMatchGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -42,6 +67,7 @@ void AHeistMatchGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(AHeistMatchGameState, PhaseRemainingTime);
 	DOREPLIFETIME(AHeistMatchGameState, bBriefingSelectionLocked);
 	DOREPLIFETIME(AHeistMatchGameState, PhaseEndServerTime);
+	DOREPLIFETIME(AHeistMatchGameState, ZoneScores);
 }
 
 void AHeistMatchGameState::OnRep_MatchPhase()
@@ -80,6 +106,11 @@ void AHeistMatchGameState::OnRep_PhaseEndServerTime()
 	{
 		StopPhaseUiTimer();
 	}
+}
+
+void AHeistMatchGameState::OnRep_ZoneScores()
+{
+	// UI 갱신용 대리자(Delegate) 호출 등에 사용
 }
 
 void AHeistMatchGameState::StartPhaseUiTimer()
