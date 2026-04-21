@@ -5,6 +5,7 @@
 #include "FlashlightComponent.generated.h"
 
 class AThiefCharacter;
+class AItemActor;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnThiefSpotted, AThiefCharacter*, SpottedThief);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnThiefLost, AThiefCharacter*, LostThief);
@@ -68,6 +69,8 @@ private:
 	FTimerHandle VisionCheckTimerHandle;
 
 	bool IsThiefInFlashlight(AThiefCharacter* Thief, bool bWasPreviouslyVisible) const;
+
+	bool IsItemInFlashlight(AItemActor* Item, const FVector& PoliceLocation) const;
 
 	UFUNCTION()
 	void ProcessLocalVision();

@@ -2,11 +2,11 @@
 
 #include "Character/PoliceCharacter.h"
 
-#include "GameFramework/Character.h"
-#include "Components/SkeletalMeshComponent.h"
+#include "Components/MeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/World.h"
 #include "Engine/Engine.h"
+#include "GameFramework/PlayerController.h"
 
 UHeistTransparencyComponent::UHeistTransparencyComponent()
 {
@@ -21,44 +21,50 @@ void UHeistTransparencyComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
-	if (!IsValid(OwnerCharacter)) return;
+	AActor* OwnerActor = GetOwner();
+	if (!IsValid(OwnerActor)) return;
 
-	USkeletalMeshComponent* MeshComp = OwnerCharacter->GetMesh();
-	if (!IsValid(MeshComp)) return;
+	TArray<UMeshComponent*> RawMeshComponents;
+	OwnerActor->GetComponents<UMeshComponent>(RawMeshComponents);
+	for (UMeshComponent* Mesh : RawMeshComponents)
+	{
+		if (IsValid(Mesh))
+		{
+			CachedMeshComponents.Add(Mesh);
+		}
+	}
 
-	bool bIsLocalViewerPolice = false;
 	APlayerController* PC = GEngine->GetFirstLocalPlayerController(GetWorld());
 	if (IsValid(PC))
 	{
 		APawn* LocalPawn = PC->GetPawn();
-		if (IsValid(LocalPawn) && LocalPawn->IsA<APoliceCharacter>())
-		{
-			bIsLocalViewerPolice = true;
-		}
+		bCachedIsLocalViewerPolice = IsValid(LocalPawn) && LocalPawn->IsA<APoliceCharacter>();
 	}
 
-	if (bIsLocalViewerPolice)
+	if (bCachedIsLocalViewerPolice && bStartInvisibleToPolice)
 	{
 		bIsTargetVisible = false;
 		CurrentOpacity = 0.0f;
-		MeshComp->SetVisibility(false, true);
+		SetAllMeshVisibility(false);
 	}
 	else
 	{
 		bIsTargetVisible = true;
 		CurrentOpacity = 1.0f;
-		MeshComp->SetVisibility(true, true);
+		SetAllMeshVisibility(true);
 	}
 
-	const int32 MaterialCount = MeshComp->GetNumMaterials();
-	for (int32 i = 0; i < MaterialCount; ++i)
+	for (UMeshComponent* Mesh : CachedMeshComponents)
 	{
-		UMaterialInstanceDynamic* MID = MeshComp->CreateAndSetMaterialInstanceDynamic(i);
-		if (IsValid(MID))
+		const int32 MaterialCount = Mesh->GetNumMaterials();
+		for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; ++MaterialIndex)
 		{
-			MID->SetScalarParameterValue(OpacityParamName, CurrentOpacity);
-			DynamicMaterials.Add(MID);
+			UMaterialInstanceDynamic* DynamicMaterial = Mesh->CreateAndSetMaterialInstanceDynamic(MaterialIndex);
+			if (IsValid(DynamicMaterial))
+			{
+				DynamicMaterial->SetScalarParameterValue(OpacityParamName, CurrentOpacity);
+				DynamicMaterials.Add(DynamicMaterial);
+			}
 		}
 	}
 }
@@ -68,18 +74,17 @@ void UHeistTransparencyComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	const float TargetOpacity = bIsTargetVisible ? 1.0f : 0.0f;
-
 	CurrentOpacity = FMath::FInterpConstantTo(CurrentOpacity, TargetOpacity, DeltaTime, FadeSpeed);
 
-	for (UMaterialInstanceDynamic* MID : DynamicMaterials)
+	for (UMaterialInstanceDynamic* DynamicMaterial : DynamicMaterials)
 	{
-		if (IsValid(MID))
+		if (IsValid(DynamicMaterial))
 		{
-			MID->SetScalarParameterValue(OpacityParamName, CurrentOpacity);
+			DynamicMaterial->SetScalarParameterValue(OpacityParamName, CurrentOpacity);
 		}
 	}
 
-	const bool bReachedTarget = FMath::IsNearlyEqual(CurrentOpacity, TargetOpacity, 0.01f);
+	const bool bReachedTarget = FMath::IsNearlyEqual(CurrentOpacity, TargetOpacity, OpacityNearlyEqualTolerance);
 	if (bReachedTarget)
 	{
 		CurrentOpacity = TargetOpacity;
@@ -87,36 +92,54 @@ void UHeistTransparencyComponent::TickComponent(float DeltaTime, ELevelTick Tick
 
 		if (CurrentOpacity <= 0.0f)
 		{
-			ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
-			if (IsValid(OwnerCharacter) && IsValid(OwnerCharacter->GetMesh()))
-			{
-				OwnerCharacter->GetMesh()->SetVisibility(false, true);
-			}
+			SetAllMeshVisibility(false);
 		}
 	}
 }
 
 void UHeistTransparencyComponent::SetTargetVisibility(bool bVisible)
 {
-	APlayerController* PC = GEngine->GetFirstLocalPlayerController(GetWorld());
-	if (IsValid(PC))
-	{
-		APawn* LocalPawn = PC->GetPawn();
-		if (IsValid(LocalPawn) && !LocalPawn->IsA<APoliceCharacter>()) return;
-	}
-
+	if (!IsLocalViewerPolice()) return;
 	if (bIsTargetVisible == bVisible) return;
 
 	bIsTargetVisible = bVisible;
 
 	if (bIsTargetVisible)
 	{
-		ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
-		if (IsValid(OwnerCharacter) && IsValid(OwnerCharacter->GetMesh()))
-		{
-			OwnerCharacter->GetMesh()->SetVisibility(true, true);
-		}
+		SetAllMeshVisibility(true);
 	}
 
 	SetComponentTickEnabled(true);
+}
+
+bool UHeistTransparencyComponent::IsLocalViewerPolice()
+{
+	// 이미 성공적으로 캐싱했다면 캐시값 반환
+	if (bHasCachedViewer) return bCachedIsLocalViewerPolice;
+
+	APlayerController* PlayerController = GEngine->GetFirstLocalPlayerController(GetWorld());
+	if (IsValid(PlayerController))
+	{
+		APawn* LocalPawn = PlayerController->GetPawn();
+		// 로컬 폰이 유효한 상태(빙의 완료)일 때만 캐싱을 확정합니다.
+		if (IsValid(LocalPawn))
+		{
+			bCachedIsLocalViewerPolice = LocalPawn->IsA<APoliceCharacter>();
+			bHasCachedViewer = true;
+			return bCachedIsLocalViewerPolice;
+		}
+	}
+	// 빙의 전이라면 일단 false를 반환하고 다음 번에 다시 시도합니다.
+	return false;
+}
+
+void UHeistTransparencyComponent::SetAllMeshVisibility(bool bVisible)
+{
+	for (UMeshComponent* Mesh : CachedMeshComponents)
+	{
+		if (IsValid(Mesh))
+		{
+			Mesh->SetVisibility(bVisible, true);
+		}
+	}
 }
