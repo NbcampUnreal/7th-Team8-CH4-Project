@@ -6,10 +6,13 @@
 #include "GameFramework/GameModeBase.h"
 #include "HeistMatchGameMode.generated.h"
 
+class UHeistArrestVictoryComponent;
 class UHeistPhaseManagerComponent;
 class UHeistBriefingPhaseComponent;
 class UHeistExecutionPhaseComponent;
 class APlayerStart;
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnMatchVictory, EHeistTeam /*Winner*/);
 
 /**
  *
@@ -22,7 +25,11 @@ class HEIST_API AHeistMatchGameMode : public AGameModeBase
 public:
 	AHeistMatchGameMode();
 
+	FOnMatchVictory OnMatchVictory;
+
 	void NotifyPlayerReadyForBriefingStart(APlayerController* PlayerController);
+	void NotifyPlayerReadyForMatchTravel(APlayerController* PlayerController);
+	void NotifyPoliceVictory();
 	void SpawnAllPlayersAtBriefingStart();
 
 protected:
@@ -30,6 +37,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void GenericPlayerInitialization(AController* C) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void Logout(AController* Exiting) override;
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
@@ -41,12 +49,20 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
 	TObjectPtr<UHeistExecutionPhaseComponent> ExecutionPhaseComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Heist|Components")
+	TObjectPtr<UHeistArrestVictoryComponent> ArrestVictoryComponent;
+
 	void GatherBriefingStartPoints();
 	void TryStartBriefingFlow();
 	int32 CountPlayersReadyForBriefingStart() const;
 	int32 CountSettledMatchPlayers() const;
 	AActor* FindBriefingStartPoint(EHeistTeam Team) const;
 	void SpawnPlayerAtBriefingStart(APlayerController* PlayerController, EHeistTeam Team);
+	void StartReturnToLobbyFlow();
+	void StartLobbyTravel();
+	void HandleLobbyTravelReadyTimeout();
+	int32 CountExpectedPlayersForMatchTravel() const;
+	int32 CountReadyPlayersForMatchTravel() const;
 
 	UPROPERTY(EditDefaultsOnly, Category="Heist|Briefing")
 	FName ThiefBriefingStartTag = TEXT("StartPoint_Briefing_Thief");
@@ -72,5 +88,17 @@ protected:
 	TObjectPtr<AActor> PoliceBriefingStartPoint;
 
 	bool bBriefingFlowStarted = false;
+	bool bMatchVictoryDeclared = false;
+	bool bLobbyTravelRequested = false;
 	TSet<TWeakObjectPtr<APlayerController>> PlayersReadyForBriefingStart;
+	TSet<TWeakObjectPtr<APlayerState>> ExpectedPlayersForMatchTravel;
+	TSet<TWeakObjectPtr<APlayerState>> PlayersReadyForMatchTravel;
+
+	UPROPERTY(EditDefaultsOnly, Category="Heist|Travel")
+	float LobbyTravelReadyTimeoutSeconds = 5.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Heist|Travel")
+	FString LobbyMapPath;
+
+	FTimerHandle LobbyTravelReadyTimeoutHandle;
 };

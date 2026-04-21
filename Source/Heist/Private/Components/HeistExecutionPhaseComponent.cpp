@@ -1,6 +1,7 @@
 
 #include "Components/HeistExecutionPhaseComponent.h"
 
+#include "Components/HeistArrestVictoryComponent.h"
 #include "Components/HeistBriefingPhaseComponent.h"
 #include "Core/HeistMatchTypes.h"
 #include "Core/HeistMatchGameMode.h"
@@ -18,6 +19,14 @@ void UHeistExecutionPhaseComponent::EnterExecutionPhase()
 	SpawnPoliceObjective();
 	RestoreVoiceToPawnRoot();
 	ActivateExecutionGameplay();
+
+	AHeistMatchGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<AHeistMatchGameMode>() : nullptr;
+	if (!IsValid(GM)) return;
+
+	if (UHeistArrestVictoryComponent* ArrestComp = GM->FindComponentByClass<UHeistArrestVictoryComponent>())
+	{
+		ArrestComp->RegisterAllThieves();
+	}
 }
 
 void UHeistExecutionPhaseComponent::ApplyThiefInsertionSpawns()
