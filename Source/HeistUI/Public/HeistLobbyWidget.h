@@ -7,15 +7,15 @@
 
 class UTextBlock;
 class UButton;
-class UScrollBox;
 class AHeistPlayerController;
 class AHeistLobbyGameState;
 
 /**
  * 로비 맵 UI.
- * 초대 코드 표시, 플레이어 목록, 호스트 전용 게임 시작 버튼을 제공한다.
+ * 초대 코드 표시, 호스트 전용 게임 시작 버튼을 제공한다.
+ * 플레이어 닉네임 및 준비 상태는 각 캐릭터의 UHeistLobbyNameplateComponent가 표시한다.
  * UMG Blueprint에서 다음 위젯을 바인딩해야 한다:
- *   TextBlockInviteCode, ScrollBoxPlayers, ButtonStartGame
+ *   TextBlockInviteCode, ButtonStartGame
  */
 UCLASS()
 class HEISTUI_API UHeistLobbyWidget : public UUserWidget
@@ -30,9 +30,6 @@ protected:
 private:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TextBlockInviteCode;
-
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UScrollBox> ScrollBoxPlayers;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> ButtonStartGame;
@@ -54,7 +51,6 @@ private:
 	FString CurrentInviteCode;
 	bool bStartGameRequested = false;
 
-	void RefreshPlayerList();
 	void RefreshStartButtonState();
 	void RefreshInviteCode(const FString& NewInviteCode);
 

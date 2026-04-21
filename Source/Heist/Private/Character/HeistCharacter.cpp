@@ -126,10 +126,14 @@ void AHeistCharacter::InitializeGameplayAbilitySystem()
 	UHeistAbilitySystemComponent* NewASC = HeistPS->GetHeistAbilitySystemComponent();
 	if (!IsValid(NewASC)) return;
 
+	if (AbilitySystemComponent == NewASC) return;
+
 	AbilitySystemComponent = NewASC;
 
 	// Owner = PlayerState, Avatar = Character
 	PawnExtensionComponent->InitializeAbilitySystem(AbilitySystemComponent, HeistPS);
+
+	OnPlayerStateInitialized.Broadcast(HeistPS);
 }
 
 bool AHeistCharacter::IsInMatchPhaseContext() const
