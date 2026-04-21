@@ -46,6 +46,7 @@ public:
 	virtual void Deinitialize() override;
 
 	static UHeistMessageSubsystem& Get(const UObject* WorldContextObject);
+	static UHeistMessageSubsystem* TryGet(const UObject* WorldContextObject);
 
 	template <typename T>
 	void BroadcastMessage(FGameplayTag Channel, const T& Message)

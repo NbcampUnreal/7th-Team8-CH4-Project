@@ -73,6 +73,19 @@ UHeistMessageSubsystem& UHeistMessageSubsystem::Get(const UObject* WorldContextO
 	return *Subsystem;
 }
 
+UHeistMessageSubsystem* UHeistMessageSubsystem::TryGet(const UObject* WorldContextObject)
+{
+	if (!IsValid(WorldContextObject)) return nullptr;
+
+	UWorld* World = WorldContextObject->GetWorld();
+	if (!IsValid(World)) return nullptr;
+
+	UGameInstance* GameInstance = World->GetGameInstance();
+	if (!IsValid(GameInstance)) return nullptr;
+
+	return GameInstance->GetSubsystem<UHeistMessageSubsystem>();
+}
+
 
 void UHeistMessageSubsystem::UnregisterListener(FHeistMessageListenerHandle& Handle)
 {
