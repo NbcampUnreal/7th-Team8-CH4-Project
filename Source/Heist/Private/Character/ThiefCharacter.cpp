@@ -9,9 +9,6 @@
 #include "Components/HeistNoiseComponent.h"
 #include "Components/FlashlightDetectionComponent.h"
 #include "Data/HeistSoundData.h"
-#include "Systems/Messaging/HeistMessageTypes.h"
-#include "Systems/Messaging/HeistMessageSubsystem.h"
-#include "Systems/Messaging/HeistTags_Message.h"
 
 #include "AbilitySystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -61,14 +58,7 @@ void AThiefCharacter::PossessedBy(AController* NewController)
 			FlashlightDetectionComponent->StartDetection();
 		}
 
-		UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-		if (IsValid(ASC))
-		{
-			ZoneTagListenerHandle = ASC->RegisterGameplayTagEvent(
-				HeistStateTags::Zone_Indoor,
-				EGameplayTagEventType::NewOrRemoved
-			).AddUObject(this, &AThiefCharacter::OnZoneTagChanged);
-		}
+		TryBindZoneTagListener();
 	}
 }
 
@@ -83,19 +73,7 @@ void AThiefCharacter::OnRep_Controller()
 			FlashlightDetectionComponent->StartDetection();
 		}
 
-		UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-		if (IsValid(ASC))
-		{
-			if (ZoneTagListenerHandle.IsValid())
-			{
-				ASC->RegisterGameplayTagEvent(HeistStateTags::Zone_Indoor, EGameplayTagEventType::NewOrRemoved).Remove(ZoneTagListenerHandle);
-			}
-
-			ZoneTagListenerHandle = ASC->RegisterGameplayTagEvent(
-				HeistStateTags::Zone_Indoor,
-				EGameplayTagEventType::NewOrRemoved
-			).AddUObject(this, &AThiefCharacter::OnZoneTagChanged);
-		}
+		TryBindZoneTagListener();
 	}
 }
 
@@ -149,6 +127,39 @@ FGameplayTag AThiefCharacter::ResolveInteractAbilityTag(ACharacter* Interactor) 
 	if (bInjured && !bIsThief) return HeistAbilityTags::Ability_Police_Cuffing;
 
 	return FGameplayTag::EmptyTag;
+}
+
+void AThiefCharacter::TryBindZoneTagListener()
+{
+	GetWorld()->GetTimerManager().ClearTimer(ASCBindTimerHandle);
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!IsValid(ASC) || ASC->GetAvatarActor() != this)
+	{
+		UWorld* World = GetWorld();
+		if (IsValid(World))
+		{
+			constexpr float RetryDelay = 0.1f;
+			World->GetTimerManager().SetTimer(ASCBindTimerHandle, this, &AThiefCharacter::TryBindZoneTagListener, RetryDelay, false);
+		}
+		return;
+	}
+
+	if (ZoneTagListenerHandle.IsValid())
+	{
+		ASC->RegisterGameplayTagEvent(HeistStateTags::Zone_Indoor, EGameplayTagEventType::NewOrRemoved).Remove(ZoneTagListenerHandle);
+	}
+
+	ZoneTagListenerHandle = ASC->RegisterGameplayTagEvent(
+		HeistStateTags::Zone_Indoor,
+		EGameplayTagEventType::NewOrRemoved
+	).AddUObject(this, &AThiefCharacter::OnZoneTagChanged);
+
+	if (IsValid(CloseVisionPointLight))
+	{
+		const bool bIsIndoor = ASC->HasMatchingGameplayTag(HeistStateTags::Zone_Indoor);
+		CloseVisionPointLight->SetVisibility(bIsIndoor);
+	}
 }
 
 void AThiefCharacter::OnZoneTagChanged(const FGameplayTag CallbackTag, int32 NewCount)

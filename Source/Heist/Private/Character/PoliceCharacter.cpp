@@ -55,14 +55,7 @@ void APoliceCharacter::PossessedBy(AController* NewController)
 			FlashlightComponent->TryStartLocalVision();
 		}
 
-		UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-		if (IsValid(ASC))
-		{
-			ZoneTagListenerHandle = ASC->RegisterGameplayTagEvent(
-				HeistStateTags::Zone_Indoor,
-				EGameplayTagEventType::NewOrRemoved
-			).AddUObject(this, &APoliceCharacter::OnZoneTagChanged);
-		}
+		TryBindZoneTagListener();
 	}
 }
 
@@ -77,19 +70,7 @@ void APoliceCharacter::OnRep_Controller()
 			FlashlightComponent->TryStartLocalVision();
 		}
 
-		UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-		if (IsValid(ASC))
-		{
-			if (ZoneTagListenerHandle.IsValid())
-			{
-				ASC->RegisterGameplayTagEvent(HeistStateTags::Zone_Indoor, EGameplayTagEventType::NewOrRemoved).Remove(ZoneTagListenerHandle);
-			}
-
-			ZoneTagListenerHandle = ASC->RegisterGameplayTagEvent(
-				HeistStateTags::Zone_Indoor,
-				EGameplayTagEventType::NewOrRemoved
-			).AddUObject(this, &APoliceCharacter::OnZoneTagChanged);
-		}
+		TryBindZoneTagListener();
 	}
 }
 
@@ -108,6 +89,39 @@ void APoliceCharacter::UnPossessed()
 	}
 
 	Super::UnPossessed();
+}
+
+void APoliceCharacter::TryBindZoneTagListener()
+{
+	GetWorld()->GetTimerManager().ClearTimer(ASCBindTimerHandle);
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!IsValid(ASC) || ASC->GetAvatarActor() != this)
+	{
+		UWorld* World = GetWorld();
+		if (IsValid(World))
+		{
+			constexpr float RetryDelay = 0.1f;
+			World->GetTimerManager().SetTimer(ASCBindTimerHandle, this, &APoliceCharacter::TryBindZoneTagListener, RetryDelay, false);
+		}
+		return;
+	}
+
+	if (ZoneTagListenerHandle.IsValid())
+	{
+		ASC->RegisterGameplayTagEvent(HeistStateTags::Zone_Indoor, EGameplayTagEventType::NewOrRemoved).Remove(ZoneTagListenerHandle);
+	}
+
+	ZoneTagListenerHandle = ASC->RegisterGameplayTagEvent(
+		HeistStateTags::Zone_Indoor,
+		EGameplayTagEventType::NewOrRemoved
+	).AddUObject(this, &APoliceCharacter::OnZoneTagChanged);
+
+	if (IsValid(CloseVisionPointLight))
+	{
+		const bool bIsIndoor = ASC->HasMatchingGameplayTag(HeistStateTags::Zone_Indoor);
+		CloseVisionPointLight->SetVisibility(bIsIndoor);
+	}
 }
 
 void APoliceCharacter::OnZoneTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
