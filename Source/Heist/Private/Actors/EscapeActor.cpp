@@ -17,7 +17,7 @@ AEscapeActor::AEscapeActor()
 	SetRootComponent(BoxCollision);
 
 	BoxCollision->SetMobility(EComponentMobility::Static);
-	BoxCollision->SetCollisionProfileName(TEXT("BlockAllDynamic"));
+	BoxCollision->SetCollisionProfileName(TEXT("Pawn"));
 	BoxCollision->SetGenerateOverlapEvents(true);
 	BoxCollision->ComponentTags.Add(FName("MainBody"));
 
