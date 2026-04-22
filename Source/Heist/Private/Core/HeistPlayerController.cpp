@@ -58,6 +58,11 @@ void AHeistPlayerController::BeginPlay()
 						VS->RequestVoiceRefresh(this);
 					}
 				}
+
+				if (Msg.CurrentPhase == EHeistMatchPhase::Briefing)
+				{
+					TryNotifyBriefingContextReady();
+				}
 			});
 	}
 }
