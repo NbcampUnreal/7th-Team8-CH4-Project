@@ -6,10 +6,8 @@
 #include "GA_Carry.generated.h"
 
 class AItemActor;
+class UAudioComponent;
 
-/**
- * 
- */
 UCLASS()
 class HEIST_API UGA_Carry : public UHeistGameplayAbility
 {
@@ -42,6 +40,9 @@ private:
 	// 에디터에서 GE_Carry 지정. MoveSpeed를 감소시키는 Infinite GE.
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Carry")
 	TSubclassOf<UGameplayEffect> CarryEffect;
+
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> CarryAudioComp;
 
 	FActiveGameplayEffectHandle CarryEffectHandle;
 

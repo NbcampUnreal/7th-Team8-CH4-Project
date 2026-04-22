@@ -1,14 +1,13 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "AbilitySystem/Police/GA_PoliceSwing.h"
 
-#include "AbilitySystemComponent.h"
-#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "AbilitySystem/HeistTags_Ability.h"
 #include "Character/HeistCharacter.h"
 #include "Character/HeistTags_State.h"
 #include "Character/ThiefCharacter.h"
 #include "Components/HeistHitReactionComponent.h"
+
+#include "AbilitySystemComponent.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 
 UGA_PoliceSwing::UGA_PoliceSwing()
 {
@@ -36,6 +35,16 @@ void UGA_PoliceSwing::ActivateAbility(
 		return;
 	}
 
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+
+	if (HasAuthority(&CurrentActivationInfo))
+	{
+		if (UHeistHitReactionComponent* HRC = IsValid(Avatar) ? Avatar->FindComponentByClass<UHeistHitReactionComponent>() : nullptr)
+		{
+			HRC->Multicast_PlayHitReaction(false, Avatar, Avatar->GetActorLocation());
+		}
+	}
+
 	// 시전 중 이동 속도 감소 GE 적용
 	if (IsValid(AttackSlowEffectClass))
 	{
@@ -51,8 +60,6 @@ void UGA_PoliceSwing::ActivateAbility(
 	MontageTask->OnCancelled.AddDynamic(this, &UGA_PoliceSwing::OnAttackMontageCancelled);
 	MontageTask->ReadyForActivation();
 
-	// 현재 Swing의 hit 처리 함수를 HitReactionComponent에 등록합니다.
-	AActor* Avatar = GetAvatarActorFromActorInfo();
 	if (UHeistHitReactionComponent* HRC =
 		IsValid(Avatar) ? Avatar->FindComponentByClass<UHeistHitReactionComponent>() : nullptr)
 	{
@@ -68,15 +75,21 @@ void UGA_PoliceSwing::OnHitEvent(const FGameplayEventData& Payload)
 
 	AThiefCharacter* Target = Cast<AThiefCharacter>(const_cast<AActor*>(Payload.Target.Get()));
 	if (!IsValid(Target)) return;
-	
+
 	UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
 	if (!IsValid(TargetASC)) return;
-	
+
 	// Cuffed, Injured, Escorted 상태 도둑은 피격 무시
 	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Cuffed)) return;
 	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Injured)) return;
 	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Escorted)) return;
 	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_MoveDisabled)) return;
+
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	if (UHeistHitReactionComponent* HRC = IsValid(Avatar) ? Avatar->FindComponentByClass<UHeistHitReactionComponent>() : nullptr)
+	{
+		HRC->Multicast_PlayHitReaction(true, Avatar, Target->GetActorLocation());
+	}
 
 	if (IsValid(InjuredEffectClass))
 	{
@@ -108,16 +121,20 @@ void UGA_PoliceSwing::EndAbility(
 	// 이동 속도 감소 GE 해제
 	if (AttackSlowEffectHandle.IsValid())
 	{
-		GetAbilitySystemComponentFromActorInfo()->RemoveActiveGameplayEffect(AttackSlowEffectHandle);
+		UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponentFromActorInfo();
+		if (IsValid(AbilitySystemComponent))
+		{
+			AbilitySystemComponent->RemoveActiveGameplayEffect(AttackSlowEffectHandle);
+		}
 		AttackSlowEffectHandle.Invalidate();
 	}
-	
+
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	if (UHeistHitReactionComponent* HRC =
 		IsValid(Avatar) ? Avatar->FindComponentByClass<UHeistHitReactionComponent>() : nullptr)
 	{
 		HRC->ResetMeleeHitHandler();
 	}
-	
+
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
