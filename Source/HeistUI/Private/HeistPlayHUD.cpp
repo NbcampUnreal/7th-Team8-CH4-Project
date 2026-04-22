@@ -11,6 +11,7 @@
 
 #include "EngineUtils.h"
 #include "Blueprint/WidgetTree.h"
+#include "Components/HorizontalBox.h"
 #include "Components/Overlay.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
@@ -100,7 +101,15 @@ void UHeistPlayHUD::NativeConstruct()
 			RefreshThiefSlots();
 		});
 
+	ThiefStateChangedHandle = MessageSubsystem.RegisterListener<FHeistPlayHUDThiefStateChangedMessage>(
+		HeistMessageTags::Message_PlayHUD_ThiefStateChanged,
+		[this](FGameplayTag, const FHeistPlayHUDThiefStateChangedMessage& Msg)
+		{
+			HandleThiefStateChanged(Msg);
+		});
+
 	UpdateTimerText(0.f);
+	RefreshThiefSlots();
 
 	if (const AHeistMatchGameState* MatchGS = GetWorld() ? GetWorld()->GetGameState<AHeistMatchGameState>() : nullptr)
 	{
@@ -144,6 +153,7 @@ void UHeistPlayHUD::NativeDestruct()
 	ZoneScoresHandle.Unregister();
 	PoliceObjectiveHandle.Unregister();
 	PlayersChangedHandle.Unregister();
+	ThiefStateChangedHandle.Unregister();
 
 	for (UHeistThiefSlotSetWidget* ThiefSlot : ThiefSlots)
 	{
@@ -153,6 +163,7 @@ void UHeistPlayHUD::NativeDestruct()
 		}
 	}
 	ThiefSlots.Empty();
+	ThiefSlotsByPlayerName.Empty();
 
 	UWorld* World = GetWorld();
 	if (!IsValid(World))
@@ -210,6 +221,8 @@ void UHeistPlayHUD::InitializeIfBriefingPhase()
 
 	if (!bTeamReady) return;
 
+	RefreshThiefSlots();
+
 	if (const AHeistMatchGameState* MatchGS = World->GetGameState<AHeistMatchGameState>())
 	{
 		UpdateTimerText(
@@ -244,7 +257,7 @@ void UHeistPlayHUD::InitializeThiefSlots()
 }
 void UHeistPlayHUD::RefreshThiefSlots()
 {
-	if (!IsValid(VBox_ThiefStates))
+	if (!IsValid(HBox_StatusGroup))
 	{
 		return;
 	}
@@ -274,7 +287,7 @@ void UHeistPlayHUD::RefreshThiefSlots()
 	}
 
 	// VBox의 자식 위젯 중 ThiefSlotSetWidget 찾기
-	TArray<UWidget*> SlotWidgets = VBox_ThiefStates->GetAllChildren();
+	TArray<UWidget*> SlotWidgets = HBox_StatusGroup->GetAllChildren();
 
 	// 기존 슬롯 정리
 	for (UHeistThiefSlotSetWidget* ThiefSlot : ThiefSlots)
@@ -285,6 +298,7 @@ void UHeistPlayHUD::RefreshThiefSlots()
 		}
 	}
 	ThiefSlots.Empty();
+	ThiefSlotsByPlayerName.Empty();
 
 	// 각 슬롯에 도둑 플레이어 할당
 	for (int32 SlotIndex = 0; SlotIndex < SlotWidgets.Num(); ++SlotIndex)
@@ -302,5 +316,52 @@ void UHeistPlayHUD::RefreshThiefSlots()
 
 		SlotWidget->Initialize(PlayerStateToAssign);
 		ThiefSlots.Add(SlotWidget);
+
+		const FString& PlayerName = SlotWidget->GetCachedPlayerName();
+		if (!PlayerName.IsEmpty())
+		{
+			ThiefSlotsByPlayerName.Add(PlayerName, SlotWidget);
+		}
 	}
+}
+
+void UHeistPlayHUD::HandleThiefStateChanged(const FHeistPlayHUDThiefStateChangedMessage& Message)
+{
+	AHeistPlayerState* HeistPlayerState = Cast<AHeistPlayerState>(Message.PlayerState.Get());
+	UHeistThiefSlotSetWidget* TargetSlot = nullptr;
+
+	if (!Message.PlayerName.IsEmpty())
+	{
+		if (TObjectPtr<UHeistThiefSlotSetWidget>* FoundSlot = ThiefSlotsByPlayerName.Find(Message.PlayerName))
+		{
+			TargetSlot = FoundSlot->Get();
+		}
+	}
+
+	if (!IsValid(TargetSlot))
+	{
+		for (UHeistThiefSlotSetWidget* ThiefSlot : ThiefSlots)
+		{
+			if (!IsValid(ThiefSlot) || !ThiefSlot->MatchesPlayer(HeistPlayerState, Message.PlayerName))
+			{
+				continue;
+			}
+
+			TargetSlot = ThiefSlot;
+			break;
+		}
+	}
+
+	if (!IsValid(TargetSlot))
+	{
+		return;
+	}
+
+	if (!Message.PlayerName.IsEmpty())
+	{
+		TargetSlot->SetPlayerName(Message.PlayerName);
+		ThiefSlotsByPlayerName.Add(Message.PlayerName, TargetSlot);
+	}
+
+	TargetSlot->UpdateThiefStateByName(Message.StateName);
 }

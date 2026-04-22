@@ -138,6 +138,21 @@ struct FHeistPlayHUDReadyMessage
 };
 
 USTRUCT()
+struct FHeistPlayHUDThiefStateChangedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TObjectPtr<APlayerState> PlayerState = nullptr;
+
+	UPROPERTY()
+	FString PlayerName;
+
+	UPROPERTY()
+	FString StateName;
+};
+
+USTRUCT()
 struct FHeistBriefingEndMessage
 {
 	GENERATED_BODY()

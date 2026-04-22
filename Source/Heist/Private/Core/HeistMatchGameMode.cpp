@@ -138,11 +138,12 @@ void AHeistMatchGameMode::Logout(AController* Exiting)
 		&& IsValid(MatchGameState)
 		&& MatchGameState->IsExecutionPhase();
 
+	if (bShouldNotifyDisconnect)
+	{
+		ArrestVictoryComponent->NotifyThiefDisconnected(HeistPS);
+	}
+
 	Super::Logout(Exiting);
-
-	if (!bShouldNotifyDisconnect) return;
-
-	ArrestVictoryComponent->NotifyThiefDisconnected(HeistPS);
 }
 
 UClass* AHeistMatchGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)

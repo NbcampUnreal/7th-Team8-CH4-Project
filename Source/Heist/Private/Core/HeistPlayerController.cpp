@@ -551,6 +551,18 @@ void AHeistPlayerController::ClientNotifyArrested_Implementation()
 	SpectatorControllerComponent->EnterArrestSpectating();
 }
 
+void AHeistPlayerController::ClientNotifyThiefSlotState_Implementation(APlayerState* InPlayerState, const FString& InPlayerName, const FString& InStateName)
+{
+	FHeistPlayHUDThiefStateChangedMessage Message;
+	Message.PlayerState = InPlayerState;
+	Message.PlayerName = InPlayerName;
+	Message.StateName = InStateName;
+
+	UHeistMessageSubsystem::Get(this).BroadcastMessage(
+		HeistMessageTags::Message_PlayHUD_ThiefStateChanged,
+		Message);
+}
+
 void AHeistPlayerController::UpdateCursorRotation()
 {
 	APawn* ControlledPawn = GetPawn();

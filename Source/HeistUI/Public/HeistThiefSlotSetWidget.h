@@ -23,6 +23,7 @@ public:
 	void Initialize(AHeistPlayerState* InPlayerState);
 
 	void UpdateThiefState(const FGameplayTag& StateTag);
+	void UpdateThiefStateByName(const FString& StateName);
 
 	void Cleanup();
 
@@ -30,6 +31,8 @@ public:
 	void SetPlayerName(const FString& NewPlayerName);
 
 	AHeistPlayerState* GetPlayerState() const { return CachedPlayerState; }
+	const FString& GetCachedPlayerName() const { return CachedPlayerName; }
+	bool MatchesPlayer(const AHeistPlayerState* InPlayerState, const FString& InPlayerName) const;
 
 protected:
 	virtual void NativeConstruct() override;
@@ -46,6 +49,8 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<AHeistPlayerState> CachedPlayerState;
+
+	FString CachedPlayerName;
 
 	// 상태 태그 변경 리스너
 	FDelegateHandle PlayerNameChangeHandle;

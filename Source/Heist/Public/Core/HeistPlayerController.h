@@ -47,6 +47,9 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientNotifyMatchResult(EHeistTeam WinnerTeam, EHeistVictoryReason Reason);
 
+	UFUNCTION(Client, Reliable)
+	void ClientNotifyThiefSlotState(APlayerState* InPlayerState, const FString& InPlayerName, const FString& InStateName);
+
 	void TryNotifyBriefingContextReady();
 
 	// 서브시스템이 최종 판단 후 실행을 위임 — StartTalking()/StopTalking()은 PC만 호출 가능

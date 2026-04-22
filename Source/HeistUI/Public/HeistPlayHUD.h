@@ -9,8 +9,9 @@ class UProgressBar;
 class UTextBlock;
 class UOverlay;
 class UWidgetSwitcher;
-class UVerticalBox;
+class UHorizontalBox;
 class UHeistThiefSlotSetWidget;
+struct FHeistPlayHUDThiefStateChangedMessage;
 
 /*
 * 플레이 화면에 띄울 가장 상위 계층의 WBP
@@ -32,13 +33,14 @@ public:
 
 protected:
 	void RefreshThiefSlots();
-	
+	void HandleThiefStateChanged(const FHeistPlayHUDThiefStateChangedMessage& Message);
+
 	void InitializeIfBriefingPhase();
 	void UpdateTimerText(float RemainingTime);
 
 	// 도둑 상태 슬롯 컨테이너
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayHUD")
-	TObjectPtr<UVerticalBox> VBox_ThiefStates;
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UHorizontalBox> HBox_StatusGroup;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UWidgetSwitcher> Thief_Police_Switcher;
@@ -62,9 +64,13 @@ protected:
 	UPROPERTY()
 	TArray<TObjectPtr<UHeistThiefSlotSetWidget>> ThiefSlots;
 
+	UPROPERTY()
+	TMap<FString, TObjectPtr<UHeistThiefSlotSetWidget>> ThiefSlotsByPlayerName;
+
 	FTimerHandle CheckTimerHandle;
 	FHeistMessageListenerHandle PhaseTimeHandle;
 	FHeistMessageListenerHandle ZoneScoresHandle;
 	FHeistMessageListenerHandle PoliceObjectiveHandle;
 	FHeistMessageListenerHandle PlayersChangedHandle;
+	FHeistMessageListenerHandle ThiefStateChangedHandle;
 };

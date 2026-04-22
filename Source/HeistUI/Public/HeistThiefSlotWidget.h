@@ -19,6 +19,7 @@ class HEISTUI_API UHeistThiefSlotWidget : public UUserWidget
 
 public:
 	void BindToASC(UHeistAbilitySystemComponent* InASC);
+	void UpdateThiefStateByName(const FString& StateName);
 
 	/**
  * 게임플레이 태그 기반으로 상태 업데이트.
@@ -40,6 +41,9 @@ protected:
 	virtual void NativeDestruct() override;
 
 	void UpdateStateImage(const FString& StateName);
+	void ResetStateDisplay();
+	void RefreshStateFromASC();
+	void UnbindFromASC();
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> Image_StateIcon;
@@ -74,4 +78,5 @@ private:
 	FDelegateHandle StateTagListenerHandle;
 	FDelegateHandle InjuredTagListenerHandle;
 	FDelegateHandle CuffedTagListenerHandle;
+	FDelegateHandle OutTagListenerHandle;
 };
