@@ -1,5 +1,6 @@
 #include "Components/HeistSpectatorControllerComponent.h"
 
+#include "Components/HeistPlayerComponent.h"
 #include "Components/InputComponent.h"
 #include "Core/HeistPlayerController.h"
 #include "Core/HeistPlayerState.h"
@@ -80,6 +81,17 @@ void UHeistSpectatorControllerComponent::ApplyViewTarget(AActor* Target)
 
 	HeistPC->SetViewTargetWithBlend(Target, 0.35f);
 	CurrentViewTarget = Target;
+
+	APawn* TargetPawn = Cast<APawn>(Target);
+	if (!IsValid(TargetPawn))
+	{
+		return;
+	}
+
+	if (UHeistPlayerComponent* PlayerComponent = UHeistPlayerComponent::FindPlayerComponent(TargetPawn))
+	{
+		PlayerComponent->EvaluateTransparencyTriggersForPawn(TargetPawn);
+	}
 }
 
 AHeistPlayerController* UHeistSpectatorControllerComponent::GetHeistPlayerController() const

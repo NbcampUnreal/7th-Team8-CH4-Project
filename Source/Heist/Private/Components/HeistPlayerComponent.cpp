@@ -74,25 +74,29 @@ void UHeistPlayerComponent::NotifyOverlappingTransparencyTriggers()
 		return;
 	}
 
+	EvaluateTransparencyTriggersForPawn(Pawn);
+}
+
+void UHeistPlayerComponent::EvaluateTransparencyTriggersForPawn(APawn* SourcePawn)
+{
+	if (!IsValid(SourcePawn)) return;
+
 	TArray<AActor*> OverlappingActors;
-	Pawn->GetOverlappingActors(OverlappingActors);
+	SourcePawn->GetOverlappingActors(OverlappingActors);
 
 	for (AActor* Actor : OverlappingActors)
 	{
-		if (!IsValid(Actor))
-		{
-			continue;
-		}
+		if (!IsValid(Actor)) continue;
 
 		if (Actor->GetClass()->ImplementsInterface(UTransparencyTriggerReceiver::StaticClass()))
 		{
-			ITransparencyTriggerReceiver::Execute_EvaluateTransparencyForActor(Actor, Pawn);
+			ITransparencyTriggerReceiver::Execute_EvaluateTransparencyForActor(Actor, SourcePawn);
 		}
 	}
 }
 
 bool UHeistPlayerComponent::CanChangeInitState(UGameFrameworkComponentManager* Manager,
-	FGameplayTag CurrentState, FGameplayTag DesiredState) const
+                                               FGameplayTag CurrentState, FGameplayTag DesiredState) const
 {
 	if (!CurrentState.IsValid() && DesiredState == HeistInitStateTags::InitState_GameplayReady)
 	{
@@ -327,7 +331,7 @@ void UHeistPlayerComponent::HandleInteractPressed()
 
 	// 인터렉티브 Sphere 안에 있고, 레이저 쏴서 그 액터도 인터렉티브 가능하면? -> 인터렉티브 Interface 상속한 액터 코드로 가서 'Tag' 만 때온다
 	FGameplayTag AbilityTag = InteractComp->ResolveInteractAbilityTag(HitResult.GetActor());
-	
+
 	if (!AbilityTag.IsValid()) return;
 
 	// Press마다 이전 상태를 먼저 정리합니다.
@@ -442,7 +446,7 @@ void UHeistPlayerComponent::HandleInteractReleased()
 
 	UHeistAbilitySystemComponent* ASC = PawnExtension->GetAbilitySystemComponent();
 	if (!IsValid(ASC)) return;
-	
+
 	if (bCurrentInteractIsToggle)
 	{
 		bCurrentInteractIsToggle = false;
