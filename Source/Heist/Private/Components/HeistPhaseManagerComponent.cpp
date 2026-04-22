@@ -124,5 +124,5 @@ void UHeistPhaseManagerComponent::HandleExecutionTimeExpired()
 	AHeistMatchGameMode* HeistGM = GetOwner<AHeistMatchGameMode>();
 	if (!IsValid(HeistGM)) return;
 
-	HeistGM->NotifyPoliceVictory();
+	HeistGM->NotifyPoliceVictory(EHeistVictoryReason::PoliceTimeout);
 }

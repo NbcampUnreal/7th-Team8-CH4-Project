@@ -22,6 +22,16 @@ enum class EHeistMatchPhase : uint8
 };
 
 UENUM(BlueprintType)
+enum class EHeistVictoryReason : uint8
+{
+	None,
+	PoliceArrest,
+	PoliceTimeout,
+	PoliceScoreWin,
+	ThiefEscape
+};
+
+UENUM(BlueprintType)
 enum class EHeistBriefingDrawingTool : uint8
 {
 	Pen,

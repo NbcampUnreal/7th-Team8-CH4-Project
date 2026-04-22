@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/HeistMatchTypes.h"
 #include "GameFramework/PlayerController.h"
 #include "InputAction.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
@@ -40,6 +41,12 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientNotifyArrested();
 
+	UFUNCTION(Client, Reliable)
+	void ClientBeginVehicleEscapeCinematic(int32 GroupIndex);
+
+	UFUNCTION(Client, Reliable)
+	void ClientNotifyMatchResult(EHeistTeam WinnerTeam, EHeistVictoryReason Reason);
+
 	void TryNotifyBriefingContextReady();
 
 	// 서브시스템이 최종 판단 후 실행을 위임 — StartTalking()/StopTalking()은 PC만 호출 가능
@@ -56,6 +63,12 @@ protected:
 	virtual void SeamlessTravelTo(APlayerController* NewPC) override;
 	// 이것은 클라이언트 측 Transient 컴포넌트를 정리합니다, HeistPlayerState::SeamlessTravelTo()는 서버만 정리됩니다.
 	virtual void NotifyLoadedWorld(FName WorldPackageName, bool bFinalDest) override;
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Heist|GameEnd")
+	void BP_OnVehicleEscapeCinematicStarted(int32 GroupIndex);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Heist|GameEnd")
+	void BP_OnMatchResultReceived(EHeistTeam WinnerTeam, EHeistVictoryReason Reason);
 
 private:
 	void TryStartVoiceCapture();

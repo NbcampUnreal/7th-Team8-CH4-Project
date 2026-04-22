@@ -530,6 +530,20 @@ void AHeistPlayerController::ClientEndBriefingPresentation_Implementation()
 		HeistMessageTags::Message_Briefing_End, FHeistBriefingEndMessage{});
 }
 
+void AHeistPlayerController::ClientBeginVehicleEscapeCinematic_Implementation(int32 GroupIndex)
+{
+	if (!IsLocalController()) return;
+
+	BP_OnVehicleEscapeCinematicStarted(GroupIndex);
+}
+
+void AHeistPlayerController::ClientNotifyMatchResult_Implementation(EHeistTeam WinnerTeam, EHeistVictoryReason Reason)
+{
+	if (!IsLocalController()) return;
+
+	BP_OnMatchResultReceived(WinnerTeam, Reason);
+}
+
 void AHeistPlayerController::ClientNotifyArrested_Implementation()
 {
 	if (!IsValid(SpectatorControllerComponent)) return;

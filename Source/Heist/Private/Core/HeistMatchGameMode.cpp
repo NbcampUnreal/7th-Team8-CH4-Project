@@ -49,7 +49,10 @@ void AHeistMatchGameMode::BeginPlay()
 
 	if (IsValid(ArrestVictoryComponent))
 	{
-		ArrestVictoryComponent->OnPoliceVictory.AddUObject(this, &ThisClass::NotifyPoliceVictory);
+		ArrestVictoryComponent->OnPoliceVictory.AddLambda([this]()
+		{
+			NotifyPoliceVictory(EHeistVictoryReason::PoliceArrest);
+		});
 	}
 
 	// 브리핑 시작 위치는 서버가 먼저 확정해 둔다.
@@ -220,54 +223,14 @@ void AHeistMatchGameMode::NotifyPlayerReadyForMatchTravel(APlayerController* Pla
 	}
 }
 
-void AHeistMatchGameMode::NotifyPoliceVictory()
+void AHeistMatchGameMode::NotifyPoliceVictory(EHeistVictoryReason Reason)
 {
-	if (!HasAuthority() || bMatchVictoryDeclared) return;
-
-	bMatchVictoryDeclared = true;
-
-	if (IsValid(PhaseManagerComponent))
-	{
-		PhaseManagerComponent->StopActiveTimers();
-	}
-
-	if (AHeistMatchGameState* MatchGameState = GetGameState<AHeistMatchGameState>())
-	{
-		MatchGameState->SetCurrentPhase(EHeistMatchPhase::Result);
-		MatchGameState->SetBriefingSelectionLocked(true);
-		MatchGameState->SetPhaseRemainingTime(0.f);
-		MatchGameState->SetPhaseEndServerTime(0.f);
-	}
-
-	OnMatchVictory.Broadcast(EHeistTeam::Police);
-	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] Police Victory!"));
-
-	StartReturnToLobbyFlow();
+	NotifyVictory(EHeistTeam::Police, Reason);
 }
 
-void AHeistMatchGameMode::NotifyThiefVictory()
+void AHeistMatchGameMode::NotifyThiefVictory(EHeistVictoryReason Reason)
 {
-	if (!HasAuthority() || bMatchVictoryDeclared) return;
-
-	bMatchVictoryDeclared = true;
-
-	if (IsValid(PhaseManagerComponent))
-	{
-		PhaseManagerComponent->StopActiveTimers();
-	}
-
-	if (AHeistMatchGameState* MatchGameState = GetGameState<AHeistMatchGameState>())
-	{
-		MatchGameState->SetCurrentPhase(EHeistMatchPhase::Result);
-		MatchGameState->SetBriefingSelectionLocked(true);
-		MatchGameState->SetPhaseRemainingTime(0.f);
-		MatchGameState->SetPhaseEndServerTime(0.f);
-	}
-
-	OnMatchVictory.Broadcast(EHeistTeam::Thief);
-	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] Thief Victory!"));
-
-	StartReturnToLobbyFlow();
+	NotifyVictory(EHeistTeam::Thief, Reason);
 }
 
 int32 AHeistMatchGameMode::CountPlayersReadyForBriefingStart() const
@@ -460,19 +423,141 @@ void AHeistMatchGameMode::TryEngineChannelingStart()
 	MatchGameState->SetEngineChannelingStart(true);
 }
 
+void AHeistMatchGameMode::RequestVehicleEscapeSequence(int32 GroupIndex)
+{
+	if (!HasAuthority() || bMatchVictoryDeclared || bVehicleEscapeSequenceRequested) return;
+	if (GroupIndex == INDEX_NONE) return;
+
+	if (!OnVehicleEscapeSequenceRequested.IsBound())
+	{
+		UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] Vehicle escape sequence is not bound. Falling back to immediate score judgment. GroupIndex=%d"), GroupIndex);
+		JudgeScore(GroupIndex);
+		return;
+	}
+
+	bVehicleEscapeSequenceRequested = true;
+	PendingVehicleEscapeGroupIndex = GroupIndex;
+
+	if (IsValid(PhaseManagerComponent))
+	{
+		PhaseManagerComponent->StopActiveTimers();
+	}
+
+	SetAllPlayersCinematicMode(true);
+	BroadcastVehicleEscapeSequenceToPlayers(GroupIndex);
+	OnVehicleEscapeSequenceRequested.Broadcast(GroupIndex);
+
+	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] Vehicle escape sequence requested. GroupIndex=%d"), GroupIndex);
+}
+
 void AHeistMatchGameMode::JudgeScore(int32 GroupIndex)
 {
+	if (!HasAuthority() || bMatchVictoryDeclared) return;
 	if (!IsValid(DropZoneManagerComponent)) return;
+
+	if (bVehicleEscapeSequenceRequested && PendingVehicleEscapeGroupIndex != INDEX_NONE && PendingVehicleEscapeGroupIndex != GroupIndex)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[MatchGameMode] JudgeScore called with mismatched GroupIndex. Requested=%d, Actual=%d"),
+			PendingVehicleEscapeGroupIndex,
+			GroupIndex);
+	}
+
+	bVehicleEscapeSequenceRequested = false;
+	PendingVehicleEscapeGroupIndex = INDEX_NONE;
+
 	int32 ZoneIndex = DropZoneManagerComponent->GetZoneIndexByGroup(GroupIndex);
 
 	AHeistMatchGameState* HeistGS = GetGameState<AHeistMatchGameState>();
 	if (HeistGS->GetZoneScore(ZoneIndex).CurrentScore >= HeistGS->GetZoneScore(ZoneIndex).TargetScore)
 	{
-		NotifyThiefVictory();
+		NotifyThiefVictory(EHeistVictoryReason::ThiefEscape);
 	}
 	else
 	{
-		NotifyPoliceVictory();
+		NotifyPoliceVictory(EHeistVictoryReason::PoliceScoreWin);
+	}
+}
+
+void AHeistMatchGameMode::NotifyVictory(EHeistTeam Winner, EHeistVictoryReason Reason)
+{
+	if (!HasAuthority() || bMatchVictoryDeclared) return;
+
+	bMatchVictoryDeclared = true;
+	bVehicleEscapeSequenceRequested = false;
+	PendingVehicleEscapeGroupIndex = INDEX_NONE;
+
+	if (IsValid(PhaseManagerComponent))
+	{
+		PhaseManagerComponent->StopActiveTimers();
+	}
+
+	if (AHeistMatchGameState* MatchGameState = GetGameState<AHeistMatchGameState>())
+	{
+		MatchGameState->SetCurrentPhase(EHeistMatchPhase::Result);
+		MatchGameState->SetBriefingSelectionLocked(true);
+		MatchGameState->SetPhaseRemainingTime(0.f);
+		MatchGameState->SetPhaseEndServerTime(0.f);
+	}
+
+	SetAllPlayersCinematicMode(true);
+	BroadcastMatchResultToPlayers(Winner, Reason);
+
+	OnMatchVictory.Broadcast(Winner);
+	UE_LOG(LogTemp, Log, TEXT("[MatchGameMode] Match victory declared. Winner=%d Reason=%d"),
+		static_cast<int32>(Winner),
+		static_cast<int32>(Reason));
+
+	if (ResultScreenDuration <= 0.f)
+	{
+		StartReturnToLobbyFlow();
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(ResultScreenTimerHandle);
+	GetWorldTimerManager().SetTimer(
+		ResultScreenTimerHandle,
+		this,
+		&ThisClass::StartReturnToLobbyFlow,
+		ResultScreenDuration,
+		false);
+}
+
+void AHeistMatchGameMode::SetAllPlayersCinematicMode(bool bEnable)
+{
+	if (!IsValid(GameState)) return;
+
+	for (APlayerState* PlayerState : GameState->PlayerArray)
+	{
+		AHeistPlayerController* HeistPC = Cast<AHeistPlayerController>(PlayerState ? PlayerState->GetOwner() : nullptr);
+		if (!IsValid(HeistPC)) continue;
+
+		HeistPC->SetCinematicMode(bEnable, false, false, true, true);
+	}
+}
+
+void AHeistMatchGameMode::BroadcastVehicleEscapeSequenceToPlayers(int32 GroupIndex)
+{
+	if (!IsValid(GameState)) return;
+
+	for (APlayerState* PlayerState : GameState->PlayerArray)
+	{
+		AHeistPlayerController* HeistPC = Cast<AHeistPlayerController>(PlayerState ? PlayerState->GetOwner() : nullptr);
+		if (!IsValid(HeistPC)) continue;
+
+		HeistPC->ClientBeginVehicleEscapeCinematic(GroupIndex);
+	}
+}
+
+void AHeistMatchGameMode::BroadcastMatchResultToPlayers(EHeistTeam Winner, EHeistVictoryReason Reason)
+{
+	if (!IsValid(GameState)) return;
+
+	for (APlayerState* PlayerState : GameState->PlayerArray)
+	{
+		AHeistPlayerController* HeistPC = Cast<AHeistPlayerController>(PlayerState ? PlayerState->GetOwner() : nullptr);
+		if (!IsValid(HeistPC)) continue;
+
+		HeistPC->ClientNotifyMatchResult(Winner, Reason);
 	}
 }
 

@@ -48,8 +48,10 @@ void UGA_Thief_Depart::OnChannelingCompleted()
 {
 	if (!HasAuthority(&CurrentActivationInfo)) return;
 
+	if (GroupIndex == INDEX_NONE) return;
+
 	if (AHeistMatchGameMode* HeistGM = GetWorld()->GetAuthGameMode<AHeistMatchGameMode>())
 	{
-		HeistGM->JudgeScore(GroupIndex);
+		HeistGM->RequestVehicleEscapeSequence(GroupIndex);
 	}
 }
