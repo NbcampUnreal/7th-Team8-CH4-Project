@@ -33,6 +33,7 @@ public:
 	void SetPoliceObjectiveSelection(APlayerState* PlayerState, FName InKey);
 	FName GetThiefSpawnSelection(const APlayerState* PlayerState) const;
 	FName GetPoliceObjectiveSelection(const APlayerState* PlayerState) const;
+	FText GetPoliceObjectiveDisplayName(FName InKey) const;
 
 	/** 서버 RPC에서 PlayerComponent가 직접 호출. 유효성 검사 + 저장. */
 	void TrySetThiefSpawnSelection(APlayerState* PlayerState, FName InKey);

@@ -5,6 +5,7 @@
 #include "Components/HeistBriefingPhaseComponent.h"
 #include "Core/HeistMatchTypes.h"
 #include "Core/HeistMatchGameMode.h"
+#include "Core/HeistMatchGameState.h"
 #include "Core/HeistPlayerController.h"
 #include "Core/HeistPlayerState.h"
 #include "GameFramework/PlayerController.h"
@@ -82,18 +83,14 @@ void UHeistExecutionPhaseComponent::ApplyThiefInsertionSpawns()
 
 void UHeistExecutionPhaseComponent::SpawnPoliceObjective()
 {
-	// TODO: PoliceObjectiveClass 구현 완료 후 활성화
-	if (!IsValid(PoliceObjectiveClass))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("ExecutionPhaseComponent: PoliceObjectiveClass가 설정되지 않았습니다. GameMode BP에서 할당하세요."));
-		return;
-	}
-
 	UWorld* World = GetWorld();
 	if (!IsValid(World)) return;
 
 	AGameStateBase* GameState = World->GetGameState();
 	if (!IsValid(GameState)) return;
+
+	AHeistMatchGameState* HeistGS = Cast<AHeistMatchGameState>(GameState);
+	if (!IsValid(HeistGS)) return;
 
 	AHeistMatchGameMode* GM = World->GetAuthGameMode<AHeistMatchGameMode>();
 	if (!IsValid(GM)) return;
@@ -116,6 +113,14 @@ void UHeistExecutionPhaseComponent::SpawnPoliceObjective()
 	if (SelectedKey == NAME_None)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("ExecutionPhaseComponent: 경찰 목표 선택이 없습니다."));
+		return;
+	}
+
+	HeistGS->SetPoliceObjectiveDisplayName(BriefingPhase->GetPoliceObjectiveDisplayName(SelectedKey));
+
+	if (!IsValid(PoliceObjectiveClass))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ExecutionPhaseComponent: PoliceObjectiveClass가 설정되지 않았습니다. GameMode BP에서 할당하세요."));
 		return;
 	}
 

@@ -50,6 +50,7 @@ void AHeistMatchGameState::SetBriefingSelectionLocked(bool bLocked)
 void AHeistMatchGameState::SetPhaseEndServerTime(float InPhaseEndServerTime)
 {
 	PhaseEndServerTime = InPhaseEndServerTime;
+	OnRep_PhaseEndServerTime();
 }
 
 void AHeistMatchGameState::SetZoneScore(int32 ZoneIndex, int32 NewScore)
@@ -57,9 +58,16 @@ void AHeistMatchGameState::SetZoneScore(int32 ZoneIndex, int32 NewScore)
 	if (ZoneScores.IsValidIndex(ZoneIndex))
 	{
 		ZoneScores[ZoneIndex].CurrentScore = NewScore;
+		OnRep_ZoneScores();
 
 		UE_LOG(LogTemp, Log, TEXT("Zone %d Score Updated: %d"), ZoneIndex, NewScore);
 	}
+}
+
+void AHeistMatchGameState::SetPoliceObjectiveDisplayName(const FText& InDisplayName)
+{
+	PoliceObjectiveDisplayName = InDisplayName;
+	OnRep_PoliceObjectiveDisplayName();
 }
 
 void AHeistMatchGameState::SetEngineChannelingStart(bool bStart)
@@ -81,6 +89,7 @@ void AHeistMatchGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(AHeistMatchGameState, bBriefingSelectionLocked);
 	DOREPLIFETIME(AHeistMatchGameState, PhaseEndServerTime);
 	DOREPLIFETIME(AHeistMatchGameState, ZoneScores);
+	DOREPLIFETIME(AHeistMatchGameState, PoliceObjectiveDisplayName);
 }
 
 void AHeistMatchGameState::OnRep_MatchPhase()
@@ -123,7 +132,24 @@ void AHeistMatchGameState::OnRep_PhaseEndServerTime()
 
 void AHeistMatchGameState::OnRep_ZoneScores()
 {
-	// UI 갱신용 대리자(Delegate) 호출 등에 사용
+	UHeistMessageSubsystem* Subsystem = UHeistMessageSubsystem::TryGet(this);
+	if (!IsValid(Subsystem)) return;
+
+	FHeistZoneScoresUpdatedMessage Message;
+	Message.ZoneScores = ZoneScores;
+
+	Subsystem->BroadcastMessage(HeistMessageTags::Message_PlayHUD_ZoneScoresUpdated, Message);
+}
+
+void AHeistMatchGameState::OnRep_PoliceObjectiveDisplayName()
+{
+	UHeistMessageSubsystem* Subsystem = UHeistMessageSubsystem::TryGet(this);
+	if (!IsValid(Subsystem)) return;
+
+	FHeistPoliceObjectiveUpdatedMessage Message;
+	Message.DisplayName = PoliceObjectiveDisplayName;
+
+	Subsystem->BroadcastMessage(HeistMessageTags::Message_PlayHUD_PoliceObjectiveUpdated, Message);
 }
 
 void AHeistMatchGameState::StartPhaseUiTimer()

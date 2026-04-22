@@ -146,6 +146,24 @@ FName UHeistBriefingPhaseComponent::GetPoliceObjectiveSelection(const APlayerSta
 	return NAME_None;
 }
 
+FText UHeistBriefingPhaseComponent::GetPoliceObjectiveDisplayName(FName InKey) const
+{
+	if (!IsValid(BriefingPointData))
+	{
+		return FText::GetEmpty();
+	}
+
+	for (const FHeistSpawnPointData& PointData : BriefingPointData->Points)
+	{
+		if (PointData.PointType == EHeistBriefingPointType::PoliceObjective && PointData.Key == InKey)
+		{
+			return PointData.DisplayName;
+		}
+	}
+
+	return FText::GetEmpty();
+}
+
 void UHeistBriefingPhaseComponent::AssignRandomRoles()
 {
 	AGameStateBase* GameState = GetWorld() ? GetWorld()->GetGameState() : nullptr;

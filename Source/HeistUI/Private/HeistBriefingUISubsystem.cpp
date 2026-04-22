@@ -51,7 +51,7 @@ void UHeistBriefingUISubsystem::HandleBriefingContextReady(
 	{
 		BriefingWidgetInstance = CreateWidget<UUserWidget>(PC, Msg.WidgetClass);
 		if (!IsValid(BriefingWidgetInstance)) return;
-		BriefingWidgetInstance->AddToViewport();
+		BriefingWidgetInstance->AddToViewport(10);
 
 		UHeistUIInputModeLibrary::ApplyInputMode(
 		  PC,
