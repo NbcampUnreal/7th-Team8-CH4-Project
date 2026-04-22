@@ -1,5 +1,6 @@
 #include "HeistPlayUISubsystem.h"
 #include "HeistPlayHUD.h"
+#include "HeistUIInputModeLibrary.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
 #include "Systems/Messaging/HeistTags_Message.h"
@@ -55,6 +56,11 @@ void UHeistPlayUISubsystem::ShowPlayHUD(TSubclassOf<UObject> InWidgetClass)
 	if (!IsValid(PlayHUDInstance)) return;
 
 	PlayHUDInstance->AddToViewport();
+
+	UHeistUIInputModeLibrary::ApplyInputMode(
+	  PC,
+	  EHeistUIInputMode::Match,
+	  PlayHUDInstance);
 }
 
 void UHeistPlayUISubsystem::HidePlayHUD()

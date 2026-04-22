@@ -15,6 +15,7 @@ class UHeistDropZoneManagerComponent;
 class APlayerStart;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMatchVictory, EHeistTeam /*Winner*/);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnVehicleEscapeSequenceRequested, int32, GroupIndex);
 
 /**
  *
@@ -29,12 +30,21 @@ public:
 
 	FOnMatchVictory OnMatchVictory;
 
+	UPROPERTY(BlueprintAssignable, Category = "Heist|GameEnd")
+	FOnVehicleEscapeSequenceRequested OnVehicleEscapeSequenceRequested;
+
 	void NotifyPlayerReadyForBriefingStart(APlayerController* PlayerController);
 	void NotifyPlayerReadyForMatchTravel(APlayerController* PlayerController);
-	void NotifyPoliceVictory();
-	void NotifyThiefVictory();
+	void NotifyPoliceVictory(EHeistVictoryReason Reason = EHeistVictoryReason::PoliceArrest);
+	void NotifyThiefVictory(EHeistVictoryReason Reason = EHeistVictoryReason::ThiefEscape);
 	void SpawnAllPlayersAtBriefingStart();
 	void TryEngineChannelingStart();
+
+	UFUNCTION(BlueprintCallable, Category = "Heist|GameEnd")
+	void RequestVehicleEscapeSequence(int32 GroupIndex);
+
+	// Vehicle 컷신 종료 후 레벨 BP가 호출한다.
+	UFUNCTION(BlueprintCallable, Category = "Heist|GameEnd")
 	void JudgeScore(int32 GroupIndex);
 
 protected:
@@ -74,6 +84,10 @@ protected:
 	void HandleLobbyTravelReadyTimeout();
 	int32 CountExpectedPlayersForMatchTravel() const;
 	int32 CountReadyPlayersForMatchTravel() const;
+	void NotifyVictory(EHeistTeam Winner, EHeistVictoryReason Reason);
+	void SetAllPlayersCinematicMode(bool bEnable);
+	void BroadcastVehicleEscapeSequenceToPlayers(int32 GroupIndex);
+	void BroadcastMatchResultToPlayers(EHeistTeam Winner, EHeistVictoryReason Reason);
 
 	void TryInitDropZone();
 
@@ -110,8 +124,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Heist|Travel")
 	float LobbyTravelReadyTimeoutSeconds = 5.0f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Heist|GameEnd", meta = (ClampMin = "0.0"))
+	float ResultScreenDuration = 5.0f;
+
 	UPROPERTY(EditDefaultsOnly, Category="Heist|Travel")
 	FString LobbyMapPath;
 
 	FTimerHandle LobbyTravelReadyTimeoutHandle;
+	FTimerHandle ResultScreenTimerHandle;
+	int32 PendingVehicleEscapeGroupIndex = INDEX_NONE;
+	bool bVehicleEscapeSequenceRequested = false;
 };

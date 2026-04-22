@@ -31,5 +31,5 @@ protected:
 	// 채널링 오버라이드
 	virtual void OnChannelingCompleted() override;
 private:
-	int32 GroupIndex;
+	int32 GroupIndex = INDEX_NONE;
 };
