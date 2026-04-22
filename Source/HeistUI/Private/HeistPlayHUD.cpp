@@ -1,13 +1,17 @@
 #include "HeistPlayHUD.h"
+#include "HeistThiefSlotSetWidget.h"
 #include "HeistThiefSlotWidget.h"
 
 #include "Core/HeistMatchGameState.h"
 #include "Core/HeistPlayerState.h"
+#include "Character/HeistTags_State.h"
 #include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "Systems/Messaging/HeistMessageTypes.h"
 #include "Systems/Messaging/HeistTags_Message.h"
 
+#include "EngineUtils.h"
 #include "Blueprint/WidgetTree.h"
+#include "Components/HorizontalBox.h"
 #include "Components/Overlay.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
@@ -90,7 +94,22 @@ void UHeistPlayHUD::NativeConstruct()
 			}
 		});
 
+	PlayersChangedHandle = MessageSubsystem.RegisterListener<FHeistLobbyPlayersChangedMessage>(
+		HeistMessageTags::Message_Lobby_PlayersChanged,
+		[this](FGameplayTag, const FHeistLobbyPlayersChangedMessage& Msg)
+		{
+			RefreshThiefSlots();
+		});
+
+	ThiefStateChangedHandle = MessageSubsystem.RegisterListener<FHeistPlayHUDThiefStateChangedMessage>(
+		HeistMessageTags::Message_PlayHUD_ThiefStateChanged,
+		[this](FGameplayTag, const FHeistPlayHUDThiefStateChangedMessage& Msg)
+		{
+			HandleThiefStateChanged(Msg);
+		});
+
 	UpdateTimerText(0.f);
+	RefreshThiefSlots();
 
 	if (const AHeistMatchGameState* MatchGS = GetWorld() ? GetWorld()->GetGameState<AHeistMatchGameState>() : nullptr)
 	{
@@ -133,6 +152,18 @@ void UHeistPlayHUD::NativeDestruct()
 	PhaseTimeHandle.Unregister();
 	ZoneScoresHandle.Unregister();
 	PoliceObjectiveHandle.Unregister();
+	PlayersChangedHandle.Unregister();
+	ThiefStateChangedHandle.Unregister();
+
+	for (UHeistThiefSlotSetWidget* ThiefSlot : ThiefSlots)
+	{
+		if (IsValid(ThiefSlot))
+		{
+			ThiefSlot->Cleanup();
+		}
+	}
+	ThiefSlots.Empty();
+	ThiefSlotsByPlayerName.Empty();
 
 	UWorld* World = GetWorld();
 	if (!IsValid(World))
@@ -190,6 +221,8 @@ void UHeistPlayHUD::InitializeIfBriefingPhase()
 
 	if (!bTeamReady) return;
 
+	RefreshThiefSlots();
+
 	if (const AHeistMatchGameState* MatchGS = World->GetGameState<AHeistMatchGameState>())
 	{
 		UpdateTimerText(
@@ -220,20 +253,115 @@ void UHeistPlayHUD::UpdateTimerText(float RemainingTime)
 
 void UHeistPlayHUD::InitializeThiefSlots()
 {
-	// 현재 접속한 모든 PlayerState를 찾아 도둑만 리스트업
-	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AHeistPlayerState::StaticClass(), FoundActors);
-
-	TArray<UWidget*> Slots = VBox_ThiefStates->GetAllChildren();
-
-	for (int32 i = 0; i < Slots.Num(); ++i)
+	RefreshThiefSlots();
+}
+void UHeistPlayHUD::RefreshThiefSlots()
+{
+	if (!IsValid(HBox_StatusGroup))
 	{
-		UHeistThiefSlotWidget* SlotWidget = Cast<UHeistThiefSlotWidget>(Slots[i]);
-		if (SlotWidget)
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return;
+	}
+
+	// 게임 스테이트에서 모든 플레이어 상태 조회
+	AHeistMatchGameState* MatchGS = World->GetGameState<AHeistMatchGameState>();
+	if (!IsValid(MatchGS))
+	{
+		return;
+	}
+
+	// 도둑 팀의 모든 플레이어 상태 수집
+	TArray<AHeistPlayerState*> ThiefPlayerStates;
+	for (TActorIterator<AHeistPlayerState> It(World); It; ++It)
+	{
+		AHeistPlayerState* PS = *It;
+		if (IsValid(PS) && PS->IsThief())
 		{
-			/*AHeistPlayerState* Target = FindThiefByIndex(i, FoundActors);
-			SlotWidget->UpdateSlot(Target);*/
+			ThiefPlayerStates.Add(PS);
 		}
 	}
 
+	// VBox의 자식 위젯 중 ThiefSlotSetWidget 찾기
+	TArray<UWidget*> SlotWidgets = HBox_StatusGroup->GetAllChildren();
+
+	// 기존 슬롯 정리
+	for (UHeistThiefSlotSetWidget* ThiefSlot : ThiefSlots)
+	{
+		if (IsValid(ThiefSlot))
+		{
+			ThiefSlot->Cleanup();
+		}
+	}
+	ThiefSlots.Empty();
+	ThiefSlotsByPlayerName.Empty();
+
+	// 각 슬롯에 도둑 플레이어 할당
+	for (int32 SlotIndex = 0; SlotIndex < SlotWidgets.Num(); ++SlotIndex)
+	{
+		UHeistThiefSlotSetWidget* SlotWidget = Cast<UHeistThiefSlotSetWidget>(SlotWidgets[SlotIndex]);
+		if (!SlotWidget)
+		{
+			continue;
+		}
+
+		// 해당 인덱스의 도둑이 존재하면 할당, 없으면 빈 슬롯으로 표시
+		AHeistPlayerState* PlayerStateToAssign = ThiefPlayerStates.IsValidIndex(SlotIndex)
+			? ThiefPlayerStates[SlotIndex]
+			: nullptr;
+
+		SlotWidget->Initialize(PlayerStateToAssign);
+		ThiefSlots.Add(SlotWidget);
+
+		const FString& PlayerName = SlotWidget->GetCachedPlayerName();
+		if (!PlayerName.IsEmpty())
+		{
+			ThiefSlotsByPlayerName.Add(PlayerName, SlotWidget);
+		}
+	}
+}
+
+void UHeistPlayHUD::HandleThiefStateChanged(const FHeistPlayHUDThiefStateChangedMessage& Message)
+{
+	AHeistPlayerState* HeistPlayerState = Cast<AHeistPlayerState>(Message.PlayerState.Get());
+	UHeistThiefSlotSetWidget* TargetSlot = nullptr;
+
+	if (!Message.PlayerName.IsEmpty())
+	{
+		if (TObjectPtr<UHeistThiefSlotSetWidget>* FoundSlot = ThiefSlotsByPlayerName.Find(Message.PlayerName))
+		{
+			TargetSlot = FoundSlot->Get();
+		}
+	}
+
+	if (!IsValid(TargetSlot))
+	{
+		for (UHeistThiefSlotSetWidget* ThiefSlot : ThiefSlots)
+		{
+			if (!IsValid(ThiefSlot) || !ThiefSlot->MatchesPlayer(HeistPlayerState, Message.PlayerName))
+			{
+				continue;
+			}
+
+			TargetSlot = ThiefSlot;
+			break;
+		}
+	}
+
+	if (!IsValid(TargetSlot))
+	{
+		return;
+	}
+
+	if (!Message.PlayerName.IsEmpty())
+	{
+		TargetSlot->SetPlayerName(Message.PlayerName);
+		ThiefSlotsByPlayerName.Add(Message.PlayerName, TargetSlot);
+	}
+
+	TargetSlot->UpdateThiefStateByName(Message.StateName);
 }

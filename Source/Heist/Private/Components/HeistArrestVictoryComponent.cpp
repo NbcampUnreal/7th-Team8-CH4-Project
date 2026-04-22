@@ -1,10 +1,12 @@
 #include "Components/HeistArrestVictoryComponent.h"
 
 #include "Character/ThiefCharacter.h"
+#include "Character/HeistTags_State.h"
 #include "Core/HeistMatchGameMode.h"
 #include "Core/HeistMatchTypes.h"
 #include "Core/HeistPlayerController.h"
 #include "Core/HeistPlayerState.h"
+#include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
@@ -44,6 +46,12 @@ void UHeistArrestVictoryComponent::NotifyThiefArrested(AThiefCharacter* Arrested
 	const TWeakObjectPtr<AHeistPlayerState> PlayerStatePtr = HeistPS;
 	if (ArrestedThieves.Contains(PlayerStatePtr)) return;
 
+	if (UHeistAbilitySystemComponent* HeistASC = HeistPS->GetHeistAbilitySystemComponent())
+	{
+		HeistASC->AddLooseGameplayTag(HeistStateTags::State_Thief_Out);
+	}
+
+	BroadcastThiefSlotState(HeistPS, HeistPS->GetPlayerName(), TEXT("Arrested"));
 	ArrestedThieves.Add(PlayerStatePtr);
 	TransitionToSpectator(ArrestedThief);
 	CheckAllArrested();
@@ -57,6 +65,7 @@ void UHeistArrestVictoryComponent::NotifyThiefDisconnected(AHeistPlayerState* Di
 	const TWeakObjectPtr<AHeistPlayerState> PlayerStatePtr = DisconnectedPS;
 	if (ArrestedThieves.Contains(PlayerStatePtr)) return;
 
+	BroadcastThiefSlotState(DisconnectedPS, DisconnectedPS->GetPlayerName(), TEXT("ConnectionLost"));
 	ArrestedThieves.Add(PlayerStatePtr);
 	CheckAllArrested();
 }
@@ -108,4 +117,18 @@ void UHeistArrestVictoryComponent::CheckAllArrested()
 	}
 
 	OnPoliceVictory.Broadcast();
+}
+
+void UHeistArrestVictoryComponent::BroadcastThiefSlotState(AHeistPlayerState* PlayerState, const FString& PlayerName, const FString& StateName) const
+{
+	UWorld* World = GetWorld();
+	if (!IsValid(World)) return;
+
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		AHeistPlayerController* HeistPC = Cast<AHeistPlayerController>(It->Get());
+		if (!IsValid(HeistPC)) continue;
+
+		HeistPC->ClientNotifyThiefSlotState(PlayerState, PlayerName, StateName);
+	}
 }

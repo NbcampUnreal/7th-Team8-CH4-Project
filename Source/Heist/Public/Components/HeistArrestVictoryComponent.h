@@ -28,6 +28,7 @@ public:
 private:
 	void TransitionToSpectator(AThiefCharacter* Thief);
 	void CheckAllArrested();
+	void BroadcastThiefSlotState(AHeistPlayerState* PlayerState, const FString& PlayerName, const FString& StateName) const;
 
 	TArray<TWeakObjectPtr<AHeistPlayerState>> RegisteredThieves;
 	TSet<TWeakObjectPtr<AHeistPlayerState>> ArrestedThieves;
