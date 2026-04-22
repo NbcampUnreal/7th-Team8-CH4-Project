@@ -1,6 +1,3 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "AbilitySystem/Thief/GA_Thief_HelpCuffed.h"
 
 #include "AbilitySystemComponent.h"
@@ -8,7 +5,10 @@
 #include "Character/HeistTags_State.h"
 #include "Character/ThiefCharacter.h"
 #include "Components/HeistNoiseComponent.h"
-#include "Data/HeistSoundData.h"
+#include "Systems/Audio/HeistAudioSubsystem.h"
+
+#include "Components/AudioComponent.h"
+#include "Engine/World.h"
 
 UGA_Thief_HelpCuffed::UGA_Thief_HelpCuffed()
 {
@@ -62,14 +62,20 @@ void UGA_Thief_HelpCuffed::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 
 	if (HasAuthority(&CurrentActivationInfo))
 	{
-		AThiefCharacter* TargetThief = Cast<AThiefCharacter>(const_cast<AActor*>(TargetActor));
-		if (IsValid(TargetThief))
+		UHeistNoiseComponent* NoiseComponent = Thief->GetHeistNoiseComponent();
+		if (IsValid(NoiseComponent))
 		{
-			UHeistNoiseComponent* NoiseComponent = TargetThief->GetHeistNoiseComponent();
-			if (IsValid(NoiseComponent))
-			{
-				NoiseComponent->StartChannelingNoise(EHeistSoundType::Cuffing);
-			}
+			NoiseComponent->StartChannelingNoise(EHeistSoundType::Cuffing);
+		}
+	}
+
+	UWorld* World = GetWorld();
+	if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
+	{
+		UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
+		if (IsValid(AudioSubsystem))
+		{
+			HelpCuffingAudioComp = AudioSubsystem->PlayLoopingSound(EHeistSoundType::Cuffing, Thief->GetRootComponent());
 		}
 	}
 }
@@ -91,6 +97,17 @@ void UGA_Thief_HelpCuffed::EndAbility(const FGameplayAbilitySpecHandle Handle,
 		}
 	}
 
+	UWorld* World = GetWorld();
+	if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
+	{
+		UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
+		if (IsValid(AudioSubsystem) && IsValid(HelpCuffingAudioComp))
+		{
+			AudioSubsystem->StopLoopingSound(HelpCuffingAudioComp);
+			HelpCuffingAudioComp = nullptr;
+		}
+	}
+
 	TargetASC = nullptr;
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
@@ -109,6 +126,9 @@ void UGA_Thief_HelpCuffed::OnChannelingCompleted()
 	if (IsValid(InjuredEffectClass))
 	{
 		FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(InjuredEffectClass, 1.f);
-		TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+		if (Spec.IsValid() && Spec.Data.IsValid())
+		{
+			TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+		}
 	}
 }

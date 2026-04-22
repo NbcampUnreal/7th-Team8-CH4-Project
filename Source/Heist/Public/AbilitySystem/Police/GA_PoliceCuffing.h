@@ -1,10 +1,11 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/HeistGameplayAbility.h"
 #include "GA_PoliceCuffing.generated.h"
 
 class AThiefCharacter;
+class UAudioComponent;
 
 UCLASS()
 class HEIST_API UGA_PoliceCuffing : public UHeistGameplayAbility
@@ -26,4 +27,7 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<AThiefCharacter> TargetThief;
+
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> CuffingAudioComp;
 };

@@ -1,12 +1,14 @@
-﻿#include "AbilitySystem/Police/GA_PoliceCuffing.h"
+#include "AbilitySystem/Police/GA_PoliceCuffing.h"
 
 #include "Character/ThiefCharacter.h"
 #include "Character/HeistTags_State.h"
 #include "AbilitySystem/HeistTags_Ability.h"
 #include "AbilitySystem/HeistTags_Event.h"
 #include "Components/HeistNoiseComponent.h"
-#include "Data/HeistSoundData.h"
+#include "Systems/Audio/HeistAudioSubsystem.h"
 
+#include "Components/AudioComponent.h"
+#include "Engine/World.h"
 #include "AbilitySystemComponent.h"
 #include "Heist/Heist.h"
 
@@ -46,12 +48,22 @@ void UGA_PoliceCuffing::ActivateAbility(
 
 	StartChanneling(FName("Cuffing"));
 
-	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
+	if (HasAuthority(&CurrentActivationInfo))
 	{
 		UHeistNoiseComponent* NoiseComponent = TargetThief->GetHeistNoiseComponent();
 		if (IsValid(NoiseComponent))
 		{
 			NoiseComponent->StartChannelingNoise(EHeistSoundType::Cuffing);
+		}
+	}
+
+	UWorld* World = GetWorld();
+	if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
+	{
+		UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
+		if (IsValid(AudioSubsystem))
+		{
+			CuffingAudioComp = AudioSubsystem->PlayLoopingSound(EHeistSoundType::Cuffing, TargetThief->GetRootComponent());
 		}
 	}
 }
@@ -88,6 +100,17 @@ void UGA_PoliceCuffing::OnChannelingCompleted()
 		}
 	}
 
+	UWorld* World = GetWorld();
+	if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
+	{
+		UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
+		if (IsValid(AudioSubsystem) && IsValid(CuffingAudioComp))
+		{
+			AudioSubsystem->StopLoopingSound(CuffingAudioComp);
+			CuffingAudioComp = nullptr;
+		}
+	}
+
 	// NOTE:
 	// 채널링 종료는 UHeistGameplayAbility의 공통 흐름(타이머 만료 -> Outro/몽타주 종료 -> EndAbility)에 맡긴다.
 	// 여기서 직접 EndAbility(..., bReplicateEndAbility=true)를 호출하면
@@ -104,6 +127,17 @@ void UGA_PoliceCuffing::OnChannelingCancelled()
 		if (IsValid(NoiseComponent))
 		{
 			NoiseComponent->StopChannelingNoise();
+		}
+	}
+
+	UWorld* World = GetWorld();
+	if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
+	{
+		UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
+		if (IsValid(AudioSubsystem) && IsValid(CuffingAudioComp))
+		{
+			AudioSubsystem->StopLoopingSound(CuffingAudioComp);
+			CuffingAudioComp = nullptr;
 		}
 	}
 

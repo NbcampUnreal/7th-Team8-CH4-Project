@@ -1,16 +1,16 @@
-﻿#include "AbilitySystem/Common/GA_Carry.h"
+#include "AbilitySystem/Common/GA_Carry.h"
 
 #include "AbilitySystem/HeistTags_FlagTags.h"
 #include "AbilitySystem/HeistTags_Event.h"
 #include "Actors/ItemActor.h"
-#include "Character/HeistCharacter.h"
-#include "Character/HeistTags_State.h"
 #include "Character/ThiefCharacter.h"
-#include "Components/HeistNoiseComponent.h"
-#include "Data/HeistSoundData.h"
+#include "Components/HeistNoiseComponent.h"	
+#include "Systems/Audio/HeistAudioSubsystem.h"
 
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Components/AudioComponent.h"
+#include "Engine/World.h"
 
 UGA_Carry::UGA_Carry()
 {
@@ -33,20 +33,41 @@ void UGA_Carry::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	float SpeedMult = 1.0f;
-
 	AHeistCharacter* Carrier = Cast<AHeistCharacter>(GetAvatarActorFromActorInfo());
-	if (TriggerEventData && TriggerEventData->Target)
+	if (!IsValid(Carrier))
 	{
-		AActor* TargetActor = TriggerEventData ? const_cast<AActor*>(TriggerEventData->Target.Get()) : nullptr;
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	if (TriggerEventData != nullptr && IsValid(TriggerEventData->Target))
+	{
+		AActor* TargetActor = const_cast<AActor*>(TriggerEventData->Target.Get());
 		Item = Cast<AItemActor>(TargetActor);
+		if (!IsValid(Item))
+		{
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+			return;
+		}
 		Item->OnPickedUp(Carrier);
 
-		if (AThiefCharacter* Thief = Cast<AThiefCharacter>(Carrier))
+		AThiefCharacter* Thief = Cast<AThiefCharacter>(Carrier);
+		if (IsValid(Thief))
 		{
-			if (UHeistNoiseComponent* NoiseComp = Thief->GetHeistNoiseComponent())
+			UHeistNoiseComponent* NoiseComp = Thief->GetHeistNoiseComponent();
+			if (IsValid(NoiseComp))
 			{
 				NoiseComp->StartChannelingNoise(EHeistSoundType::Carry);
+			}
+
+			UWorld* World = GetWorld();
+			if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
+			{
+				UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
+				if (IsValid(AudioSubsystem))
+				{
+					CarryAudioComp = AudioSubsystem->PlayLoopingSound(EHeistSoundType::Carry, Thief->GetRootComponent());
+				}
 			}
 		}
 	}
@@ -71,14 +92,35 @@ void UGA_Carry::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGamep
 	}
 
 	AHeistCharacter* Carrier = Cast<AHeistCharacter>(GetAvatarActorFromActorInfo());
-	Item->OnDropOff(Carrier);
-
-	if (AThiefCharacter* Thief = Cast<AThiefCharacter>(Carrier))
+	if (IsValid(Item) && IsValid(Carrier))
 	{
-		if (UHeistNoiseComponent* NoiseComp = Thief->GetHeistNoiseComponent())
+		Item->OnDropOff(Carrier);
+	}
+
+	AThiefCharacter* Thief = Cast<AThiefCharacter>(Carrier);
+	if (IsValid(Thief))
+	{
+		UHeistNoiseComponent* NoiseComp = Thief->GetHeistNoiseComponent();
+		if (IsValid(NoiseComp))
 		{
 			NoiseComp->StopChannelingNoise();
 			NoiseComp->MakeHeistNoise(EHeistSoundType::ItemDrop, Thief->GetActorLocation());
+		}
+
+		UWorld* World = GetWorld();
+		if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
+		{
+			UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
+			if (IsValid(AudioSubsystem))
+			{
+				if (IsValid(CarryAudioComp))
+				{
+					AudioSubsystem->StopLoopingSound(CarryAudioComp);
+					CarryAudioComp = nullptr;
+				}
+
+				AudioSubsystem->PlayOneShotSound(EHeistSoundType::ItemDrop, Thief->GetActorLocation());
+			}
 		}
 	}
 
@@ -103,17 +145,18 @@ void UGA_Carry::UpdateCarryEffect()
 		CarryEffectHandle.Invalidate();
 	}
 
-	int32 CurrentCarriers = Item->GetCurrentCarrierCount();
-	float SpeedMult = AItemActor::Execute_GetCarrySpeedMultiplier(Item, CurrentCarriers);
+	const int32 CurrentCarriers = Item->GetCurrentCarrierCount();
+	const float SpeedMult = AItemActor::Execute_GetCarrySpeedMultiplier(Item, CurrentCarriers);
 
 	if (IsValid(CarryEffect))
 	{
 		FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
 		FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(CarryEffect, 1.0f, EffectContext);
 		FGameplayTag DataTag = FGameplayTag::RequestGameplayTag(FName("Data.CarrySpeedMultiplier"));
-		EffectSpec.Data.Get()->SetSetByCallerMagnitude(DataTag, SpeedMult);
-
-		CarryEffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
+		FGameplayEffectSpec* EffectSpecData = EffectSpec.Data.Get();
+		if (EffectSpecData == nullptr) return;
+		EffectSpecData->SetSetByCallerMagnitude(DataTag, SpeedMult);
+		CarryEffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpecData);
 	}
 }
 

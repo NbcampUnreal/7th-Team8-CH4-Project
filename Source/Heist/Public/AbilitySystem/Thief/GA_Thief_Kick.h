@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -11,16 +9,16 @@ class UAbilitySystemComponent;
 class AHeistCharacter;
 
 /**
- * 
+ *
  */
 UCLASS()
 class HEIST_API UGA_Thief_Kick : public UHeistGameplayAbility
 {
 	GENERATED_BODY()
-	
+
 public:
 	UGA_Thief_Kick();
- 
+
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
@@ -37,7 +35,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Effects")
 	float KnockbackDuration = 0.75f;
-	
+
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Effects")
 	float StunDuration = 2.f;
 
@@ -47,11 +45,10 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Heist|Effects")
 	float KnockbackZVelocity = 150.f;
-	
+
 	void OnBackAttackHit(const FGameplayEventData& Payload); // non-dynamic
 	void ApplyKickToTarget(AHeistCharacter* Target, UAbilitySystemComponent* TargetASC);
 
 	UFUNCTION() void OnKickMontageCompleted();
 	UFUNCTION() void OnKickMontageCancelled();
-
 };

@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -7,7 +5,7 @@
 #include "GA_PoliceSwing.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class HEIST_API UGA_PoliceSwing : public UHeistGameplayAbility
