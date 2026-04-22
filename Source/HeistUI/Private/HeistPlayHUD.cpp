@@ -1,9 +1,17 @@
 #include "HeistPlayHUD.h"
 #include "HeistThiefSlotWidget.h"
-#include "Core/HeistPlayerController.h"
-#include "Core/HeistPlayerState.h"
-#include "Core/HeistMatchGameState.h"
 
+#include "Core/HeistMatchGameState.h"
+#include "Core/HeistPlayerState.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
+#include "Systems/Messaging/HeistMessageTypes.h"
+#include "Systems/Messaging/HeistTags_Message.h"
+
+#include "Blueprint/WidgetTree.h"
+#include "Components/Overlay.h"
+#include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
+#include "Components/Widget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/VerticalBox.h"
 #include "Components/WidgetSwitcher.h"
@@ -12,13 +20,126 @@ void UHeistPlayHUD::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	GetWorld()->GetTimerManager().SetTimer(CheckTimerHandle, this, &UHeistPlayHUD::InitializeIfBriefingPhase, 1.f, true);
+	static const FName QuotaNames[] = {
+		TEXT("WBP_QuotaSegment_A"),
+		TEXT("WBP_QuotaSegment_B"),
+		TEXT("WBP_QuotaSegment_C")
+	};
+
+	if (UUserWidget* TimerWidget = Cast<UUserWidget>(WidgetTree->FindWidget(TEXT("WBP_PlayTimer"))))
+	{
+		PlayTimerText = Cast<UTextBlock>(TimerWidget->WidgetTree->FindWidget(TEXT("TextBlock_PlayTimer")));
+	}
+
+	//Overlay_Thief_Only = Cast<UOverlay>(WidgetTree->FindWidget(TEXT("Overlay_Thief_Only")));
+	//Overlay_Police_Only = Cast<UOverlay>(WidgetTree->FindWidget(TEXT("Overlay_Police_Only")));
+
+	QuotaBars.Reset();
+	for (const FName& QuotaName : QuotaNames)
+	{
+		if (UUserWidget* QuotaWidget = Cast<UUserWidget>(WidgetTree->FindWidget(QuotaName)))
+		{
+			if (UProgressBar* ProgressBar = Cast<UProgressBar>(QuotaWidget->WidgetTree->FindWidget(TEXT("ProgressBar_30"))))
+			{
+				QuotaBars.Add(ProgressBar);
+			}
+		}
+	}
+
+	UHeistMessageSubsystem& MessageSubsystem = UHeistMessageSubsystem::Get(this);
+
+	PhaseTimeHandle = MessageSubsystem.RegisterListener<FHeistPhaseTimeUpdatedMessage>(
+		HeistMessageTags::Message_Phase_TimeUpdated,
+		[this](FGameplayTag, const FHeistPhaseTimeUpdatedMessage& Msg)
+		{
+			const AHeistMatchGameState* MatchGS = GetWorld() ? GetWorld()->GetGameState<AHeistMatchGameState>() : nullptr;
+			UpdateTimerText(IsValid(MatchGS) && MatchGS->IsExecutionPhase() ? Msg.RemainingTime : 0.f);
+		});
+
+	ZoneScoresHandle = MessageSubsystem.RegisterListener<FHeistZoneScoresUpdatedMessage>(
+		HeistMessageTags::Message_PlayHUD_ZoneScoresUpdated,
+		[this](FGameplayTag, const FHeistZoneScoresUpdatedMessage& Msg)
+		{
+			for (int32 Index = 0; Index < QuotaBars.Num(); ++Index)
+			{
+				if (!IsValid(QuotaBars[Index]))
+				{
+					continue;
+				}
+
+				const FZoneScoreData ZoneScore = Msg.ZoneScores.IsValidIndex(Index)
+					? Msg.ZoneScores[Index]
+					: FZoneScoreData();
+				const float Percent = ZoneScore.TargetScore > 0.f
+					? ZoneScore.CurrentScore / ZoneScore.TargetScore
+					: 0.f;
+
+				QuotaBars[Index]->SetPercent(FMath::Clamp(Percent, 0.f, 1.f));
+			}
+		});
+
+	PoliceObjectiveHandle = MessageSubsystem.RegisterListener<FHeistPoliceObjectiveUpdatedMessage>(
+		HeistMessageTags::Message_PlayHUD_PoliceObjectiveUpdated,
+		[this](FGameplayTag, const FHeistPoliceObjectiveUpdatedMessage& Msg)
+		{
+			if (IsValid(Text_ProtectObjective))
+			{
+				Text_ProtectObjective->SetText(FText::Format(
+					NSLOCTEXT("HeistPlayHUD", "ProtectObjectiveFormat", "보호 - {0}"),
+					Msg.DisplayName));
+			}
+		});
+
+	UpdateTimerText(0.f);
+
+	if (const AHeistMatchGameState* MatchGS = GetWorld() ? GetWorld()->GetGameState<AHeistMatchGameState>() : nullptr)
+	{
+		UpdateTimerText(
+			MatchGS->IsExecutionPhase()
+				? FMath::Max(MatchGS->GetPhaseEndServerTime() - MatchGS->GetServerWorldTimeSeconds(), 0.f)
+				: 0.f);
+
+		for (int32 Index = 0; Index < QuotaBars.Num(); ++Index)
+		{
+			if (!IsValid(QuotaBars[Index]))
+			{
+				continue;
+			}
+
+			const FZoneScoreData ZoneScore = MatchGS->GetZoneScore(Index);
+			const float Percent = ZoneScore.TargetScore > 0.f
+				? ZoneScore.CurrentScore / ZoneScore.TargetScore
+				: 0.f;
+
+			QuotaBars[Index]->SetPercent(FMath::Clamp(Percent, 0.f, 1.f));
+		}
+
+		if (IsValid(Text_ProtectObjective))
+		{
+			Text_ProtectObjective->SetText(FText::Format(
+				NSLOCTEXT("HeistPlayHUD", "ProtectObjectiveFormat", "보호 - {0}"),
+				MatchGS->GetPoliceObjectiveDisplayName()));
+		}
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(CheckTimerHandle, this, &UHeistPlayHUD::InitializeIfBriefingPhase, 1.f, true);
+	}
 }
 
 void UHeistPlayHUD::NativeDestruct()
 {
+	PhaseTimeHandle.Unregister();
+	ZoneScoresHandle.Unregister();
+	PoliceObjectiveHandle.Unregister();
+
 	UWorld* World = GetWorld();
-	if (!IsValid(World)) return;
+	if (!IsValid(World))
+	{
+		Super::NativeDestruct();
+		return;
+	}
 
 	if (World->GetTimerManager().IsTimerActive(CheckTimerHandle))
 	{
@@ -35,30 +156,66 @@ void UHeistPlayHUD::InitializeIfBriefingPhase()
 	UWorld* World = GetWorld();
 	if (!IsValid(World)) return;
 
-	AGameStateBase* GS = World->GetGameState();
-	AHeistMatchGameState* MatchGS = Cast<AHeistMatchGameState>(GS);
-	if (MatchGS && MatchGS->IsBriefingPhase())
+	APlayerState* MyPS = GetOwningPlayerState();
+	AHeistPlayerState* HeistPS = Cast<AHeistPlayerState>(MyPS);
+	if (!IsValid(HeistPS) || !IsValid(Thief_Police_Switcher)) return;
+
+	bool bTeamReady = false;
+	if (HeistPS->IsThief())
 	{
-		APlayerState* MyPS = GetOwningPlayerState();
-		AHeistPlayerState* HeistPS = Cast<AHeistPlayerState>(MyPS);
-
-		if (HeistPS) {
-			if (HeistPS->IsThief()) {
-				Thief_Police_Switcher->SetActiveWidgetIndex(1);
-			}
-			else if (HeistPS->IsPolice())
-			{
-				Thief_Police_Switcher->SetActiveWidgetIndex(0);
-			}
-
-			//InitializeThiefSlots();
-		}
-
-		if (World->GetTimerManager().IsTimerActive(CheckTimerHandle))
+		Thief_Police_Switcher->SetActiveWidgetIndex(1);
+		if (IsValid(Overlay_Thief_Only))
 		{
-			World->GetTimerManager().ClearTimer(CheckTimerHandle);
+			Overlay_Thief_Only->SetVisibility(ESlateVisibility::Visible);
 		}
+		if (IsValid(Overlay_Police_Only))
+		{
+			Overlay_Police_Only->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		bTeamReady = true;
 	}
+	else if (HeistPS->IsPolice())
+	{
+		Thief_Police_Switcher->SetActiveWidgetIndex(0);
+		if (IsValid(Overlay_Police_Only))
+		{
+			Overlay_Police_Only->SetVisibility(ESlateVisibility::Visible);
+		}
+		if (IsValid(Overlay_Thief_Only))
+		{
+			Overlay_Thief_Only->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		bTeamReady = true;
+	}
+
+	if (!bTeamReady) return;
+
+	if (const AHeistMatchGameState* MatchGS = World->GetGameState<AHeistMatchGameState>())
+	{
+		UpdateTimerText(
+			MatchGS->IsExecutionPhase()
+				? FMath::Max(MatchGS->GetPhaseEndServerTime() - MatchGS->GetServerWorldTimeSeconds(), 0.f)
+				: 0.f);
+	}
+
+	if (World->GetTimerManager().IsTimerActive(CheckTimerHandle))
+	{
+		World->GetTimerManager().ClearTimer(CheckTimerHandle);
+	}
+}
+
+void UHeistPlayHUD::UpdateTimerText(float RemainingTime)
+{
+	if (!IsValid(PlayTimerText))
+	{
+		return;
+	}
+
+	const int32 RemainingSeconds = FMath::CeilToInt(FMath::Max(RemainingTime, 0.f));
+	const int32 Minutes = RemainingSeconds / 60;
+	const int32 Seconds = RemainingSeconds % 60;
+
+	PlayTimerText->SetText(FText::FromString(FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds)));
 }
 
 void UHeistPlayHUD::InitializeThiefSlots()

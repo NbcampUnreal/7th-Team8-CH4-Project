@@ -22,6 +22,7 @@ public:
 	void SetBriefingSelectionLocked(bool bLocked);
 	void SetPhaseEndServerTime(float InPhaseEndServerTime);
 	void SetZoneScore(int32 ZoneIndex, int32 NewScore);
+	void SetPoliceObjectiveDisplayName(const FText& InDisplayName);
 	void SetEngineChannelingStart(bool bStart);
 	void SetEngineChannelingEnd(bool bEnd);
 
@@ -42,6 +43,9 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	FZoneScoreData GetZoneScore(int32 Index) const { return ZoneScores.IsValidIndex(Index) ? ZoneScores[Index] : FZoneScoreData(); }
+
+	UFUNCTION(BlueprintPure)
+	FText GetPoliceObjectiveDisplayName() const { return PoliceObjectiveDisplayName; }
 
 	UFUNCTION(BlueprintPure)
 	bool IsEngineChannelingStarted() const { return bEngineChannelingStarted; }
@@ -71,6 +75,9 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_ZoneScores, BlueprintReadOnly)
 	TArray<FZoneScoreData> ZoneScores;
 
+	UPROPERTY(ReplicatedUsing = OnRep_PoliceObjectiveDisplayName, BlueprintReadOnly)
+	FText PoliceObjectiveDisplayName;
+
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bEngineChannelingStarted = false;
 
@@ -88,6 +95,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_ZoneScores();
+
+	UFUNCTION()
+	void OnRep_PoliceObjectiveDisplayName();
 
 	FTimerHandle PhaseUiUpdateTimerHandle;
 };

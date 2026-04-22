@@ -17,12 +17,14 @@ void UHeistPlayUISubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		{
 			ShowPlayHUD(Msg.PlayHUDClass);
 		});
-	//TODO_CSH 게임 종류 태그 생성시 변경 필요할 수 있음
-	EndHandle = MS.RegisterListener<FHeistBriefingEndMessage>(
+	EndHandle = MS.RegisterListener<FHeistPhaseChangedMessage>(
 		HeistMessageTags::Message_Phase_Changed,
-		[this](FGameplayTag Channel, const FHeistBriefingEndMessage& Msg)
+		[this](FGameplayTag, const FHeistPhaseChangedMessage& Msg)
 		{
-			HidePlayHUD();
+			if (Msg.CurrentPhase == EHeistMatchPhase::Result)
+			{
+				HidePlayHUD();
+			}
 		});
 }
 

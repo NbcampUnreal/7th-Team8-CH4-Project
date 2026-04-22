@@ -2,9 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
 #include "HeistPlayHUD.generated.h"
 
+class UProgressBar;
 class UTextBlock;
+class UOverlay;
 class UWidgetSwitcher;
 class UVerticalBox;
 
@@ -27,11 +30,31 @@ public:
 
 protected:
 	void InitializeIfBriefingPhase();
+	void UpdateTimerText(float RemainingTime);
 
 	UPROPERTY()
 	TObjectPtr<UVerticalBox> VBox_ThiefStates;
+
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UWidgetSwitcher> Thief_Police_Switcher;
 
+	UPROPERTY()
+	TObjectPtr<UTextBlock> PlayTimerText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Text_ProtectObjective;
+
+	UPROPERTY()
+	TArray<TObjectPtr<UProgressBar>> QuotaBars;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UOverlay> Overlay_Thief_Only;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UOverlay> Overlay_Police_Only;
+
 	FTimerHandle CheckTimerHandle;
+	FHeistMessageListenerHandle PhaseTimeHandle;
+	FHeistMessageListenerHandle ZoneScoresHandle;
+	FHeistMessageListenerHandle PoliceObjectiveHandle;
 };

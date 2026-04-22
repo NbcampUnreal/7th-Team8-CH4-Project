@@ -71,6 +71,24 @@ struct FHeistPhaseTimeUpdatedMessage
 	float RemainingTime = 0.f;
 };
 
+USTRUCT()
+struct FHeistZoneScoresUpdatedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FZoneScoreData> ZoneScores;
+};
+
+USTRUCT()
+struct FHeistPoliceObjectiveUpdatedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FText DisplayName;
+};
+
 USTRUCT(BlueprintType)
 struct FHeistSoundDetectedMessage
 {

@@ -32,26 +32,37 @@ void UHeistDropZoneManagerComponent::InitDropZone()
 	}
 
 	int32 ZoneVolumeCount = 0;
+	TArray<ADropZoneVolume*> DropZones;
 	for (TActorIterator<ADropZoneVolume> It(GetWorld()); It; ++It)
 	{
 		ADropZoneVolume* Zone = *It;
 		if (Zone)
 		{
-			Zone->ZoneIndex = ZoneVolumeCount;
-			Zone->OnZoneValueChanged.AddDynamic(this, &UHeistDropZoneManagerComponent::UpdateZoneScore);
-
-			FEscapeGroup& NewGroup = EscapeGroupMap.FindOrAdd(ZoneVolumeCount);
-			NewGroup.DropZone = Zone;
-
-			// 해당 Zone의 GroupIndex와 일치하는 EscapeActor가 TempMap에 있는지 확인
-			if (AEscapeActor** FoundActor = TempEscapeMap.Find(Zone->EscapeGroupIndex))
-			{
-				NewGroup.EscapeActor = *FoundActor;
-			}
-
-			ZoneVolumeCount++;
+			DropZones.Add(Zone);
 		}
 	}
+
+	DropZones.Sort([](const ADropZoneVolume& A, const ADropZoneVolume& B)
+	{
+		return A.EscapeGroupIndex < B.EscapeGroupIndex;
+	});
+
+	for (ADropZoneVolume* Zone : DropZones)
+	{
+		Zone->ZoneIndex = ZoneVolumeCount;
+		Zone->OnZoneValueChanged.AddDynamic(this, &UHeistDropZoneManagerComponent::UpdateZoneScore);
+
+		FEscapeGroup& NewGroup = EscapeGroupMap.FindOrAdd(ZoneVolumeCount);
+		NewGroup.DropZone = Zone;
+
+		if (AEscapeActor** FoundActor = TempEscapeMap.Find(Zone->EscapeGroupIndex))
+		{
+			NewGroup.EscapeActor = *FoundActor;
+		}
+
+		ZoneVolumeCount++;
+	}
+
 	HeistGS->InitZoneScores(ZoneVolumeCount, TargetScore);
 }
 
