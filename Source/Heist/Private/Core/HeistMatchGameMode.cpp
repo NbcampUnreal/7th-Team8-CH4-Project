@@ -469,7 +469,7 @@ void AHeistMatchGameMode::JudgeScore(int32 GroupIndex)
 	int32 ZoneIndex = DropZoneManagerComponent->GetZoneIndexByGroup(GroupIndex);
 
 	AHeistMatchGameState* HeistGS = GetGameState<AHeistMatchGameState>();
-	if (HeistGS->GetZoneScore(ZoneIndex).CurrentScore >= HeistGS->GetZoneScore(ZoneIndex).TargetScore)
+	if (HeistGS->GetZoneScore(ZoneIndex).CurrentScore >= HeistGS->GetZoneScore(ZoneIndex).TargetScore && !DropZoneManagerComponent->CheckDoorOpened(GroupIndex))
 	{
 		NotifyThiefVictory(EHeistVictoryReason::ThiefEscape);
 	}
@@ -560,6 +560,30 @@ void AHeistMatchGameMode::BroadcastMatchResultToPlayers(EHeistTeam Winner, EHeis
 
 		HeistPC->ClientNotifyMatchResult(Winner, Reason);
 	}
+}
+
+bool AHeistMatchGameMode::TryCheckDoorMoving(int32 GroupIndex)
+{
+	if (!IsValid(DropZoneManagerComponent)) return false;
+	return DropZoneManagerComponent->CheckDoorMoving(GroupIndex);
+}
+
+bool AHeistMatchGameMode::TryCheckDoorOpened(int32 GroupIndex)
+{
+	if (!IsValid(DropZoneManagerComponent)) return false;
+	return DropZoneManagerComponent->CheckDoorOpened(GroupIndex);
+}
+
+void AHeistMatchGameMode::TryCloseDoor(int32 GroupIndex)
+{
+	if (!IsValid(DropZoneManagerComponent)) return;
+	DropZoneManagerComponent->CloseDoor(GroupIndex);
+}
+
+void AHeistMatchGameMode::TryOpenDoor(int32 GroupIndex)
+{
+	if (!IsValid(DropZoneManagerComponent)) return;
+	DropZoneManagerComponent->OpenDoor(GroupIndex);
 }
 
 void AHeistMatchGameMode::StartReturnToLobbyFlow()

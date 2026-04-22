@@ -46,6 +46,10 @@ public:
 	// Vehicle 컷신 종료 후 레벨 BP가 호출한다.
 	UFUNCTION(BlueprintCallable, Category = "Heist|GameEnd")
 	void JudgeScore(int32 GroupIndex);
+	bool TryCheckDoorMoving(int32 GroupIndex);
+	bool TryCheckDoorOpened(int32 GroupIndex);
+	void TryCloseDoor(int32 GroupIndex);
+	void TryOpenDoor(int32 GroupIndex);
 
 protected:
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;

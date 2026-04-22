@@ -3,6 +3,7 @@
 #include "Core/HeistMatchGameState.h"
 #include "Actors/DropZoneVolume.h"
 #include "Actors/EscapeActor.h"
+#include "Actors/VehicleActor.h"
 #include "EngineUtils.h"
 
 UHeistDropZoneManagerComponent::UHeistDropZoneManagerComponent()
@@ -31,12 +32,19 @@ void UHeistDropZoneManagerComponent::InitDropZone()
 		}
 	}
 
-	int32 ZoneVolumeCount = 0;
+	TMap<int32, AVehicleActor*> TempVehicleMap;
+	for (TActorIterator<AVehicleActor> It(GetWorld()); It; ++It)
+	{
+		if (AVehicleActor* Vehicle = *It)
+		{
+			TempVehicleMap.Add(Vehicle->EscapeGroupIndex, Vehicle);
+		}
+	}
+
 	TArray<ADropZoneVolume*> DropZones;
 	for (TActorIterator<ADropZoneVolume> It(GetWorld()); It; ++It)
 	{
-		ADropZoneVolume* Zone = *It;
-		if (Zone)
+		if (ADropZoneVolume* Zone = *It)
 		{
 			DropZones.Add(Zone);
 		}
@@ -47,6 +55,7 @@ void UHeistDropZoneManagerComponent::InitDropZone()
 		return A.EscapeGroupIndex < B.EscapeGroupIndex;
 	});
 
+	int32 ZoneVolumeCount = 0;
 	for (ADropZoneVolume* Zone : DropZones)
 	{
 		Zone->ZoneIndex = ZoneVolumeCount;
@@ -58,6 +67,11 @@ void UHeistDropZoneManagerComponent::InitDropZone()
 		if (AEscapeActor** FoundActor = TempEscapeMap.Find(Zone->EscapeGroupIndex))
 		{
 			NewGroup.EscapeActor = *FoundActor;
+		}
+
+		if (AVehicleActor** FoundVehicle = TempVehicleMap.Find(Zone->EscapeGroupIndex))
+		{
+			NewGroup.VehicleActor = *FoundVehicle;
 		}
 
 		ZoneVolumeCount++;
@@ -112,4 +126,54 @@ int32 UHeistDropZoneManagerComponent::GetZoneIndexByGroup(int32 GroupIndex)
 		}
 	}
 	return 0;
+}
+
+bool UHeistDropZoneManagerComponent::CheckDoorMoving(int32 GroupIndex)
+{
+	for (auto& Elem : EscapeGroupMap)
+	{
+		if (Elem.Value.VehicleActor && Elem.Value.VehicleActor->EscapeGroupIndex == GroupIndex)
+		{
+			return Elem.Value.VehicleActor->GetDoorMoving();
+		}
+	}
+	return false;
+}
+
+bool UHeistDropZoneManagerComponent::CheckDoorOpened(int32 GroupIndex)
+{
+	for (auto& Elem : EscapeGroupMap)
+	{
+		if (Elem.Value.VehicleActor && Elem.Value.VehicleActor->EscapeGroupIndex == GroupIndex)
+		{
+			return Elem.Value.VehicleActor->GetDoorOpened();
+		}
+	}
+	return false;
+}
+
+void UHeistDropZoneManagerComponent::CloseDoor(int32 GroupIndex)
+{
+	for (auto& Elem : EscapeGroupMap)
+	{
+		if (Elem.Value.VehicleActor && Elem.Value.VehicleActor->EscapeGroupIndex == GroupIndex)
+		{
+			Elem.Value.VehicleActor->CloseDoor();
+			Elem.Value.VehicleActor->SetDoorOpened(false);
+			break;
+		}
+	}
+}
+
+void UHeistDropZoneManagerComponent::OpenDoor(int32 GroupIndex)
+{
+	for (auto& Elem : EscapeGroupMap)
+	{
+		if (Elem.Value.VehicleActor && Elem.Value.VehicleActor->EscapeGroupIndex == GroupIndex)
+		{
+			Elem.Value.VehicleActor->OpenDoor();
+			Elem.Value.VehicleActor->SetDoorOpened(true);
+			break;
+		}
+	}
 }
