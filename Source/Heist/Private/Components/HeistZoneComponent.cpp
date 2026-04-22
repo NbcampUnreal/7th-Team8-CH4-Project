@@ -60,26 +60,46 @@ void UHeistZoneComponent::ApplyResolvedZone(EHeistZoneType NewResolvedZone)
 	if (!IsValid(OwnerActor) || !OwnerActor->HasAuthority()) return;
 
 	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OwnerActor);
-	if (!IsValid(ASC)) return;
+	if (!IsValid(ASC) || ASC->GetAvatarActor() != OwnerActor)
+	{
+		UWorld* World = GetWorld();
+		if (IsValid(World))
+		{
+			constexpr float RetryDelay = 0.1f;
+			TWeakObjectPtr<UHeistZoneComponent> WeakThis(this);
+			World->GetTimerManager().SetTimer(ASCInitRetryTimerHandle, [WeakThis, NewResolvedZone]()
+				{
+					if (WeakThis.IsValid())
+					{
+						WeakThis->ApplyResolvedZone(NewResolvedZone);
+					}
+				}, RetryDelay, false);
+		}
+		return;
+	}
 
 	if (bZoneInitialized)
 	{
 		if (ResolvedZone == EHeistZoneType::Indoor)
 		{
+			ASC->RemoveLooseGameplayTag(HeistStateTags::Zone_Indoor);
 			ASC->RemoveReplicatedLooseGameplayTag(HeistStateTags::Zone_Indoor);
 		}
 		else
 		{
+			ASC->RemoveLooseGameplayTag(HeistStateTags::Zone_Outdoor);
 			ASC->RemoveReplicatedLooseGameplayTag(HeistStateTags::Zone_Outdoor);
 		}
 	}
 
 	if (NewResolvedZone == EHeistZoneType::Indoor)
 	{
+		ASC->AddLooseGameplayTag(HeistStateTags::Zone_Indoor);
 		ASC->AddReplicatedLooseGameplayTag(HeistStateTags::Zone_Indoor);
 	}
 	else
 	{
+		ASC->AddLooseGameplayTag(HeistStateTags::Zone_Outdoor);
 		ASC->AddReplicatedLooseGameplayTag(HeistStateTags::Zone_Outdoor);
 	}
 

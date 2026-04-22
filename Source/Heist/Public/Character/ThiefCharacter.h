@@ -74,6 +74,8 @@ private:
 	float MaxRotationRateYaw = 150.f;
 
 	FDelegateHandle ZoneTagListenerHandle;
+	FTimerHandle ASCBindTimerHandle;
 
+	void TryBindZoneTagListener();
 	void OnZoneTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 };
