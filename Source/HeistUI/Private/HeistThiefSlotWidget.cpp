@@ -1,8 +1,10 @@
 #include "HeistThiefSlotWidget.h"
-#include "Components/Image.h"
-#include "Components/Border.h"
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "Character/HeistTags_State.h"
+
+#include "Components/Image.h"
+#include "Components/Border.h"
+#include "NativeGameplayTags.h"
 
 void UHeistThiefSlotWidget::NativeConstruct()
 {
@@ -127,9 +129,6 @@ void UHeistThiefSlotWidget::UpdateStateImage(const FString& StateName)
 	}
 }
 
-void UHeistThiefSlotWidget::OnStatusChanged(const FString& StateName)
-{
-}
 //void UHeistThiefSlotWidget::OnGameplayEffectAdded(UAbilitySystemComponent* ASC, const FGameplayEffectSpec& Spec, FActiveGameplayEffectHandle AGEHandle)
 //{
 //	// 기존 GE 기반 처리는 제거하고 태그 기반 처리로 통합

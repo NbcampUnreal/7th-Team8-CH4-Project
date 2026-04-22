@@ -7,6 +7,7 @@
 class AHeistPlayerState;
 class UHeistThiefSlotWidget;
 class UTextBlock;
+struct FGameplayTag;
 /**
  * 
  */

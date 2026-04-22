@@ -95,16 +95,6 @@ void UHeistThiefSlotSetWidget::Cleanup()
 	}
 }
 
-void UHeistThiefSlotSetWidget::SetPlayerName(const FString& NewPlayerName)
-{
-	if (!IsValid(Text_PlayerName))
-	{
-		return;
-	}
-
-	Text_PlayerName->SetText(FText::FromString(NewPlayerName));
-}
-
 void UHeistThiefSlotSetWidget::OnGameplayTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
 {
 	if (NewCount > 0)

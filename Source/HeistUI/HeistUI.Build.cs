@@ -16,6 +16,7 @@ public class HeistUI : ModuleRules
 			"Slate",
 			"SlateCore",
 			"GameplayTags",
+			"GameplayAbilities",
 			"Heist",
 		});
 
