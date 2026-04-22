@@ -116,6 +116,20 @@ struct FHeistBriefingEndMessage
 	GENERATED_BODY()
 };
 
+USTRUCT(BlueprintType)
+struct FHeistChannelingStateMessage
+{
+	GENERATED_BODY()
+
+	// true = 채널링 시작, false = 채널링 종료(완료 또는 취소)
+	UPROPERTY(BlueprintReadWrite)
+	bool bStarted = false;
+
+	// 채널링 총 소요 시간 (시작 메시지에서만 유효)
+	UPROPERTY(BlueprintReadWrite)
+	float Duration = 0.0f;
+};
+
 USTRUCT()
 struct FHeistTravelSeamlessStartMessage
 {

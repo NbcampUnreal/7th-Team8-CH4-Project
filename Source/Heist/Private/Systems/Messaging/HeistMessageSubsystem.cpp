@@ -45,6 +45,15 @@ void UHeistMessageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 			OnFlashlightAlertEvent.Broadcast(Message.bIsDetected);
 		}
 	);
+
+	// 3. 채널링 상태 메시지 브릿지 연동
+	ChannelingStateBridgeHandle = RegisterListener<FHeistChannelingStateMessage>(
+		HeistMessageTags::Message_UI_ChannelingState,
+		[this](FGameplayTag Channel, const FHeistChannelingStateMessage& Message)
+		{
+			OnChannelingStateEvent.Broadcast(Message.bStarted, Message.Duration);
+		}
+	);
 }
 
 void UHeistMessageSubsystem::Deinitialize()
@@ -57,6 +66,11 @@ void UHeistMessageSubsystem::Deinitialize()
 	if (FlashlightAlertBridgeHandle.IsValid())
 	{
 		FlashlightAlertBridgeHandle.Unregister();
+	}
+
+	if (ChannelingStateBridgeHandle.IsValid())
+	{
+		ChannelingStateBridgeHandle.Unregister();
 	}
 
 	Super::Deinitialize();

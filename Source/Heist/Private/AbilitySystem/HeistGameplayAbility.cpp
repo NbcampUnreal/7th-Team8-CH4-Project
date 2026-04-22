@@ -3,6 +3,9 @@
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "AbilitySystem/HeistTags_Event.h"
+#include "Systems/Messaging/HeistMessageSubsystem.h"
+#include "Systems/Messaging/HeistMessageTypes.h"
+#include "Systems/Messaging/HeistTags_Message.h"
 
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
@@ -41,6 +44,17 @@ void UHeistGameplayAbility::StartChanneling(FName RowName)
 	}
 
 	bIsChanneling = true;
+
+	if (CurrentActorInfo && CurrentActorInfo->IsLocallyControlled())
+	{
+		if (UHeistMessageSubsystem* MS = UHeistMessageSubsystem::TryGet(this))
+		{
+			FHeistChannelingStateMessage Msg;
+			Msg.bStarted = true;
+			Msg.Duration = Data->Duration;
+			MS->BroadcastMessage(HeistMessageTags::Message_UI_ChannelingState, Msg);
+		}
+	}
 
 	// 0. 애니메이션 몽타주 재생 (선택 사항)
 	if (IsValid(Data->ChannelingMontage))
@@ -119,6 +133,14 @@ void UHeistGameplayAbility::OnMontageCancelled()
 
 void UHeistGameplayAbility::OnChannelingTimerExpired()
 {
+	if (CurrentActorInfo && CurrentActorInfo->IsLocallyControlled())
+	{
+		if (UHeistMessageSubsystem* MS = UHeistMessageSubsystem::TryGet(this))
+		{
+			MS->BroadcastMessage(HeistMessageTags::Message_UI_ChannelingState, FHeistChannelingStateMessage{});
+		}
+	}
+
 	bIsChanneling = false;
 
 	// 현재 재생 중인 몽타주가 있다면 Outro 섹션으로 강제 점프시킵니다.
@@ -151,6 +173,14 @@ void UHeistGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 
 	if (bIsChanneling && bWasCancelled)
 	{
+		if (CurrentActorInfo && CurrentActorInfo->IsLocallyControlled())
+		{
+			if (UHeistMessageSubsystem* MS = UHeistMessageSubsystem::TryGet(this))
+			{
+				MS->BroadcastMessage(HeistMessageTags::Message_UI_ChannelingState, FHeistChannelingStateMessage{});
+			}
+		}
+
 		bIsChanneling = false;
 		OnChannelingCancelled();
 		// Montage는 GAS에서 자동 종료

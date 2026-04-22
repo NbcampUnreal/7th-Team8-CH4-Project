@@ -26,6 +26,7 @@ namespace HeistMessageTags
 	
 	UE_DEFINE_GAMEPLAY_TAG(Message_UI_SoundDetected, "Message.UI.SoundDetected");
 	UE_DEFINE_GAMEPLAY_TAG(Message_UI_FlashlightAlert, "Message.UI.FlashlightAlert");
+	UE_DEFINE_GAMEPLAY_TAG(Message_UI_ChannelingState, "Message.UI.ChannelingState");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Voice_TalkingStateChanged, "Message.Voice.TalkingStateChanged");
 
 	UE_DEFINE_GAMEPLAY_TAG(Message_Travel_SeamlessStart, "Message.Travel.SeamlessStart");
