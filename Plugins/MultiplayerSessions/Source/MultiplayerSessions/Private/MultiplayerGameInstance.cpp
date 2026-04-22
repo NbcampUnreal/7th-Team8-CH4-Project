@@ -48,6 +48,9 @@ void UMultiplayerGameInstance::HandleSessionCreated(bool bWasSuccessful)
 		UWorld* World = GetWorld();
 		if (!World) return;
 
+		// 클라이언트로 다른 서버에 접속 중인 상태에서 세션을 생성하면 ServerTravel이 불가능하다.
+		if (World->GetNetMode() == NM_Client) return;
+
 		ensureAlwaysMsgf(!LobbyPath.IsEmpty(), TEXT("UMultiplayerGameInstance: LobbyPath is not set."));
 		World->ServerTravel(LobbyPath + TEXT("?listen"));
 	}
