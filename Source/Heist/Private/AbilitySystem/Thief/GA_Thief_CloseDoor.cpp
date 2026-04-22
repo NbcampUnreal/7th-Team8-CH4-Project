@@ -2,6 +2,8 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/HeistTags_Ability.h"
+#include "Actors/VehicleActor.h"
+#include "Core/HeistMatchGameMode.h"
 
 UGA_Thief_CloseDoor::UGA_Thief_CloseDoor()
 {
@@ -27,6 +29,13 @@ void UGA_Thief_CloseDoor::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		return;
 	}
 
+	if (TriggerEventData && TriggerEventData->Target)
+	{
+		// 이벤트 데이터에서 EscapeActor를 추출
+		TWeakObjectPtr<AActor> InteractedActor = const_cast<AActor*>(TriggerEventData->Target.Get());
+		GroupIndex = Cast<AVehicleActor>(InteractedActor.Get())->EscapeGroupIndex;
+	}
+
 	StartChanneling(FName("CloseDoor"));
 }
 
@@ -38,4 +47,13 @@ void UGA_Thief_CloseDoor::EndAbility(const FGameplayAbilitySpecHandle Handle, co
 void UGA_Thief_CloseDoor::OnChannelingCompleted()
 {
 	if (!HasAuthority(&CurrentActivationInfo)) return;
+
+	if (AHeistMatchGameMode* HeistGM = GetWorld()->GetAuthGameMode<AHeistMatchGameMode>())
+	{
+		if (!HeistGM->TryCheckDoorMoving(GroupIndex))
+		{
+			if (HeistGM->TryCheckDoorOpened(GroupIndex))	HeistGM->TryCloseDoor(GroupIndex);
+			else HeistGM->TryOpenDoor(GroupIndex);
+		}
+	}
 }

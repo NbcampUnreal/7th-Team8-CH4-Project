@@ -6,6 +6,7 @@
 
 class ADropZoneVolume;
 class AEscapeActor;
+class AVehicleActor;
 
 USTRUCT(BlueprintType)
 struct FEscapeGroup
@@ -17,6 +18,9 @@ struct FEscapeGroup
 
 	UPROPERTY(BlueprintReadOnly)
 	AEscapeActor* EscapeActor;
+
+	UPROPERTY(BlueprintReadOnly)
+	AVehicleActor* VehicleActor;
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -34,6 +38,11 @@ public:
 	void UpdateZoneScore(int32 ZoneIndex, int32 CurrentScore);
 
 	int32 GetZoneIndexByGroup(int32 GroupIndex);
+
+	bool CheckDoorMoving(int32 GroupIndex);
+	bool CheckDoorOpened(int32 GroupIndex);
+	void CloseDoor(int32 GroupIndex);
+	void OpenDoor(int32 GroupIndex);
 
 public:
 	UPROPERTY(VisibleAnywhere, Category = "Heist|Volume")

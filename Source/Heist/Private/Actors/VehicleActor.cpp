@@ -1,5 +1,4 @@
 #include "Actors/VehicleActor.h"
-#include "Components/BoxComponent.h"
 #include "Components/HeistInteractSphereComponent.h"
 #include "Net/UnrealNetwork.h"
 
@@ -21,6 +20,11 @@ void AVehicleActor::SetDoorOpened(bool bIsDoorOpened)
 	bDoorOpened = bIsDoorOpened;
 }
 
+void AVehicleActor::SetDoorMoving(bool bIsDoorMoving)
+{
+	bDoorMoving = bIsDoorMoving;
+}
+
 void AVehicleActor::BeginPlay()
 {
 	Super::BeginPlay();
@@ -34,6 +38,7 @@ void AVehicleActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AVehicleActor, bDoorOpened);
+	DOREPLIFETIME(AVehicleActor, bDoorMoving);
 }
 
 bool AVehicleActor::CheckCanInteract(ACharacter* Interactor) const
@@ -41,7 +46,7 @@ bool AVehicleActor::CheckCanInteract(ACharacter* Interactor) const
 	AHeistMatchGameState* HeistGS = GetWorld()->GetGameState<AHeistMatchGameState>();
 	if (!HeistGS) return false;
 
-	if (HeistGS->IsEngineChannelingStarted()) return true;
+	if (HeistGS->IsEngineChannelingStarted() && !bDoorMoving) return true;
 
 	return false;
 }
@@ -53,8 +58,5 @@ FGameplayTag AVehicleActor::ResolveInteractAbilityTag(ACharacter* Interactor) co
 
 	if (!HeistGS->IsEngineChannelingStarted()) return FGameplayTag::EmptyTag;
 
-	if(bDoorOpened) return HeistAbilityTags::Ability_Thief_CloseDoor;
-	else return HeistAbilityTags::Ability_Police_OpenDoor;
-
-	return FGameplayTag::EmptyTag;
+	return HeistAbilityTags::Ability_Thief_CloseDoor;
 }

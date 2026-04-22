@@ -5,7 +5,6 @@
 #include "VehicleActor.generated.h"
 
 class USceneComponent;
-class UBoxComponent;
 class UStaticMeshComponent;
 class AHeistCharacter;
 class UHeistInteractSphereComponent;
@@ -21,8 +20,19 @@ public:
 
 	void SetDoorOpened(bool bIsDoorOpened);
 
-	virtual void OpenDoor();
-	virtual void CloseDoor();
+	UFUNCTION(BlueprintCallable)
+	void SetDoorMoving(bool bIsDoorMoving);
+
+	bool GetDoorOpened() { return bDoorOpened; }
+
+	UFUNCTION(BlueprintCallable)
+	bool GetDoorMoving() { return bDoorMoving; }
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OpenDoor();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void CloseDoor();
 
 protected:
 	virtual void BeginPlay() override;
@@ -37,9 +47,6 @@ private:
 	TObjectPtr<USceneComponent> SceneRoot;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess))
-	TObjectPtr<UBoxComponent> BoxCollision;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Meta = (AllowPrivateAccess))
 	TObjectPtr<UStaticMeshComponent> Mesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
@@ -47,6 +54,9 @@ private:
 
 	UPROPERTY(Replicated)
 	bool bDoorOpened = true;
+
+	UPROPERTY(Replicated)
+	bool bDoorMoving = false;
 
 public:
 	UPROPERTY(EditAnywhere, Category = "Heist|Escape")
