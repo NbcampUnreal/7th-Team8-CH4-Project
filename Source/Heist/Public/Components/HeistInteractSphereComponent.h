@@ -32,7 +32,9 @@ public:
 	// C++ 캐릭터 전용 바인드
 	FCanInteractDelegate OnCanInteract;
 	FGetAbilityTagDelegate OnGetAbilityTag;
-	
+
+	UPROPERTY(EditAnywhere, Category = "Heist|Interaction")
+	FVector InteractionOffset = FVector::ZeroVector;
 protected:
 	virtual void BeginPlay() override;
 	
