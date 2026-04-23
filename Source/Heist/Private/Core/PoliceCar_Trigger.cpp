@@ -1,12 +1,13 @@
-﻿#include "Core/PoliceCar_Trigger.h"
+#include "Core/PoliceCar_Trigger.h"
 
 #include "Character/ThiefCharacter.h"
 #include "Components/HeistArrestVictoryComponent.h"
 #include "Components/ThiefEscortComponent.h"
+#include "Systems/Audio/HeistAudioSubsystem.h"
 #include "Core/HeistMatchGameMode.h"
 #include "AbilitySystem/HeistTags_Event.h"
-#include "AbilitySystemComponent.h"
 
+#include "AbilitySystemComponent.h"
 #include "Components/BoxComponent.h"
 
 APoliceCar_Trigger::APoliceCar_Trigger()
@@ -26,6 +27,17 @@ void APoliceCar_Trigger::BeginPlay()
 	if (HasAuthority())
 	{
 		TriggerBox->OnComponentBeginOverlap.AddDynamic(this, &APoliceCar_Trigger::OnOverlapBegin);
+	}
+
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			if (UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>())
+			{
+				AudioSubsystem->PlayLoopingSound(EHeistSoundType::PoliceCar, RootComponent);
+			}
+		}
 	}
 }
 
