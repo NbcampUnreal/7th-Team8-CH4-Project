@@ -101,10 +101,10 @@ bool UThiefEscortComponent::BeginEscort(AHeistCharacter* InPolice, TSubclassOf<U
 		// 서버 아니면 False
 		return false;
 	}
-	
+
 	UAbilitySystemComponent* TargetASC = OwnerThief->GetAbilitySystemComponent();
 	if (!IsValid(TargetASC)) return false;
-	
+
 	// 이미 Escort 중이면 중복해서 시작을 방지 - (Escorting GA에서 1차로 걸러주긴 합니다. 방어코드용)
 	if (IsValid(EscortedBy)) return false;
 
@@ -113,7 +113,7 @@ bool UThiefEscortComponent::BeginEscort(AHeistCharacter* InPolice, TSubclassOf<U
 	{
 		return false;
 	}
-	
+
 	if (IsValid(EscortedEffectClass) && IsValid(SourceASC))
 	{
 		FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
@@ -143,21 +143,21 @@ void UThiefEscortComponent::InterruptEscort(TSubclassOf<UGameplayEffect> InCuffe
 	AActor* OwnerActor = GetOwner();
 	AThiefCharacter* OwnerThief = Cast<AThiefCharacter>(OwnerActor);
 	if (!IsValid(OwnerActor) || !OwnerActor->HasAuthority() || !IsValid(OwnerThief)) return;
-	
+
 	UAbilitySystemComponent* TargetASC = OwnerThief->GetAbilitySystemComponent();
 	if (!IsValid(TargetASC))
 	{
 		SetEscortedBy(nullptr);
 		return;
 	}
-	
+
 	// Escorted GE 제거
 	if (EscortedEffectHandle.IsValid())
 	{
 		TargetASC->RemoveActiveGameplayEffect(EscortedEffectHandle);
 		EscortedEffectHandle.Invalidate();
 	}
-	
+
 	// 정책 분기 - bConvertedToCuff (Default : true)
 	// 수갑 채운 상태로 풀려날지 아닐지 정한다
 	if (bConvertToCuffed && InCuffedEffectClass && SourceASC)
@@ -199,14 +199,14 @@ void UThiefEscortComponent::SetEscortedBy(AHeistCharacter* InPolice)
 {
 	AActor* OwnerActor = GetOwner();
 	if (!IsValid(OwnerActor) || !OwnerActor->HasAuthority()) return;
-	
+
 	EscortedBy = InPolice;
 	if (!InPolice)
 	{
 		PolicePositionTrail.Empty();
 		MeshVisualRecoveryTimer = 0.0f;
 	}
-	
+
 	ApplyEscortReplicationState();
 }
 
@@ -358,7 +358,7 @@ void UThiefEscortComponent::UpdateVisualState()
 void UThiefEscortComponent::SetComponentVisualHidden(USceneComponent* Component, bool bHidden) const
 {
 	if (!IsValid(Component)) return;
-	
+
 	Component->SetHiddenInGame(bHidden, true);
 	Component->SetVisibility(!bHidden, true);
 }
@@ -407,7 +407,7 @@ void UThiefEscortComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 		}
 		else if (Mesh->IsAnySimulatingPhysics())
 		{
-			const float CapsuleBottomZ = OwnerCharacter->GetActorLocation().Z - 
+			const float CapsuleBottomZ = OwnerCharacter->GetActorLocation().Z -
 						OwnerCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 
 			const float MeshBottomZ = Mesh->Bounds.Origin.Z - Mesh->Bounds.BoxExtent.Z;
@@ -432,7 +432,7 @@ void UThiefEscortComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 	// 거리 기반 트레일 기록 - 일정 거리 기준으로 떨어지면 기록해서 역추적
 	const FVector PoliceLocation = EscortedBy->GetActorLocation();
 	const FVector LastRecorded = PolicePositionTrail.Num() > 0 ? PolicePositionTrail.Last() : PoliceLocation;
-	
+
 	if (FVector::Dist(PoliceLocation, LastRecorded) >= TrailRecordInterval)
 	{
 		PolicePositionTrail.Add(PoliceLocation);
@@ -441,13 +441,13 @@ void UThiefEscortComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 			PolicePositionTrail.RemoveAt(0);
 		}
 	}
-	
+
 	const float DirectDist = FVector::Dist2D(PoliceLocation, OwnerActor->GetActorLocation());
 	if (DirectDist > EscortOffsetDistance * 3.0f) // 기존 거리 Offeset 3배 초과시 , 이건 그냥 매직넘버로 둡니다. OD를 조정 가능하니
 	{
 		PolicePositionTrail.Empty();
 	}
-	
+
 	// 트레일 안차있으면 경찰 위치를 바로 타겟 지정
 	FVector TargetLocation = PoliceLocation - EscortedBy->GetActorForwardVector() * EscortOffsetDistance;
 	if (PolicePositionTrail.Num() > 0)
@@ -462,7 +462,7 @@ void UThiefEscortComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 		}
 	}
 
-	
+
 	// 회전 보간
 	const FRotator NewRotation = FMath::RInterpTo(
 			OwnerActor->GetActorRotation(),
@@ -470,7 +470,7 @@ void UThiefEscortComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 			DeltaTime,
 			EscortRotationInterpSpeed);
 	OwnerCharacter->SetActorRotation(NewRotation);
-	
+
 	// 이동 — bZOverride=false 로 중력 유지 (계단 대응)
 	const FVector ToTarget = TargetLocation - OwnerActor->GetActorLocation();
 	const float Dist = ToTarget.Size2D();
@@ -480,8 +480,16 @@ void UThiefEscortComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 		const float Speed = FMath::Clamp(Dist * EscortFollowInterpSpeed, 0.f, EscortMaxSpeed);
 		OwnerCharacter->LaunchCharacter(ToTarget.GetSafeNormal() * Speed, true, false);
 	}
-	else
-	{
-		OwnerCharacter->LaunchCharacter(FVector::ZeroVector, true, false);
-	}
+	// const FVector ToTarget = TargetLocation - OwnerActor->GetActorLocation();
+	// const float Dist = ToTarget.Size2D();
+	//
+	// if (Dist > LaunchIntervalDistance)
+	// {
+	// 	const float Speed = FMath::Clamp(Dist * EscortFollowInterpSpeed, 0.f, EscortMaxSpeed);
+	// 	OwnerCharacter->LaunchCharacter(ToTarget.GetSafeNormal() * Speed, true, false);
+	// }
+	// else
+	// {
+	// 	OwnerCharacter->LaunchCharacter(FVector::ZeroVector, true, false);
+	// }
 }
