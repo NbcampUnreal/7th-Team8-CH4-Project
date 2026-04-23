@@ -11,11 +11,11 @@ void UHeistSystemMessageWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	UHeistMessageSubsystem& MessageSubsystem = UHeistMessageSubsystem::Get(this);
-	MessageHandle = MessageSubsystem.RegisterListener<FHeistGameNotificationMessage>(
-		HeistMessageTags::Message_UI_GameNotification,
-		[this](FGameplayTag Channel, const FHeistGameNotificationMessage& Msg)
+	MessageHandle = MessageSubsystem.RegisterListener<FHeistSystemMessage>(
+		HeistMessageTags::Message_UI_SystemMessage,
+		[this](FGameplayTag Channel, const FHeistSystemMessage& Msg)
 		{
-			HandleGameNotification(Channel, Msg);
+			HandleSystemMessage(Channel, Msg);
 		});
 }
 
@@ -25,7 +25,7 @@ void UHeistSystemMessageWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void UHeistSystemMessageWidget::HandleGameNotification(FGameplayTag, const FHeistGameNotificationMessage& Msg)
+void UHeistSystemMessageWidget::HandleSystemMessage(FGameplayTag, const FHeistSystemMessage& Msg)
 {
 	if (!IsValid(VBox_Messages) || !EntryWidgetClass) return;
 

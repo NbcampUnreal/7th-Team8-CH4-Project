@@ -7,11 +7,11 @@
 
 class UVerticalBox;
 class UHeistSystemMessageEntry;
-struct FHeistGameNotificationMessage;
+struct FHeistSystemMessage;
 
 /**
  * 시스템 메시지 컨테이너.
- * Message_UI_GameNotification 구독 후 엔트리를 생성해 VBox_Messages에 쌓는다.
+ * Message_UI_SystemMessage 구독 후 엔트리를 생성해 VBox_Messages에 쌓는다.
  * BP Class Defaults에서 EntryWidgetClass를 WBP_SystemMessageEntry로 지정한다.
  */
 UCLASS()
@@ -30,7 +30,7 @@ protected:
 	TSubclassOf<UHeistSystemMessageEntry> EntryWidgetClass;
 
 private:
-	void HandleGameNotification(FGameplayTag Channel, const FHeistGameNotificationMessage& Msg);
+	void HandleSystemMessage(FGameplayTag Channel, const FHeistSystemMessage& Msg);
 
 	FHeistMessageListenerHandle MessageHandle;
 };

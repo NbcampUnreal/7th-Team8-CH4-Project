@@ -150,9 +150,9 @@ void AHeistMatchGameState::OnRep_EngineChannelingStarted()
 	UHeistMessageSubsystem* Subsystem = UHeistMessageSubsystem::TryGet(this);
 	if (!IsValid(Subsystem)) return;
 
-	FHeistGameNotificationMessage Message;
+	FHeistSystemMessage Message;
 	Message.Text = NSLOCTEXT("HeistMatchGameState", "EngineStarted", "엔진이 작동을 시작했습니다!");
-	Subsystem->BroadcastMessage(HeistMessageTags::Message_UI_GameNotification, Message);
+	Subsystem->BroadcastMessage(HeistMessageTags::Message_UI_SystemMessage, Message);
 }
 
 void AHeistMatchGameState::OnRep_EngineChannelingEnded()
@@ -160,9 +160,9 @@ void AHeistMatchGameState::OnRep_EngineChannelingEnded()
 	UHeistMessageSubsystem* Subsystem = UHeistMessageSubsystem::TryGet(this);
 	if (!IsValid(Subsystem)) return;
 
-	FHeistGameNotificationMessage Message;
+	FHeistSystemMessage Message;
 	Message.Text = NSLOCTEXT("HeistMatchGameState", "EngineReady", "출발 준비 완료! 문을 닫고 출발하세요!");
-	Subsystem->BroadcastMessage(HeistMessageTags::Message_UI_GameNotification, Message);
+	Subsystem->BroadcastMessage(HeistMessageTags::Message_UI_SystemMessage, Message);
 }
 
 void AHeistMatchGameState::OnRep_PoliceObjectiveDisplayName()

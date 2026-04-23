@@ -37,5 +37,5 @@ namespace HeistMessageTags
 	UE_DEFINE_GAMEPLAY_TAG(Message_Travel_SeamlessStart, "Message.Travel.SeamlessStart");
 	UE_DEFINE_GAMEPLAY_TAG(Message_Travel_SeamlessEnd, "Message.Travel.SeamlessEnd");
 
-	UE_DEFINE_GAMEPLAY_TAG(Message_UI_GameNotification, "Message.UI.GameNotification");
+	UE_DEFINE_GAMEPLAY_TAG(Message_UI_SystemMessage, "Message.UI.SystemMessage");
 }

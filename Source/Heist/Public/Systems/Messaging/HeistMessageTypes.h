@@ -185,7 +185,7 @@ struct FHeistTravelSeamlessEndMessage
 };
 
 USTRUCT(BlueprintType)
-struct FHeistGameNotificationMessage
+struct FHeistSystemMessage
 {
 	GENERATED_BODY()
 
