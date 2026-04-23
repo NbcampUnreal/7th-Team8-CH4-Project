@@ -8,6 +8,7 @@
 #include "Data/ItemData.h"
 
 #include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
@@ -21,11 +22,7 @@ AItemActor::AItemActor() : CurrentCarrierCount(0)
 	bReplicates = true;
 	SetReplicateMovement(true);
 
-	//SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
-	//SetRootComponent(SceneRoot);
-
 	BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
-	//BoxCollision->SetupAttachment(Mesh);
 	SetRootComponent(BoxCollision);
 
 	BoxCollision->SetSimulatePhysics(true);
@@ -36,7 +33,7 @@ AItemActor::AItemActor() : CurrentCarrierCount(0)
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(BoxCollision);
 
-	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
 	InteractSphereComponent = CreateDefaultSubobject<UHeistInteractSphereComponent>(TEXT("InteractSphereComponent"));
 
@@ -63,55 +60,70 @@ void AItemActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (CurrentCarriers.Num() > 0)
+	const TArray<FCarrierEntry>& ActiveCarriers = HasAuthority()
+		? ReplicatedCarriers  // 서버는 자기 배열 사용
+		: ReplicatedCarriers; // 클라이언트도 복제된 배열로 직접 계산
+
+	if (ActiveCarriers.Num() > 0)
 	{
-		// 1. 목표 위치 계산 (플레이어 정면)
+
 		FVector SumLocation = FVector::ZeroVector;
 		FQuat CombineQuat = FQuat::Identity;
 		float SumZ = 0.f;
 		bool bFirst = true;
-		for (TPair<AHeistCharacter*, FRotator> It : CurrentCarriers)
+
+		for (const FCarrierEntry& Entry : ActiveCarriers)
 		{
-			AHeistCharacter* Carrier = It.Key;
-			FRotator StartRotator = It.Value;
-			if (IsValid(Carrier))
-			{
-				// 각 캐리어의 정면 Offset 위치 계산
-				FVector CarrierTarget = Carrier->GetActorLocation() + (Carrier->GetActorForwardVector() * CarryDistance);
-				SumLocation += CarrierTarget;
-				SumZ += Carrier->GetActorLocation().Z;
-				FRotator SumRotation = Carrier->GetActorRotation() + StartRotator;
-				if (bFirst)
-				{
-					CombineQuat = SumRotation.Quaternion();
-					bFirst = false;
-				}
-				else
-				{
-					CombineQuat += SumRotation.Quaternion();
-				}
-			}
+			AHeistCharacter* Carrier = Entry.Carrier;
+			if (!IsValid(Carrier)) continue;
+
+			FVector CarrierTarget = Carrier->GetActorLocation()
+				+ (Carrier->GetActorForwardVector() * CarryDistance);
+			SumLocation += CarrierTarget;
+			SumZ += Carrier->GetActorLocation().Z;
+
+			FRotator SumRotation = Carrier->GetActorRotation() + Entry.StartRotator;
+			if (bFirst) { CombineQuat = SumRotation.Quaternion(); bFirst = false; }
+			else { CombineQuat += SumRotation.Quaternion(); }
 		}
-		FVector TargetLocation = SumLocation / CurrentCarriers.Num();
 
-		// 높이값 보정 (플레이어의 허리 높이 정도로 유지하고 싶을 때)
-		TargetLocation.Z = SumZ / CurrentCarriers.Num();
+		FVector TargetLocation = SumLocation / ActiveCarriers.Num();
+		SumZ /= ActiveCarriers.Num();
 
-		// 2. 최대 속도를 고려한 위치 보간 (VInterpToConstant)
-		FVector CurrentLocation = GetActorLocation();
-		FVector NewLocation = FMath::VInterpConstantTo(CurrentLocation, TargetLocation, DeltaTime, MaxFollowSpeed);
+		float CurrentZ = GetActorLocation().Z;
+		float GroundZ = GetGroundZ(TargetLocation);
+		float ClampedZ = FMath::Clamp(CurrentZ, SumZ, SumZ + 40.f);
+
+		TargetLocation.Z = FMath::Max(ClampedZ, GroundZ);
+
+		FVector NewLocation = FMath::VInterpConstantTo(GetActorLocation(), TargetLocation, DeltaTime, 1000.f);
 		SetActorLocation(NewLocation, true);
 
-		CombineQuat.Normalize();
+		// 현재 각속도 크기 확인
+		FVector AngularVelocity = BoxCollision->GetPhysicsAngularVelocityInDegrees();
+		float AngularSpeed = AngularVelocity.Size();
 
-		// 3. 회전도 부드럽게 따라가게 설정
-		FRotator CurrentRotation = GetActorRotation();
-		FRotator TargetRotation = CombineQuat.Rotator();
-		FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, 10.f);
-		SetActorRotation(NewRotation);
+		// 각속도가 충분히 크면 물리 회전에 맡기고
+		// 잠잠해지면 캐릭터 방향으로 서서히 복귀
+		const float AngularThreshold = 10.f; // 이 이상이면 물리 우선
+		if (AngularSpeed > AngularThreshold)
+		{
+			// 물리 회전 유지, 각속도에 댐핑만 살짝 줘서 자연스럽게 감속
+			BoxCollision->SetPhysicsAngularVelocityInDegrees(
+				AngularVelocity * FMath::Max(0.f, 1.f - DeltaTime * 2.f)
+			);
+		}
+		else
+		{
+			// 잠잠해지면 캐릭터 방향으로 복귀
+			CombineQuat.Normalize();
+			FRotator TargetRotation = CombineQuat.Rotator();
+			FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 5.f);
+			SetActorRotation(NewRotation);
+		}
 	}
 
-	CheckDrop();
+	if (HasAuthority()) CheckDrop();
 }
 
 void AItemActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -119,6 +131,7 @@ void AItemActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AItemActor, CurrentCarrierCount);
+	DOREPLIFETIME(AItemActor, ReplicatedCarriers);
 }
 
 void AItemActor::InitializeFromData()
@@ -134,16 +147,43 @@ void AItemActor::InitializeFromData()
 	}
 }
 
-void AItemActor::OnExplode_Implementation()
-{
-	//TODO: 폭발 로직 구현
-}
-
 const FItemData* AItemActor::GetItemData() const
 {
 	if (ItemData.IsNull()) return nullptr;
 
 	return ItemData.GetRow<FItemData>(TEXT("Context_ItemActor"));
+}
+
+float AItemActor::GetGroundZ(const FVector& AtLocation) const
+{
+	FHitResult Hit;
+	FVector Start = AtLocation + FVector(0.f, 0.f, 100.f); // 위에서 시작
+	FVector End = AtLocation - FVector(0.f, 0.f, 500.f); // 아래로 트레이스
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	// 캐리어도 무시
+	for (const FCarrierEntry& Entry : ReplicatedCarriers)
+	{
+		if (IsValid(Entry.Carrier))
+			Params.AddIgnoredActor(Entry.Carrier);
+	}
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		Hit, Start, End,
+		ECC_Visibility,
+		Params
+	);
+
+	if (bHit)
+	{
+		// 바닥 위에 아이템 절반 높이만큼 올려줌
+		FVector BoxExtent = BoxCollision->GetScaledBoxExtent();
+		return Hit.ImpactPoint.Z + BoxExtent.Z + 10.f;
+	}
+
+	// 바닥을 못 찾으면 현재 Z 유지
+	return GetActorLocation().Z;
 }
 
 void AItemActor::CheckDrop()
@@ -180,6 +220,9 @@ void AItemActor::CheckDrop()
 		// 조건 2: 거리가 너무 멀어진 경우 (Max 초과)
 		if (CurrentDistance > CarryDistanceMax) bShouldDrop = true;
 
+		// 조건 3: 거리가 너무 가까워진 경우 (Min 미만)
+		if (CurrentDistance < CarryDistanceMin) bShouldDrop = true;
+
 		if (bShouldDrop)
 		{
 			CarriersToDrop.Add(Carrier);
@@ -199,13 +242,25 @@ void AItemActor::OnPickedUp(AHeistCharacter* InCarrier)
 
 	if (CurrentCarrierCount <= 0)
 	{
+		SetReplicateMovement(false);
 		BoxCollision->SetSimulatePhysics(false);
+		BoxCollision->SetEnableGravity(false);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		SetActorTickEnabled(true);
 	}
 	if (!CurrentCarriers.Contains(InCarrier))
 	{
-		CurrentCarriers.Add(InCarrier, GetActorRotation() - InCarrier->GetActorRotation());
+		FRotator RelativeRot = GetActorRotation() - InCarrier->GetActorRotation();
+		CurrentCarriers.Add(InCarrier, RelativeRot);
 		CurrentCarrierCount++;
+
+		BoxCollision->IgnoreActorWhenMoving(InCarrier, true);
+
+		FCarrierEntry Entry;
+		Entry.Carrier = InCarrier;
+		Entry.StartRotator = RelativeRot;
+		ReplicatedCarriers.Add(Entry);
+
 		OnRep_CurrentCarrierCount();
 	}
 	NotifyCarriersUpdate();
@@ -219,12 +274,22 @@ void AItemActor::OnDropOff(AHeistCharacter* InCarrier)
 	{
 		CurrentCarriers.Remove(InCarrier);
 		CurrentCarrierCount--;
+
+		BoxCollision->IgnoreActorWhenMoving(InCarrier, false);
+
+		ReplicatedCarriers.RemoveAll([InCarrier](const FCarrierEntry& E) {
+			return E.Carrier == InCarrier;
+			});
+
 		OnRep_CurrentCarrierCount();
 	}
 	if (CurrentCarrierCount <= 0)
 	{
+		BoxCollision->SetEnableGravity(true);
 		BoxCollision->SetSimulatePhysics(true);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		SetActorTickEnabled(false);
+		SetReplicateMovement(true);
 	}
 	NotifyCarriersUpdate();
 }
@@ -235,6 +300,35 @@ void AItemActor::OnRep_CurrentCarrierCount()
 
 	const bool bShouldBeVisibleToPolice = (CurrentCarrierCount <= 0);
 	TransparencyComponent->SetTargetVisibility(bShouldBeVisibleToPolice);
+}
+
+void AItemActor::OnRep_CarrierEntries()
+{
+	if (ReplicatedCarriers.Num() > 0)
+	{
+		BoxCollision->SetSimulatePhysics(false);
+		BoxCollision->SetEnableGravity(false);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		SetActorTickEnabled(true);
+
+		for (const FCarrierEntry& Entry : ReplicatedCarriers)
+		{
+			if (IsValid(Entry.Carrier))
+			{
+				BoxCollision->IgnoreActorWhenMoving(Entry.Carrier, true);
+				Entry.Carrier->GetCapsuleComponent()->IgnoreActorWhenMoving(this, true);
+			}
+		}
+	}
+	else
+	{
+		BoxCollision->SetEnableGravity(true);
+		BoxCollision->SetSimulatePhysics(true);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		SetActorTickEnabled(false);
+
+		BoxCollision->ClearMoveIgnoreActors();
+	}
 }
 
 int32 AItemActor::GetRequiredCarriers_Implementation() const

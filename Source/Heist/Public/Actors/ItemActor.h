@@ -13,6 +13,18 @@ class UHeistInteractSphereComponent;
 class UHeistTransparencyComponent;
 struct FGameplayTag;
 
+USTRUCT()
+struct FCarrierEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	AHeistCharacter* Carrier = nullptr;
+
+	UPROPERTY()
+	FRotator StartRotator = FRotator::ZeroRotator;
+};
+
 UCLASS()
 class HEIST_API AItemActor : public AActor, public IHeistCarryable
 {
@@ -49,13 +61,15 @@ protected:
 	// 데이터 테이블 기반 초기화
 	void InitializeFromData();
 
-	UFUNCTION(BlueprintNativeEvent, Category = "Heist|Item")
-	void OnExplode();
-
 	UFUNCTION()
 	void OnRep_CurrentCarrierCount();
 
+	UFUNCTION()
+	void OnRep_CarrierEntries();
+
 	const struct FItemData* GetItemData() const;
+
+	float GetGroundZ(const FVector& AtLocation) const;
 
 	void CheckDrop();
 
@@ -96,11 +110,14 @@ private:
 	float CarryDistance = 120.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
-	float MaxFollowSpeed = 1000.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
-	float DropAngleMax = 90.f;
+	float DropAngleMax = 45.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
 	float CarryDistanceMax = 200.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
+	float CarryDistanceMin = 50.f;
+
+	UPROPERTY(ReplicatedUsing = OnRep_CarrierEntries)
+	TArray<FCarrierEntry> ReplicatedCarriers;
 };
