@@ -147,6 +147,6 @@ void UHeistBGMManagerComponent::UpdateBGMState()
 	}
 	else if (CurrentMatchPhase == EHeistMatchPhase::Result)
 	{
-		// TODO (하민): Result 승패 전용 BGM을 Enum에 추가 후 여기서 재생
+		AudioSubsystem->TransitionToBGM(EHeistSoundType::BGM_Result);
 	}
 }
