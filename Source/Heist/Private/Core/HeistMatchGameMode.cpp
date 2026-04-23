@@ -16,6 +16,7 @@
 AHeistMatchGameMode::AHeistMatchGameMode()
 {
 	bStartPlayersAsSpectators = true;
+	bUseSeamlessTravel = true;
 
 	PhaseManagerComponent = CreateDefaultSubobject<UHeistPhaseManagerComponent>(TEXT("PhaseManagerComponent"));
 	BriefingPhaseComponent = CreateDefaultSubobject<UHeistBriefingPhaseComponent>(TEXT("BriefingPhaseComponent"));
