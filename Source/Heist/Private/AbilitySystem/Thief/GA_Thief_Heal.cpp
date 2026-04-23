@@ -1,12 +1,14 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "AbilitySystem/Thief/GA_Thief_Heal.h"
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/HeistTags_Ability.h"
 #include "Character/HeistTags_State.h"
 #include "Character/ThiefCharacter.h"
+#include "Components/HeistNoiseComponent.h"
+#include "Systems/Audio/HeistAudioSubsystem.h"
+
+#include "Components/AudioComponent.h"
+#include "Engine/World.h"
 
 UGA_Thief_Heal::UGA_Thief_Heal()
 {
@@ -33,7 +35,7 @@ void UGA_Thief_Heal::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-	
+
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, true);
@@ -60,11 +62,54 @@ void UGA_Thief_Heal::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	// FChannelingData의 RowName과 맞출 것
 	// StartChanneling이 GE_Channeling을 적용하여 State.ActionDisabled / State.Channeling 부여
 	StartChanneling(FName("Heal"));
+
+	if (HasAuthority(&CurrentActivationInfo))
+	{
+		UHeistNoiseComponent* NoiseComponent = Thief->GetHeistNoiseComponent();
+		if (IsValid(NoiseComponent))
+		{
+			NoiseComponent->StartChannelingNoise(EHeistSoundType::Heal);
+		}
+	}
+
+	UWorld* World = GetWorld();
+	if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
+	{
+		UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
+		if (IsValid(AudioSubsystem))
+		{
+			HealAudioComp = AudioSubsystem->PlayLoopingSound(EHeistSoundType::Heal, Thief->GetRootComponent());
+		}
+	}
 }
 
 void UGA_Thief_Heal::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
+	if (HasAuthority(&CurrentActivationInfo) && TargetASC.IsValid())
+	{
+		AThiefCharacter* TargetThief = Cast<AThiefCharacter>(TargetASC->GetAvatarActor());
+		if (IsValid(TargetThief))
+		{
+			UHeistNoiseComponent* NoiseComponent = TargetThief->GetHeistNoiseComponent();
+			if (IsValid(NoiseComponent))
+			{
+				NoiseComponent->StopChannelingNoise();
+			}
+		}
+	}
+
+	UWorld* World = GetWorld();
+	if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
+	{
+		UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
+		if (IsValid(AudioSubsystem) && IsValid(HealAudioComp))
+		{
+			AudioSubsystem->StopLoopingSound(HealAudioComp);
+			HealAudioComp = nullptr;
+		}
+	}
+
 	TargetASC = nullptr;
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

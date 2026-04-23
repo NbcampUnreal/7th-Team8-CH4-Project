@@ -7,15 +7,10 @@
 #include "AbilitySystem/HeistTags_FlagTags.h"
 #include "Components/SoundDetectionComponent.h"
 
-#include "Components/AudioComponent.h"
-#include "Sound/SoundAttenuation.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
-#include "AbilitySystemBlueprintLibrary.h"
-#include "Kismet/GameplayStatics.h"
-#include "Abilities/GameplayAbilityTargetTypes.h"
 
 UHeistNoiseComponent::UHeistNoiseComponent()
 {
@@ -50,10 +45,6 @@ void UHeistNoiseComponent::Server_StartChannelingNoise_Implementation(EHeistSoun
 	const FHeistSoundData* SoundData = GetSoundData(SoundType);
 	if (SoundData == nullptr) return;
 
-	// 1. 모든 클라이언트에서 루프 오디오 재생
-	Multicast_StartChannelingNoise(SoundType);
-
-	// 2. 경찰 탐지 핑
 	if (SoundData->bAffectsPoliceAlert || SoundData->bInstantAlert)
 	{
 		UAbilitySystemComponent* OwnerASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
@@ -62,54 +53,9 @@ void UHeistNoiseComponent::Server_StartChannelingNoise_Implementation(EHeistSoun
 	}
 }
 
-void UHeistNoiseComponent::Multicast_StartChannelingNoise_Implementation(EHeistSoundType SoundType)
-{
-	const FHeistSoundData* SoundData = GetSoundData(SoundType);
-	if (SoundData == nullptr) return;
-
-	if (IsValid(ActiveChannelingAudio))
-	{
-		ActiveChannelingAudio->Stop();
-		ActiveChannelingAudio->DestroyComponent();
-		ActiveChannelingAudio = nullptr;
-	}
-
-	if (IsValid(SoundData->SoundAsset))
-	{
-		constexpr float DefaultVolumeMultiplier = 1.0f;
-		constexpr float DefaultPitchMultiplier = 1.0f;
-		constexpr float DefaultStartTime = 0.0f;
-
-		ActiveChannelingAudio = UGameplayStatics::SpawnSoundAttached(
-			SoundData->SoundAsset,
-			GetOwner()->GetRootComponent(),
-			NAME_None,
-			FVector::ZeroVector,
-			EAttachLocation::SnapToTarget,
-			false, // bAutoDestroy
-			DefaultVolumeMultiplier,
-			DefaultPitchMultiplier,
-			DefaultStartTime,
-			SoundData->AttenuationSettings
-		);
-	}
-}
-
 void UHeistNoiseComponent::Server_StopChannelingNoise_Implementation()
 {
-	Multicast_StopChannelingNoise();
-}
-
-void UHeistNoiseComponent::Multicast_StopChannelingNoise_Implementation()
-{
-	if (IsValid(ActiveChannelingAudio))
-	{
-		constexpr float FadeOutDuration = 0.2f;
-		constexpr float FadeVolumeLevel = 0.0f;
-
-		ActiveChannelingAudio->FadeOut(FadeOutDuration, FadeVolumeLevel);
-		ActiveChannelingAudio = nullptr;
-	}
+	// TODO (하민): 채널링 중단 시 경찰 AI의 추가적인 상태 초기화가 필요하다면 여기 작성
 }
 
 void UHeistNoiseComponent::MakeHeistNoise(EHeistSoundType SoundType, FVector OriginLocation)
@@ -125,13 +71,22 @@ void UHeistNoiseComponent::MakeHeistNoise(EHeistSoundType SoundType, FVector Ori
 
 void UHeistNoiseComponent::Server_ProcessNoise_Implementation(EHeistSoundType SoundType, FVector OriginLocation)
 {
+	if (SoundType == EHeistSoundType::Footstep_Thief)
+	{
+		UWorld* World = GetWorld();
+		if (!IsValid(World)) return;
+
+		const float CurrentTime = World->GetTimeSeconds();
+		if (CurrentTime - LastFootstepTime < FootstepDebounceTime)
+		{
+			return; // 쿨타임 미달 시 무시 (탐지/사운드 연산 스킵)
+		}
+		LastFootstepTime = CurrentTime;
+	}
+
 	const FHeistSoundData* SoundData = GetSoundData(SoundType);
 	if (SoundData == nullptr) return;
 
-	// 1. 오디오는 모든 클라이언트가 들을 수 있도록 Multicast 호출
-	Multicast_PlaySound(SoundType, OriginLocation);
-
-	// 2. 경찰 탐지 처리 (서버에서만 연산)
 	if (SoundData->bAffectsPoliceAlert || SoundData->bInstantAlert)
 	{
 		UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
@@ -141,35 +96,11 @@ void UHeistNoiseComponent::Server_ProcessNoise_Implementation(EHeistSoundType So
 	}
 }
 
-void UHeistNoiseComponent::Multicast_PlaySound_Implementation(EHeistSoundType SoundType, FVector OriginLocation)
-{
-	const FHeistSoundData* SoundData = GetSoundData(SoundType);
-	if (SoundData == nullptr) return;
-
-	if (IsValid(SoundData->SoundAsset))
-	{
-		constexpr float DefaultVolumeMultiplier = 1.0f;
-		constexpr float DefaultPitchMultiplier = 1.0f;
-		constexpr float DefaultStartTime = 0.0f;
-
-		UGameplayStatics::PlaySoundAtLocation(
-			this,
-			SoundData->SoundAsset,
-			OriginLocation,
-			DefaultVolumeMultiplier,
-			DefaultPitchMultiplier,
-			DefaultStartTime,
-			SoundData->AttenuationSettings
-		);
-	}
-}
-
 const FHeistSoundData* UHeistNoiseComponent::GetSoundData(EHeistSoundType SoundType) const
 {
 	if (!IsValid(SoundDataTable)) return nullptr;
 
 	static const FString ContextString(TEXT("HeistNoiseComponent::GetSoundData"));
-
 	const UEnum* EnumPtr = StaticEnum<EHeistSoundType>();
 	if (!IsValid(EnumPtr)) return nullptr;
 
@@ -182,12 +113,6 @@ float UHeistNoiseComponent::CalculateFinalDetectionRadius(const FHeistSoundData*
 	if (SoundData == nullptr) return 0.0f;
 
 	float BaseRadius = SoundData->BaseRadius;
-
-	if (IsValid(SoundData->AttenuationSettings))
-	{
-		BaseRadius = SoundData->AttenuationSettings->Attenuation.GetMaxDimension();
-	}
-
 	float FinalRadius = BaseRadius;
 
 	if (!IsValid(OwnerASC)) return FinalRadius;

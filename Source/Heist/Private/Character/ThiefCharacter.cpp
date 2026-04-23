@@ -100,7 +100,7 @@ void AThiefCharacter::ReportFootstep()
 
 	if (GetVelocity().IsNearlyZero()) return;
 
-	NoiseComponent->MakeHeistNoise(EHeistSoundType::Footstep, GetActorLocation());
+	NoiseComponent->MakeHeistNoise(EHeistSoundType::Footstep_Thief, GetActorLocation());
 }
 
 bool AThiefCharacter::CheckCanInteract(ACharacter* Interactor) const

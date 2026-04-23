@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
@@ -7,18 +7,32 @@
 class USoundBase;
 class USoundAttenuation;
 
-/**
- *
- */
+UENUM(BlueprintType)
+enum class EHeistSoundPlayMode : uint8
+{
+	OneShot UMETA(DisplayName = "One Shot"),
+	Looping UMETA(DisplayName = "Looping")
+};
+
 UENUM(BlueprintType)
 enum class EHeistSoundType : uint8
 {
-	Footstep   UMETA(DisplayName = "Footstep"),
-	Carry      UMETA(DisplayName = "Carry"),
-	ItemDrop   UMETA(DisplayName = "ItemDrop"),
-	Cuffing    UMETA(DisplayName = "Cuffing"),
-	Voice      UMETA(DisplayName = "Voice"),
-	Kick       UMETA(DisplayName = "Kick")
+	// Movement & Action (One-Shot)
+	Footstep_Thief	UMETA(DisplayName = "Footstep (Thief)"),
+	Footstep_Police	UMETA(DisplayName = "Footstep (Police)"),
+	ItemDrop		UMETA(DisplayName = "ItemDrop"),
+	Kick			UMETA(DisplayName = "Kick (Thief Miss)"),
+	Swing			UMETA(DisplayName = "Swing (Police Miss)"),
+	Hit_Thief		UMETA(DisplayName = "Hit (Thief Success)"),
+	Hit_Police		UMETA(DisplayName = "Hit (Police Success)"),
+
+	// Continuous & Channeling (Looping)
+	Carry		UMETA(DisplayName = "Carry"),
+	Cuffing		UMETA(DisplayName = "Cuffing"),
+	Heal		UMETA(DisplayName = "Heal"),
+	Escort		UMETA(DisplayName = "Escort"),
+	Voice		UMETA(DisplayName = "Voice"),
+	Engine		UMETA(DisplayName = "Engine")
 };
 
 USTRUCT(BlueprintType)
@@ -27,7 +41,11 @@ struct FHeistSoundData : public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heist|Audio")
-	EHeistSoundType SoundType = EHeistSoundType::Footstep;
+	EHeistSoundType SoundType = EHeistSoundType::Footstep_Thief;
+
+	// 사운드 재생 방식 (단발성 vs 루프)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heist|Audio")
+	EHeistSoundPlayMode PlayMode = EHeistSoundPlayMode::OneShot;
 
 	// 실제 재생할 사운드 에셋
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heist|Audio")

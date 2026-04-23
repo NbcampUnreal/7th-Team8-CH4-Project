@@ -1,5 +1,3 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "AbilitySystem/Thief/GA_Thief_Kick.h"
 
 #include "AbilitySystem/HeistTags_Ability.h"
@@ -39,7 +37,22 @@ void UGA_Thief_Kick::ActivateAbility(
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo)) return;
 
-	if (AThiefCharacter* Thief = Cast<AThiefCharacter>(GetAvatarActorFromActorInfo()))
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	if (!IsValid(Avatar))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	if (HasAuthority(&CurrentActivationInfo))
+	{
+		if (UHeistHitReactionComponent* HRC = Avatar->FindComponentByClass<UHeistHitReactionComponent>())
+		{
+			HRC->Multicast_PlayHitReaction(false, Avatar, Avatar->GetActorLocation());
+		}
+	}
+
+	if (AThiefCharacter* Thief = Cast<AThiefCharacter>(Avatar))
 	{
 		if (UHeistNoiseComponent* NoiseComp = Thief->GetHeistNoiseComponent())
 		{
@@ -53,10 +66,7 @@ void UGA_Thief_Kick::ActivateAbility(
 		return;
 	}
 
-	// 현재 Kick의 hit 처리 함수를 HitReactionComponent에 등록합니다.
-	AActor* Avatar = GetAvatarActorFromActorInfo();
-	if (UHeistHitReactionComponent* HRC =
-		IsValid(Avatar) ? Avatar->FindComponentByClass<UHeistHitReactionComponent>() : nullptr)
+	if (UHeistHitReactionComponent* HRC = Avatar->FindComponentByClass<UHeistHitReactionComponent>())
 	{
 		FHeistMeleeHitDelegate Handler;
 		Handler.BindUObject(this, &UGA_Thief_Kick::OnBackAttackHit);
@@ -88,6 +98,13 @@ void UGA_Thief_Kick::OnBackAttackHit(const FGameplayEventData& Payload)
 	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Cuffed)) return;
 	if (TargetASC->HasMatchingGameplayTag(HeistStateTags::State_Thief_Escorted)) return;
 
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	if (UHeistHitReactionComponent* HRC = IsValid(Avatar) ? Avatar->FindComponentByClass<UHeistHitReactionComponent>() : nullptr)
+	{
+		// bIsHitValid = true (타격 사운드 재생)
+		HRC->Multicast_PlayHitReaction(true, Avatar, Target->GetActorLocation());
+	}
+
 	ApplyKickToTarget(Target, TargetASC);
 }
 
@@ -112,7 +129,7 @@ void UGA_Thief_Kick::ApplyKickToTarget(AHeistCharacter* Target, UAbilitySystemCo
 	LaunchDirection = LaunchDirection.GetSafeNormal();
 	Target->SetActorRotation(LaunchDirection.Rotation());
 
-	const FVector LaunchVelocity = (LaunchDirection * KnockbackLaunchSpeed) + FVector::UpVector * KnockbackZVelocity; // 어우씨 이거 넣으니까 공중으로 뜬다
+	const FVector LaunchVelocity = (LaunchDirection * KnockbackLaunchSpeed) + FVector::UpVector * KnockbackZVelocity; // TODO: 어우씨 이거 넣으니까 공중으로 뜬다
 	Target->LaunchCharacter(LaunchVelocity, true, true);
 
 	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
