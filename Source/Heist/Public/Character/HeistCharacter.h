@@ -42,6 +42,9 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UHeistAbilitySystemComponent* GetHeistAbilitySystemComponent() const;
 
+	UFUNCTION(BlueprintPure, Category = "Heist|Transparency")
+	bool IsLocallyControlledOrViewed() const;
+
 	// PlayerState가 처음 유효해지는 시점에 발행. PossessedBy(서버) 또는 OnRep_PlayerState(클라이언트) 경로.
 	FOnHeistPlayerStateInitialized OnPlayerStateInitialized;
 

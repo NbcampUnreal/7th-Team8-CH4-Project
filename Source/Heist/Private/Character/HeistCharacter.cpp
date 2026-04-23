@@ -4,6 +4,7 @@
 #include "Components/HeistPlayerComponent.h"
 #include "AbilitySystem/HeistAbilitySystemComponent.h"
 #include "Core/HeistPlayerState.h"
+#include "Core/HeistPlayerController.h"
 #include "Data/HeistPawnData.h"
 #include "Input/HeistInputComponent.h"
 #include "Character/HeistTags_State.h"
@@ -12,6 +13,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/HeistHitReactionComponent.h"
 #include "Core/HeistMatchGameState.h"
+#include "Engine/Engine.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AHeistCharacter::AHeistCharacter(const FObjectInitializer& ObjectInitializer)
@@ -56,6 +58,28 @@ UAbilitySystemComponent* AHeistCharacter::GetAbilitySystemComponent() const
 UHeistAbilitySystemComponent* AHeistCharacter::GetHeistAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+bool AHeistCharacter::IsLocallyControlledOrViewed() const
+{
+	if (IsLocallyControlled())
+	{
+		return true;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!IsValid(World) || !IsValid(GEngine))
+	{
+		return false;
+	}
+
+	const AHeistPlayerController* HeistPC = Cast<AHeistPlayerController>(GEngine->GetFirstLocalPlayerController(World));
+	if (!IsValid(HeistPC) || !HeistPC->IsLocalController())
+	{
+		return false;
+	}
+
+	return HeistPC->GetViewTarget() == this;
 }
 
 void AHeistCharacter::BeginPlay()
