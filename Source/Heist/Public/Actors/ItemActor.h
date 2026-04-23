@@ -13,6 +13,18 @@ class UHeistInteractSphereComponent;
 class UHeistTransparencyComponent;
 struct FGameplayTag;
 
+USTRUCT()
+struct FCarrierEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	AHeistCharacter* Carrier = nullptr;
+
+	UPROPERTY()
+	FRotator StartRotator = FRotator::ZeroRotator;
+};
+
 UCLASS()
 class HEIST_API AItemActor : public AActor, public IHeistCarryable
 {
@@ -54,6 +66,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_CurrentCarrierCount();
+
+	UFUNCTION()
+	void OnRep_CarrierEntries();
 
 	const struct FItemData* GetItemData() const;
 
@@ -103,4 +118,7 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
 	float CarryDistanceMax = 200.f;
+
+	UPROPERTY(ReplicatedUsing = OnRep_CarrierEntries)
+	TArray<FCarrierEntry> ReplicatedCarriers;
 };
