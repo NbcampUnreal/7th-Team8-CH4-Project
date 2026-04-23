@@ -91,17 +91,36 @@ void AItemActor::Tick(float DeltaTime)
 		SumZ /= ActiveCarriers.Num();
 
 		float CurrentZ = GetActorLocation().Z;
-		float ClampedZ = FMath::Clamp(CurrentZ, SumZ - 20.f, SumZ + 40.f);
-		TargetLocation.Z = ClampedZ;
+		float GroundZ = GetGroundZ(TargetLocation);
+		float ClampedZ = FMath::Clamp(CurrentZ, SumZ, SumZ + 40.f);
+
+		TargetLocation.Z = FMath::Max(ClampedZ, GroundZ);
 
 		FVector NewLocation = FMath::VInterpConstantTo(GetActorLocation(), TargetLocation, DeltaTime, 1000.f);
 		SetActorLocation(NewLocation, true);
 
-		CombineQuat.Normalize();
+		// 현재 각속도 크기 확인
+		FVector AngularVelocity = BoxCollision->GetPhysicsAngularVelocityInDegrees();
+		float AngularSpeed = AngularVelocity.Size();
 
-		// 3. 회전도 부드럽게 따라가게 설정
-		FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), CombineQuat.Rotator(), DeltaTime, 10.f);
-		SetActorRotation(NewRotation);
+		// 각속도가 충분히 크면 물리 회전에 맡기고
+		// 잠잠해지면 캐릭터 방향으로 서서히 복귀
+		const float AngularThreshold = 10.f; // 이 이상이면 물리 우선
+		if (AngularSpeed > AngularThreshold)
+		{
+			// 물리 회전 유지, 각속도에 댐핑만 살짝 줘서 자연스럽게 감속
+			BoxCollision->SetPhysicsAngularVelocityInDegrees(
+				AngularVelocity * FMath::Max(0.f, 1.f - DeltaTime * 2.f)
+			);
+		}
+		else
+		{
+			// 잠잠해지면 캐릭터 방향으로 복귀
+			CombineQuat.Normalize();
+			FRotator TargetRotation = CombineQuat.Rotator();
+			FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 5.f);
+			SetActorRotation(NewRotation);
+		}
 	}
 
 	if (HasAuthority()) CheckDrop();
@@ -133,6 +152,38 @@ const FItemData* AItemActor::GetItemData() const
 	if (ItemData.IsNull()) return nullptr;
 
 	return ItemData.GetRow<FItemData>(TEXT("Context_ItemActor"));
+}
+
+float AItemActor::GetGroundZ(const FVector& AtLocation) const
+{
+	FHitResult Hit;
+	FVector Start = AtLocation + FVector(0.f, 0.f, 100.f); // 위에서 시작
+	FVector End = AtLocation - FVector(0.f, 0.f, 500.f); // 아래로 트레이스
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	// 캐리어도 무시
+	for (const FCarrierEntry& Entry : ReplicatedCarriers)
+	{
+		if (IsValid(Entry.Carrier))
+			Params.AddIgnoredActor(Entry.Carrier);
+	}
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		Hit, Start, End,
+		ECC_Visibility,
+		Params
+	);
+
+	if (bHit)
+	{
+		// 바닥 위에 아이템 절반 높이만큼 올려줌
+		FVector BoxExtent = BoxCollision->GetScaledBoxExtent();
+		return Hit.ImpactPoint.Z + BoxExtent.Z + 10.f;
+	}
+
+	// 바닥을 못 찾으면 현재 Z 유지
+	return GetActorLocation().Z;
 }
 
 void AItemActor::CheckDrop()

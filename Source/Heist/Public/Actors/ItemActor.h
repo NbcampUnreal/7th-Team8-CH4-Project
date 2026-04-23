@@ -69,6 +69,8 @@ protected:
 
 	const struct FItemData* GetItemData() const;
 
+	float GetGroundZ(const FVector& AtLocation) const;
+
 	void CheckDrop();
 
 	bool CheckCanInteract(ACharacter* Interactor) const;
