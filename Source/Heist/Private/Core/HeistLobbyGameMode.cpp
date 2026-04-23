@@ -197,13 +197,10 @@ void AHeistLobbyGameMode::RequestTogglePreviewCharacter(APlayerController* Reque
 
 bool AHeistLobbyGameMode::IsHostController(APlayerController* PlayerController) const
 {
-	if (!IsValid(GameState)) return false;
-	if (GameState->PlayerArray.IsEmpty()) return false;
-
-	const APlayerState* HostPlayerState = GameState->PlayerArray[0];
-	if (!IsValid(HostPlayerState)) return false;
-
-	return HostPlayerState->GetOwner() == PlayerController;
+	// Listen Server에서 방장은 로컬 플레이어이다.
+	// PlayerArray[0] 기반 판별은 시임리스 트래블 귀환 시 원격 클라이언트가
+	// 먼저 초기화되어 인덱스 0을 점유할 수 있으므로 신뢰할 수 없다.
+	return IsValid(PlayerController) && PlayerController->IsLocalController();
 }
 
 void AHeistLobbyGameMode::StartMatchTravel()
