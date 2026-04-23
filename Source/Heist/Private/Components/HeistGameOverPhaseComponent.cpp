@@ -1,6 +1,7 @@
 #include "Components/HeistGameOverPhaseComponent.h"
 #include "Core/HeistMatchGameMode.h"
 #include "Core/HeistMatchGameState.h"
+#include "TimerManager.h"
 
 UHeistGameOverPhaseComponent::UHeistGameOverPhaseComponent()
 {
@@ -10,6 +11,14 @@ UHeistGameOverPhaseComponent::UHeistGameOverPhaseComponent()
 
 void UHeistGameOverPhaseComponent::StartEngineChanneling()
 {
+	AHeistMatchGameMode* HeistGM = GetOwner<AHeistMatchGameMode>();
+	if (!IsValid(HeistGM)) return;
+
+	AHeistMatchGameState* HeistGS = HeistGM->GetGameState<AHeistMatchGameState>();
+	if (!IsValid(HeistGS)) return;
+
+	HeistGS->SetEngineChannelingStart(true);
+
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().SetTimer(
@@ -19,11 +28,8 @@ void UHeistGameOverPhaseComponent::StartEngineChanneling()
 			EngineChannelingDuration,
 			false);
 	}
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White, TEXT("엔진이 작동을 시작했습니다!"));
-	}
-	UE_LOG(LogTemp, Warning, TEXT("엔진 채널링 시작"));
+
+	UE_LOG(LogTemp, Log, TEXT("[GameOverPhase] 엔진 채널링 시작"));
 }
 
 void UHeistGameOverPhaseComponent::EngineChannelingEnd()
@@ -32,13 +38,9 @@ void UHeistGameOverPhaseComponent::EngineChannelingEnd()
 	if (!IsValid(HeistGM)) return;
 
 	AHeistMatchGameState* HeistGS = HeistGM->GetGameState<AHeistMatchGameState>();
-	if (!HeistGS) return;
+	if (!IsValid(HeistGS)) return;
 
 	HeistGS->SetEngineChannelingEnd(true);
 
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White, TEXT("출발 준비 완료! 문을 닫고 출발하세요!"));
-	}
-	UE_LOG(LogTemp, Warning, TEXT("엔진 채널링 종료"));
+	UE_LOG(LogTemp, Log, TEXT("[GameOverPhase] 엔진 채널링 종료"));
 }

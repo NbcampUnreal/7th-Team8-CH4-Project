@@ -11,6 +11,7 @@ class UOverlay;
 class UWidgetSwitcher;
 class UHorizontalBox;
 class UHeistThiefSlotSetWidget;
+class UHeistSystemMessageWidget;
 struct FHeistPlayHUDThiefStateChangedMessage;
 
 /*
@@ -30,6 +31,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void InitializeThiefSlots();
+
+	// 시스템 메시지 컨테이너 클래스. Blueprint Class Defaults에서 설정한다.
+	UPROPERTY(EditDefaultsOnly, Category = "SystemMessage")
+	TSubclassOf<UHeistSystemMessageWidget> SystemMessageWidgetClass;
 
 protected:
 	void RefreshThiefSlots();

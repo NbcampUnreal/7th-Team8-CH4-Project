@@ -1,4 +1,5 @@
 #include "HeistPlayHUD.h"
+#include "HeistSystemMessageWidget.h"
 #include "HeistThiefSlotSetWidget.h"
 #include "HeistThiefSlotWidget.h"
 
@@ -107,6 +108,16 @@ void UHeistPlayHUD::NativeConstruct()
 		{
 			HandleThiefStateChanged(Msg);
 		});
+
+	if (SystemMessageWidgetClass)
+	{
+		UHeistSystemMessageWidget* SystemMessageWidget = CreateWidget<UHeistSystemMessageWidget>(
+			GetOwningPlayer(), SystemMessageWidgetClass);
+		if (IsValid(SystemMessageWidget))
+		{
+			SystemMessageWidget->AddToViewport();
+		}
+	}
 
 	UpdateTimerText(0.f);
 	RefreshThiefSlots();
