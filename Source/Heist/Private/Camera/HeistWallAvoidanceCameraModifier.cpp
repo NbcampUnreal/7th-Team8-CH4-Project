@@ -2,6 +2,7 @@
 
 #include "Camera/PlayerCameraManager.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/Pawn.h"
 #include "Engine/World.h"
 
 bool UHeistWallAvoidanceCameraModifier::ModifyCamera(float DeltaTime, FMinimalViewInfo& InOutPOV)
@@ -31,6 +32,7 @@ bool UHeistWallAvoidanceCameraModifier::ModifyCamera(float DeltaTime, FMinimalVi
 	);
 
 	if (!bHit) return false;
+	if (IsValid(HitResult.GetActor()) && HitResult.GetActor()->IsA<APawn>()) return false;
 
 	// 벽이 캐릭터에 가까울수록 BlendWeight가 1에 가까워져 MaxPitch에 수렴한다.
 	const float BlendWeight = FMath::Clamp(1.0f - (HitResult.Distance / ArmLength), 0.0f, 1.0f);
