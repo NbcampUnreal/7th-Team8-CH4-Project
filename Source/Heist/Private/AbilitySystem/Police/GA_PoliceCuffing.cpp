@@ -4,7 +4,6 @@
 #include "Character/HeistTags_State.h"
 #include "AbilitySystem/HeistTags_Ability.h"
 #include "AbilitySystem/HeistTags_Event.h"
-#include "Components/HeistNoiseComponent.h"
 #include "Systems/Audio/HeistAudioSubsystem.h"
 
 #include "Components/AudioComponent.h"
@@ -48,15 +47,6 @@ void UGA_PoliceCuffing::ActivateAbility(
 
 	StartChanneling(FName("Cuffing"));
 
-	if (HasAuthority(&CurrentActivationInfo))
-	{
-		UHeistNoiseComponent* NoiseComponent = TargetThief->GetHeistNoiseComponent();
-		if (IsValid(NoiseComponent))
-		{
-			NoiseComponent->StartChannelingNoise(EHeistSoundType::Cuffing);
-		}
-	}
-
 	UWorld* World = GetWorld();
 	if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
 	{
@@ -72,12 +62,6 @@ void UGA_PoliceCuffing::OnChannelingCompleted()
 {
 	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
 	{
-		UHeistNoiseComponent* NoiseComponent = TargetThief->GetHeistNoiseComponent();
-		if (IsValid(NoiseComponent))
-		{
-			NoiseComponent->StopChannelingNoise();
-		}
-
 		UAbilitySystemComponent* TargetASC = TargetThief->GetAbilitySystemComponent();
 		if (IsValid(TargetASC))
 		{
@@ -121,15 +105,6 @@ void UGA_PoliceCuffing::OnChannelingCompleted()
 
 void UGA_PoliceCuffing::OnChannelingCancelled()
 {
-	if (HasAuthority(&CurrentActivationInfo) && IsValid(TargetThief))
-	{
-		UHeistNoiseComponent* NoiseComponent = TargetThief->GetHeistNoiseComponent();
-		if (IsValid(NoiseComponent))
-		{
-			NoiseComponent->StopChannelingNoise();
-		}
-	}
-
 	UWorld* World = GetWorld();
 	if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
 	{
