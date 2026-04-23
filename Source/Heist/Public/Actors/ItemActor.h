@@ -61,9 +61,6 @@ protected:
 	// 데이터 테이블 기반 초기화
 	void InitializeFromData();
 
-	UFUNCTION(BlueprintNativeEvent, Category = "Heist|Item")
-	void OnExplode();
-
 	UFUNCTION()
 	void OnRep_CurrentCarrierCount();
 
@@ -111,13 +108,13 @@ private:
 	float CarryDistance = 120.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
-	float MaxFollowSpeed = 1000.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
-	float DropAngleMax = 90.f;
+	float DropAngleMax = 45.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
 	float CarryDistanceMax = 200.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess))
+	float CarryDistanceMin = 50.f;
 
 	UPROPERTY(ReplicatedUsing = OnRep_CarrierEntries)
 	TArray<FCarrierEntry> ReplicatedCarriers;

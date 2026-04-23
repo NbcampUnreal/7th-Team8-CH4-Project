@@ -8,6 +8,7 @@
 #include "Data/ItemData.h"
 
 #include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
@@ -32,7 +33,7 @@ AItemActor::AItemActor() : CurrentCarrierCount(0)
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(BoxCollision);
 
-	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
 	InteractSphereComponent = CreateDefaultSubobject<UHeistInteractSphereComponent>(TEXT("InteractSphereComponent"));
 
@@ -87,9 +88,13 @@ void AItemActor::Tick(float DeltaTime)
 		}
 
 		FVector TargetLocation = SumLocation / ActiveCarriers.Num();
-		TargetLocation.Z = SumZ / ActiveCarriers.Num();
+		SumZ /= ActiveCarriers.Num();
 
-		FVector NewLocation = FMath::VInterpTo(GetActorLocation(), TargetLocation, DeltaTime, 20.f);
+		float CurrentZ = GetActorLocation().Z;
+		float ClampedZ = FMath::Clamp(CurrentZ, SumZ - 20.f, SumZ + 40.f);
+		TargetLocation.Z = ClampedZ;
+
+		FVector NewLocation = FMath::VInterpConstantTo(GetActorLocation(), TargetLocation, DeltaTime, 1000.f);
 		SetActorLocation(NewLocation, true);
 
 		CombineQuat.Normalize();
@@ -121,11 +126,6 @@ void AItemActor::InitializeFromData()
 	{
 		// GPS 관련 로직 (Event.GPSActivated 등)
 	}
-}
-
-void AItemActor::OnExplode_Implementation()
-{
-	//TODO: 폭발 로직 구현
 }
 
 const FItemData* AItemActor::GetItemData() const
@@ -169,6 +169,9 @@ void AItemActor::CheckDrop()
 		// 조건 2: 거리가 너무 멀어진 경우 (Max 초과)
 		if (CurrentDistance > CarryDistanceMax) bShouldDrop = true;
 
+		// 조건 3: 거리가 너무 가까워진 경우 (Min 미만)
+		if (CurrentDistance < CarryDistanceMin) bShouldDrop = true;
+
 		if (bShouldDrop)
 		{
 			CarriersToDrop.Add(Carrier);
@@ -191,6 +194,7 @@ void AItemActor::OnPickedUp(AHeistCharacter* InCarrier)
 		SetReplicateMovement(false);
 		BoxCollision->SetSimulatePhysics(false);
 		BoxCollision->SetEnableGravity(false);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		SetActorTickEnabled(true);
 	}
 	if (!CurrentCarriers.Contains(InCarrier))
@@ -232,6 +236,7 @@ void AItemActor::OnDropOff(AHeistCharacter* InCarrier)
 	{
 		BoxCollision->SetEnableGravity(true);
 		BoxCollision->SetSimulatePhysics(true);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		SetActorTickEnabled(false);
 		SetReplicateMovement(true);
 	}
@@ -252,6 +257,7 @@ void AItemActor::OnRep_CarrierEntries()
 	{
 		BoxCollision->SetSimulatePhysics(false);
 		BoxCollision->SetEnableGravity(false);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		SetActorTickEnabled(true);
 
 		for (const FCarrierEntry& Entry : ReplicatedCarriers)
@@ -259,6 +265,7 @@ void AItemActor::OnRep_CarrierEntries()
 			if (IsValid(Entry.Carrier))
 			{
 				BoxCollision->IgnoreActorWhenMoving(Entry.Carrier, true);
+				Entry.Carrier->GetCapsuleComponent()->IgnoreActorWhenMoving(this, true);
 			}
 		}
 	}
@@ -266,6 +273,7 @@ void AItemActor::OnRep_CarrierEntries()
 	{
 		BoxCollision->SetEnableGravity(true);
 		BoxCollision->SetSimulatePhysics(true);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		SetActorTickEnabled(false);
 
 		BoxCollision->ClearMoveIgnoreActors();
