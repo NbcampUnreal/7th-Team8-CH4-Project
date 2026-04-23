@@ -66,7 +66,7 @@ void UGA_Carry::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 				UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
 				if (IsValid(AudioSubsystem))
 				{
-					CarryAudioComp = AudioSubsystem->PlayLoopingSound(EHeistSoundType::Carry, Thief->GetRootComponent());
+					CarryAudioComp = AudioSubsystem->PlayLoopingSound(EHeistSoundType::Carry, Carrier->GetRootComponent());
 				}
 			}
 		}
@@ -106,21 +106,21 @@ void UGA_Carry::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGamep
 			NoiseComp->StopChannelingNoise();
 			NoiseComp->MakeHeistNoise(EHeistSoundType::ItemDrop, Thief->GetActorLocation());
 		}
+	}
 
-		UWorld* World = GetWorld();
-		if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
+	UWorld* World = GetWorld();
+	if (IsValid(World) && World->GetNetMode() != NM_DedicatedServer)
+	{
+		UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
+		if (IsValid(AudioSubsystem))
 		{
-			UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>();
-			if (IsValid(AudioSubsystem))
+			if (IsValid(CarryAudioComp))
 			{
-				if (IsValid(CarryAudioComp))
-				{
-					AudioSubsystem->StopLoopingSound(CarryAudioComp);
-					CarryAudioComp = nullptr;
-				}
-
-				AudioSubsystem->PlayOneShotSound(EHeistSoundType::ItemDrop, Thief->GetActorLocation());
+				AudioSubsystem->StopLoopingSound(CarryAudioComp);
+				CarryAudioComp = nullptr;
 			}
+
+			AudioSubsystem->PlayOneShotSound(EHeistSoundType::ItemDrop, Carrier->GetActorLocation());
 		}
 	}
 
