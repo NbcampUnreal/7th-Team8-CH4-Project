@@ -8,6 +8,7 @@
 #include "Core/HeistLobbyGameMode.h"
 #include "Character/HeistTags_State.h"
 #include "Components/HeistSpectatorControllerComponent.h"
+#include "Components/HeistBGMManagerComponent.h"
 #include "Core/HeistMatchGameMode.h"
 #include "Core/HeistPlayerState.h"
 #include "Voice/HeistVoipTalker.h"
@@ -33,6 +34,7 @@ AHeistPlayerController::AHeistPlayerController()
 {
 	bShowMouseCursor = true;
 	SpectatorControllerComponent = CreateDefaultSubobject<UHeistSpectatorControllerComponent>(TEXT("SpectatorControllerComponent"));
+	BGMManagerComponent = CreateDefaultSubobject<UHeistBGMManagerComponent>(TEXT("BGMManagerComponent"));
 }
 
 void AHeistPlayerController::BeginPlay()
@@ -103,6 +105,11 @@ void AHeistPlayerController::AcknowledgePossession(APawn* NewPawn)
 	Super::AcknowledgePossession(NewPawn);
 
 	if (!IsLocalController()) return;
+
+	if (IsValid(BGMManagerComponent))
+	{
+		BGMManagerComponent->BindToPawn(NewPawn);
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("[BriefingRetry] AcknowledgePossession: PC=%s Pawn=%s"),
 		*GetNameSafe(this),
@@ -312,7 +319,7 @@ void AHeistPlayerController::DrawVoiceRangeDebug()
 	const float OuterRadius = InnerRadius + Attenuation.FalloffDistance;
 
 	DrawDebugCircle(GetWorld(), Center, InnerRadius, 64, FColor::Green, false, -1.f, 0, 3.f, FVector::ForwardVector, FVector::RightVector);
-	DrawDebugCircle(GetWorld(), Center, OuterRadius, 64, FColor::Red,   false, -1.f, 0, 3.f, FVector::ForwardVector, FVector::RightVector);
+	DrawDebugCircle(GetWorld(), Center, OuterRadius, 64, FColor::Red, false, -1.f, 0, 3.f, FVector::ForwardVector, FVector::RightVector);
 }
 
 bool AHeistPlayerController::IsInMatchBriefingPhase() const
@@ -510,10 +517,11 @@ void AHeistPlayerController::ClientPrepareForMatchTravel_Implementation()
 	}
 
 	if (IsLocalController())
-	{	if (UHeistMessageSubsystem* MS = UHeistMessageSubsystem::TryGet(this))
+	{
+		if (UHeistMessageSubsystem* MS = UHeistMessageSubsystem::TryGet(this))
 		{
 			MS->BroadcastMessage(
-						  HeistMessageTags::Message_Travel_SeamlessStart, FHeistTravelSeamlessStartMessage{});
+				HeistMessageTags::Message_Travel_SeamlessStart, FHeistTravelSeamlessStartMessage{});
 		}
 
 		if (!bSentReadyForMatchTravel)

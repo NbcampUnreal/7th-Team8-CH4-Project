@@ -11,6 +11,7 @@ class UHeistBriefingPlayerComponent;
 class UHeistSpectatorControllerComponent;
 class AHeistBriefingDrawingBoard;
 class UHeistWallAvoidanceCameraModifier;
+class UHeistBGMManagerComponent;
 
 UCLASS()
 class HEIST_API AHeistPlayerController : public APlayerController
@@ -90,6 +91,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Heist|Components")
 	TObjectPtr<UHeistSpectatorControllerComponent> SpectatorControllerComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Heist|Components")
+	TObjectPtr<UHeistBGMManagerComponent> BGMManagerComponent;
 
 	void Input_SystemMenu();
 
