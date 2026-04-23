@@ -73,11 +73,13 @@ void AHeistMatchGameState::SetPoliceObjectiveDisplayName(const FText& InDisplayN
 void AHeistMatchGameState::SetEngineChannelingStart(bool bStart)
 {
 	bEngineChannelingStarted = bStart;
+	OnRep_EngineChannelingStarted();
 }
 
 void AHeistMatchGameState::SetEngineChannelingEnd(bool bEnd)
 {
 	bEngineChannelingEnded = bEnd;
+	OnRep_EngineChannelingEnded();
 }
 
 void AHeistMatchGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -90,6 +92,8 @@ void AHeistMatchGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(AHeistMatchGameState, PhaseEndServerTime);
 	DOREPLIFETIME(AHeistMatchGameState, ZoneScores);
 	DOREPLIFETIME(AHeistMatchGameState, PoliceObjectiveDisplayName);
+	DOREPLIFETIME(AHeistMatchGameState, bEngineChannelingStarted);
+	DOREPLIFETIME(AHeistMatchGameState, bEngineChannelingEnded);
 }
 
 void AHeistMatchGameState::OnRep_MatchPhase()
@@ -139,6 +143,26 @@ void AHeistMatchGameState::OnRep_ZoneScores()
 	Message.ZoneScores = ZoneScores;
 
 	Subsystem->BroadcastMessage(HeistMessageTags::Message_PlayHUD_ZoneScoresUpdated, Message);
+}
+
+void AHeistMatchGameState::OnRep_EngineChannelingStarted()
+{
+	UHeistMessageSubsystem* Subsystem = UHeistMessageSubsystem::TryGet(this);
+	if (!IsValid(Subsystem)) return;
+
+	FHeistGameNotificationMessage Message;
+	Message.Text = NSLOCTEXT("HeistMatchGameState", "EngineStarted", "엔진이 작동을 시작했습니다!");
+	Subsystem->BroadcastMessage(HeistMessageTags::Message_UI_GameNotification, Message);
+}
+
+void AHeistMatchGameState::OnRep_EngineChannelingEnded()
+{
+	UHeistMessageSubsystem* Subsystem = UHeistMessageSubsystem::TryGet(this);
+	if (!IsValid(Subsystem)) return;
+
+	FHeistGameNotificationMessage Message;
+	Message.Text = NSLOCTEXT("HeistMatchGameState", "EngineReady", "출발 준비 완료! 문을 닫고 출발하세요!");
+	Subsystem->BroadcastMessage(HeistMessageTags::Message_UI_GameNotification, Message);
 }
 
 void AHeistMatchGameState::OnRep_PoliceObjectiveDisplayName()

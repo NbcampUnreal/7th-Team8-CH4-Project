@@ -183,3 +183,15 @@ struct FHeistTravelSeamlessEndMessage
 {
 	GENERATED_BODY()
 };
+
+USTRUCT(BlueprintType)
+struct FHeistGameNotificationMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite)
+	FText Text;
+
+	UPROPERTY(BlueprintReadWrite)
+	float Duration = 5.f;
+};

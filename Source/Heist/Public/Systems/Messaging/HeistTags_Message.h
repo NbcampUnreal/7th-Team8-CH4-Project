@@ -39,4 +39,6 @@ namespace HeistMessageTags
 
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Travel_SeamlessStart);
 	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Travel_SeamlessEnd);
+
+	HEIST_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UI_GameNotification);
 }

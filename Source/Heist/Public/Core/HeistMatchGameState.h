@@ -78,11 +78,17 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_PoliceObjectiveDisplayName, BlueprintReadOnly)
 	FText PoliceObjectiveDisplayName;
 
-	UPROPERTY(Replicated, BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing = OnRep_EngineChannelingStarted, BlueprintReadOnly)
 	bool bEngineChannelingStarted = false;
 
-	UPROPERTY(Replicated, BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing = OnRep_EngineChannelingEnded, BlueprintReadOnly)
 	bool bEngineChannelingEnded = false;
+
+	UFUNCTION()
+	void OnRep_EngineChannelingStarted();
+
+	UFUNCTION()
+	void OnRep_EngineChannelingEnded();
 
 	UFUNCTION()
 	void OnRep_MatchPhase();
