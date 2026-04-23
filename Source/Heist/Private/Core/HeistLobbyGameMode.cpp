@@ -37,20 +37,31 @@ void AHeistLobbyGameMode::BeginPlay()
 	}
 }
 
+void AHeistLobbyGameMode::GenericPlayerInitialization(AController* C)
+{
+	Super::GenericPlayerInitialization(C);
+
+	APlayerController* PC = Cast<APlayerController>(C);
+	if (!IsValid(PC)) return;
+
+	AHeistPlayerState* PlayerState = PC->GetPlayerState<AHeistPlayerState>();
+	if (!IsValid(PlayerState)) return;
+
+	if (IsHostController(PC))
+	{
+		PlayerState->SetIsHost(true);
+		PlayerState->SetIsReady(true);
+	}
+}
+
 void AHeistLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
 	if (!IsValid(NewPlayer)) return;
 
-	AHeistPlayerState* PlayerState = NewPlayer->GetPlayerState<AHeistPlayerState>();
+	const AHeistPlayerState* PlayerState = NewPlayer->GetPlayerState<AHeistPlayerState>();
 	const FString PlayerName = IsValid(PlayerState) ? PlayerState->GetPlayerName() : TEXT("Unknown");
-
-	if (IsHostController(NewPlayer) && IsValid(PlayerState))
-	{
-		PlayerState->SetIsHost(true);
-		PlayerState->SetIsReady(true);
-	}
 
 	UE_LOG(LogTemp, Log, TEXT("[HeistLobbyGameMode] PostLogin: %s (Total: %d)"),
 		*PlayerName, GameState->PlayerArray.Num());
