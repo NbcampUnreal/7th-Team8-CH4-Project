@@ -30,13 +30,12 @@ void UHeistInteractSphereComponent::BeginPlay()
 	InteractSphere->SetSphereRadius(CachedRadius);
 	
 	// 2. 게임 내에서 스피어 콜리전이 보이도록 설정 (디버그용)
-	InteractSphere->SetHiddenInGame(false);
+	//InteractSphere->SetHiddenInGame(false);
 	
 	InteractSphere->RegisterComponent();
 	InteractSphere->AttachToComponent(GetOwner()->GetRootComponent(),
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	InteractSphere->SetRelativeLocation(InteractionOffset);
-	InteractSphere->SetHiddenInGame(false); // 디버그용
 	InteractSphere->OnComponentBeginOverlap.AddDynamic(this, &UHeistInteractSphereComponent::OnSphereBeginOverlap);
 	InteractSphere->OnComponentEndOverlap.AddDynamic(this, &UHeistInteractSphereComponent::OnSphereEndOverlap);
 
