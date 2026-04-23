@@ -48,9 +48,6 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> Image_StateIcon;
 
-	UPROPERTY(meta = (BindWidget))
-	UBorder* Border_StateText;
-
 	// 상태별 이미지 에셋 (블루프린트에서 설정)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Thief Slot|Images")
 	TObjectPtr<UTexture2D> Image_Idle;
