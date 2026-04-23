@@ -4,9 +4,10 @@
 #include "Core/HeistPlayerController.h"
 #include "Core/HeistPlayerState.h"
 #include "Components/FlashlightComponent.h"
-#include "MultiplayerSessionsSubsystem.h"
+#include "Systems/Audio/HeistAudioSubsystem.h"
 #include "Voice/HeistVoiceSubsystem.h"
 
+#include "MultiplayerSessionsSubsystem.h"
 #include "GameFramework/GameStateBase.h"
 
 AHeistLobbyGameMode::AHeistLobbyGameMode()
@@ -20,6 +21,14 @@ AHeistLobbyGameMode::AHeistLobbyGameMode()
 void AHeistLobbyGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (UWorld* World = GetWorld())
+	{
+		if (UHeistAudioSubsystem* AudioSubsystem = World->GetSubsystem<UHeistAudioSubsystem>())
+		{
+			AudioSubsystem->TransitionToBGM(EHeistSoundType::BGM_Lobby);
+		}
+	}
 
 	UGameInstance* GameInstance = GetGameInstance();
 	if (!IsValid(GameInstance)) return;
