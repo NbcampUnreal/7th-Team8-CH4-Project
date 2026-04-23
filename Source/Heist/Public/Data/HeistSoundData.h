@@ -6,12 +6,14 @@
 
 class USoundBase;
 class USoundAttenuation;
+class USoundClass;
 
 UENUM(BlueprintType)
 enum class EHeistSoundPlayMode : uint8
 {
 	OneShot UMETA(DisplayName = "One Shot"),
-	Looping UMETA(DisplayName = "Looping")
+	Looping UMETA(DisplayName = "Looping"),
+	BGM     UMETA(DisplayName = "BGM")
 };
 
 UENUM(BlueprintType)
@@ -32,7 +34,13 @@ enum class EHeistSoundType : uint8
 	Heal		UMETA(DisplayName = "Heal"),
 	Escort		UMETA(DisplayName = "Escort"),
 	Voice		UMETA(DisplayName = "Voice"),
-	Engine		UMETA(DisplayName = "Engine")
+	Engine		UMETA(DisplayName = "Engine"),
+
+	// BGM
+	BGM_Game_Normal	UMETA(DisplayName = "BGM (Game Normal)"),
+	BGM_Game_Chase	UMETA(DisplayName = "BGM (Game Chase)"),
+
+	None UMETA(Hidden)
 };
 
 USTRUCT(BlueprintType)
@@ -51,9 +59,15 @@ struct FHeistSoundData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heist|Audio")
 	TObjectPtr<USoundBase> SoundAsset;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heist|Audio")
+	TObjectPtr<USoundClass> SoundClass;
+
 	// 거리에 따른 소리 감쇠 세팅
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heist|Audio")
 	TObjectPtr<USoundAttenuation> AttenuationSettings;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heist|Audio", meta = (EditCondition = "PlayMode == EHeistSoundPlayMode::BGM"))
+	float DefaultFadeDuration = 2.0f;
 
 	// 기본 탐지 반경 (cm)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heist|Detection")
