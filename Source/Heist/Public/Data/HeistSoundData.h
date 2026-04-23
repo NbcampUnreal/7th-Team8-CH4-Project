@@ -27,6 +27,9 @@ enum class EHeistSoundType : uint8
 	Swing			UMETA(DisplayName = "Swing (Police Miss)"),
 	Hit_Thief		UMETA(DisplayName = "Hit (Thief Success)"),
 	Hit_Police		UMETA(DisplayName = "Hit (Police Success)"),
+	PoliceCar		UMETA(DisplayName = "PoliceCar"),
+	Vehicle_Depart	UMETA(DisplayName = "Vehicle Depart"),
+	Heli_Depart		UMETA(DisplayName = "Heli Depart"),
 
 	// Continuous & Channeling (Looping)
 	Carry		UMETA(DisplayName = "Carry"),
@@ -37,8 +40,11 @@ enum class EHeistSoundType : uint8
 	Engine		UMETA(DisplayName = "Engine"),
 
 	// BGM
-	BGM_Game_Normal	UMETA(DisplayName = "BGM (Game Normal)"),
-	BGM_Game_Chase	UMETA(DisplayName = "BGM (Game Chase)"),
+	BGM_MainMenu		UMETA(DisplayName = "BGM (Main Menu)"),
+	BGM_Lobby			UMETA(DisplayName = "BGM (Lobby)"),
+	BGM_Game_Normal		UMETA(DisplayName = "BGM (Game Normal)"),
+	BGM_Game_Chase		UMETA(DisplayName = "BGM (Game Chase)"),
+	BGM_Result			UMETA(DisplayName = "BGM (Result)"),
 
 	None UMETA(Hidden)
 };
