@@ -1,6 +1,6 @@
-# 🔦 Project Heist (가제: Perfect Crime)
+# 🔦 Perfect Crime
 > **"우당탕탕! 1명의 경찰과 4명의 도둑이 벌이는 비대칭 협동 PVP 대탈출!"**
-<img width="3102" height="1376" alt="Gemini_Generated_Image_f1q12nf1q12nf1q1" src="https://github.com/user-attachments/assets/f5985a72-011a-448e-9f04-35247e91af9f" />
+<img width="2767" height="1376" alt="dw" src="https://github.com/user-attachments/assets/a6f96d3a-823e-4311-a36e-415c796ceabb" />
 
 ---
 
