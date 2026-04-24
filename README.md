@@ -65,7 +65,7 @@
 
 
 ## 📸 스크린샷 및 플레이 영상
-[*(스크린샷, GIF, 시연 영상 링크 추가 예정)*](https://www.youtube.com/watch?v=82np8gdwmcw)
+https://www.youtube.com/watch?v=82np8gdwmcw
 
 
 
