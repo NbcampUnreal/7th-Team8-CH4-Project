@@ -65,7 +65,7 @@
 
 
 ## 📸 스크린샷 및 플레이 영상
-https://www.youtube.com/watch?v=82np8gdwmcw
+[<img width="396" height="236" alt="image" src="https://github.com/user-attachments/assets/d5cb21cc-9b6f-4a26-a068-eb8f68a86260" />](https://www.youtube.com/watch?v=82np8gdwmcw)
 
 
 
